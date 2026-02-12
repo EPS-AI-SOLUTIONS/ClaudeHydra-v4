@@ -1,0 +1,67 @@
+/**
+ * Session management TanStack Query hooks.
+ * CRUD operations for chat sessions and message persistence.
+ */
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiDelete, apiGet, apiPost } from '@/shared/api/client';
+import type { Session, SessionsList } from '@/shared/api/schemas';
+
+/** GET /api/sessions */
+export function useSessionsQuery() {
+  return useQuery<SessionsList>({
+    queryKey: ['sessions'],
+    queryFn: () => apiGet<SessionsList>('/api/sessions'),
+  });
+}
+
+/** GET /api/sessions/:id */
+export function useSessionQuery(id: string | null) {
+  return useQuery<Session>({
+    queryKey: ['session', id],
+    queryFn: () => apiGet<Session>(`/api/sessions/${id}`),
+    enabled: id !== null,
+  });
+}
+
+/** POST /api/sessions */
+export function useCreateSessionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Session, Error, { title?: string }>({
+    mutationFn: (body) => apiPost<Session>('/api/sessions', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+}
+
+/** DELETE /api/sessions/:id */
+export function useDeleteSessionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ success: boolean }, Error, string>({
+    mutationFn: (id) => apiDelete<{ success: boolean }>(`/api/sessions/${id}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+}
+
+/** POST /api/sessions/:id/messages */
+export function useAddMessageMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ success: boolean }, Error, { sessionId: string; role: string; content: string; model?: string }>(
+    {
+      mutationFn: ({ sessionId, ...body }) =>
+        apiPost<{ success: boolean }>(`/api/sessions/${sessionId}/messages`, body),
+      onSuccess: (_data, variables) => {
+        void queryClient.invalidateQueries({
+          queryKey: ['session', variables.sessionId],
+        });
+        void queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      },
+    },
+  );
+}

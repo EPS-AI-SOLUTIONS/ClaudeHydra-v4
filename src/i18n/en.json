@@ -1,0 +1,27 @@
+{
+  "nav": {
+    "home": "Home",
+    "chat": "Chat",
+    "agents": "Agents",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "send": "Send",
+    "retry": "Retry",
+    "loading": "Loading...",
+    "error": "Error",
+    "confirm": "Confirm"
+  },
+  "chat": {
+    "modelSelector": "Select model",
+    "temperature": "Temperature",
+    "systemPrompt": "System prompt",
+    "placeholder": "Type a message...",
+    "emptyState": "Start a conversation",
+    "clearChat": "Clear chat"
+  }
+}

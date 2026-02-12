@@ -1,0 +1,27 @@
+{
+  "nav": {
+    "home": "Strona Glowna",
+    "chat": "Czat",
+    "agents": "Agenci",
+    "history": "Historia",
+    "settings": "Ustawienia"
+  },
+  "common": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usun",
+    "send": "Wyslij",
+    "retry": "Ponow",
+    "loading": "Ladowanie...",
+    "error": "Blad",
+    "confirm": "Potwierdz"
+  },
+  "chat": {
+    "modelSelector": "Wybierz model",
+    "temperature": "Temperatura",
+    "systemPrompt": "Prompt systemowy",
+    "placeholder": "Wpisz wiadomosc...",
+    "emptyState": "Rozpocznij rozmowe",
+    "clearChat": "Wyczysc czat"
+  }
+}
