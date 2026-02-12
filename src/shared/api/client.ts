@@ -3,7 +3,9 @@
  * Base URL points to the Rust/Axum server on port 8082.
  */
 
-const BASE_URL = 'http://localhost:8082';
+const BASE_URL = import.meta.env.PROD
+  ? 'https://claudehydra-v4-backend.fly.dev'
+  : 'http://localhost:8082';
 
 // ---------------------------------------------------------------------------
 // Error class
