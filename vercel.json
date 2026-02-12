@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "pnpm install && tsc -b && vite build",
-  "outputDirectory": "dist",
-  "installCommand": "npm i -g pnpm && pnpm install"
+  "installCommand": "corepack enable && pnpm install",
+  "buildCommand": "tsc -b && vite build",
+  "outputDirectory": "dist"
 }
