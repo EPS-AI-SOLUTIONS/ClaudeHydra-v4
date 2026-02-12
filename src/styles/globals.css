@@ -124,7 +124,7 @@ body {
   background: var(--matrix-bg-primary);
   color: var(--matrix-text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
   min-height: 100vh;
 }
 
@@ -132,6 +132,11 @@ code,
 pre,
 .font-mono {
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
 }
 
 /* ============================================

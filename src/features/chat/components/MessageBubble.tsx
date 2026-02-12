@@ -147,6 +147,7 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
 
   return (
     <motion.div
+      data-testid="chat-message-bubble"
       variants={bubbleVariants}
       initial="hidden"
       animate="visible"

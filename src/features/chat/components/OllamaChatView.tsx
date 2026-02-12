@@ -134,6 +134,7 @@ function EmptyChatState() {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
+      data-testid="chat-empty-state"
       className="h-full flex items-center justify-center text-[var(--matrix-text-secondary)]"
     >
       <div className="text-center">
@@ -334,19 +335,20 @@ export function OllamaChatView() {
   // ----- Render ----------------------------------------------------------
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <div data-testid="chat-view" className="h-full flex flex-col p-4">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
+        data-testid="chat-header"
         className="flex items-center justify-between mb-4"
       >
         <div className="flex items-center gap-3">
           <Bot className="text-[var(--matrix-accent)]" size={24} />
           <div>
             <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">Ollama Chat</h2>
-            <p className="text-xs text-[var(--matrix-text-secondary)]">
+            <p data-testid="chat-status-text" className="text-xs text-[var(--matrix-text-secondary)]">
               {ollamaConnected
                 ? `${models.length} model${models.length === 1 ? '' : 's'} available`
                 : 'Offline — start Ollama to connect'}
@@ -367,6 +369,7 @@ export function OllamaChatView() {
 
           {/* Clear chat */}
           <Button
+            data-testid="chat-clear-btn"
             variant="ghost"
             size="sm"
             onClick={clearChat}
@@ -382,6 +385,7 @@ export function OllamaChatView() {
       {/* Chat message area */}
       <div
         ref={chatContainerRef}
+        data-testid="chat-message-area"
         className={cn('flex-1 glass-panel p-4 overflow-y-auto relative transition-all rounded-lg', 'scrollbar-thin')}
       >
         {messages.length === 0 ? (
@@ -401,6 +405,7 @@ export function OllamaChatView() {
       {/* Streaming indicator bar */}
       {isLoading && (
         <motion.div
+          data-testid="chat-streaming-bar"
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           className="h-0.5 bg-gradient-to-r from-transparent via-[var(--matrix-accent)] to-transparent origin-left mt-1 rounded-full"

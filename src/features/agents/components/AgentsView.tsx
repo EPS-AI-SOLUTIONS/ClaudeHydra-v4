@@ -223,7 +223,7 @@ function AgentCard({ agent }: AgentCardProps) {
   const TierIcon = tierIcon[agent.tier];
 
   return (
-    <motion.div variants={cardVariants} layout layoutId={agent.id}>
+    <motion.div data-testid={`agent-card-${agent.id}`} variants={cardVariants} layout layoutId={agent.id}>
       <Card variant="hover" padding="none" interactive className="h-full">
         <div className="p-4 space-y-3">
           {/* Header: Icon + Name + Status */}
@@ -298,7 +298,7 @@ export function AgentsView() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col overflow-auto p-4 sm:p-6">
+    <div data-testid="agents-view" className="h-full flex flex-col overflow-auto p-4 sm:p-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -311,8 +311,8 @@ export function AgentsView() {
             <Users size={20} className="text-[var(--matrix-accent)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Witcher Agent Swarm</h2>
-            <p className="text-xs text-[var(--matrix-text-secondary)]">
+            <h2 data-testid="agents-header" className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Witcher Agent Swarm</h2>
+            <p data-testid="agents-online-count" className="text-xs text-[var(--matrix-text-secondary)]">
               {onlineCount} of {WITCHER_AGENTS.length} agents online
             </p>
           </div>
@@ -323,11 +323,12 @@ export function AgentsView() {
         </p>
 
         {/* Tier Filter Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div data-testid="agents-filter-bar" className="flex items-center gap-2 flex-wrap">
           <Filter size={14} className="text-[var(--matrix-text-secondary)]" />
           {TIER_FILTERS.map((tier) => (
             <Button
               key={tier}
+              data-testid={`agents-filter-${tier.toLowerCase()}`}
               variant={activeTier === tier ? 'primary' : 'secondary'}
               size="sm"
               onClick={() => handleTierFilter(tier)}
@@ -346,6 +347,7 @@ export function AgentsView() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          data-testid="agents-grid"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
         >
           {filteredAgents.map((agent) => (

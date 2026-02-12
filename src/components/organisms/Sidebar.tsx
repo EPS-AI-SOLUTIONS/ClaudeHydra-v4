@@ -141,6 +141,7 @@ function SessionItem({ session, isActive, collapsed, onSelect, onDelete, onRenam
       <button
         type="button"
         onClick={onSelect}
+        data-testid="sidebar-session-item"
         className={cn(
           'w-full p-2 rounded flex items-center justify-center transition-colors',
           isActive
@@ -188,6 +189,7 @@ function SessionItem({ session, isActive, collapsed, onSelect, onDelete, onRenam
   return (
     <button
       type="button"
+      data-testid="sidebar-session-item"
       className={cn(
         'group relative flex items-center gap-2 p-2 rounded cursor-pointer transition-colors w-full text-left',
         isActive
@@ -331,6 +333,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         {!collapsed ? (
           <button
             type="button"
+            data-testid="sidebar-logo"
             onClick={() => navigateTo('home')}
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
@@ -338,7 +341,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             <span className="font-mono font-semibold text-[var(--matrix-accent)] text-glow-subtle">ClaudeHydra</span>
           </button>
         ) : (
-          <button type="button" onClick={() => navigateTo('home')} className="mx-auto">
+          <button type="button" data-testid="sidebar-logo" onClick={() => navigateTo('home')} className="mx-auto">
             <Zap className="w-6 h-6 text-[var(--matrix-accent)]" />
           </button>
         )}
@@ -353,6 +356,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             <motion.button
               key={item.id}
               type="button"
+              data-testid={`nav-${item.id}`}
               onClick={() => navigateTo(item.id)}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
@@ -378,6 +382,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         <div className="flex items-center justify-between mb-2">
           <button
             type="button"
+            data-testid="sidebar-chats-toggle"
             onClick={() => setShowSessions(!showSessions)}
             className="flex items-center gap-2 text-xs text-[var(--matrix-text-primary)] hover:text-[var(--matrix-accent)] transition-colors"
           >
@@ -392,6 +397,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
           </button>
           <button
             type="button"
+            data-testid="sidebar-new-chat-btn"
             onClick={handleCreateSession}
             className="p-1.5 hover:bg-[rgba(0,255,65,0.2)] rounded text-[var(--matrix-accent)] transition-colors"
             title="New chat"
@@ -407,6 +413,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
+              data-testid="sidebar-session-list"
               className="flex-1 space-y-1 overflow-y-auto min-h-0"
             >
               {sortedSessions.length === 0 ? (
@@ -436,6 +443,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         <div className="flex items-center gap-1">
           <button
             type="button"
+            data-testid="sidebar-theme-toggle"
             onClick={cycleThemeMode}
             className={cn(
               'flex-1 flex items-center justify-center gap-2 p-2 rounded',
@@ -449,6 +457,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
           </button>
           <button
             type="button"
+            data-testid="sidebar-settings-btn"
             onClick={() => navigateTo('settings')}
             className={cn(
               'flex items-center justify-center p-2 rounded',
@@ -463,7 +472,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
         {/* Version */}
         {!collapsed && (
-          <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center mt-2 font-mono opacity-50">
+          <p data-testid="sidebar-version" className="text-[10px] text-[var(--matrix-text-secondary)] text-center mt-2 font-mono opacity-50">
             v4.0.0
           </p>
         )}
@@ -474,6 +483,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         <div className="p-2 border-t border-[var(--matrix-border)]">
           <button
             type="button"
+            data-testid="mobile-close-btn"
             onClick={onClose}
             className="nav-item w-full justify-center text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)]"
           >
@@ -508,6 +518,7 @@ export function Sidebar() {
         {/* Hamburger trigger */}
         <button
           type="button"
+          data-testid="mobile-hamburger"
           onClick={() => setMobileDrawerOpen(true)}
           className={cn(
             'fixed top-3 left-3 z-50 p-2 rounded-lg',
@@ -527,6 +538,7 @@ export function Sidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
+              data-testid="mobile-backdrop"
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               onClick={() => setMobileDrawerOpen(false)}
               role="presentation"
@@ -539,6 +551,7 @@ export function Sidebar() {
           initial={{ x: '-100%' }}
           animate={{ x: mobileDrawerOpen ? 0 : '-100%' }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          data-testid="mobile-drawer"
           className="fixed top-0 left-0 h-full w-72 z-50 glass-panel-solid flex flex-col"
         >
           <SidebarContent collapsed={false} onClose={() => setMobileDrawerOpen(false)} isMobile />
@@ -550,6 +563,7 @@ export function Sidebar() {
   // Desktop: inline sidebar
   return (
     <motion.aside
+      data-testid="sidebar"
       initial={false}
       animate={{ width: sidebarCollapsed ? 64 : 240 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -563,6 +577,7 @@ export function Sidebar() {
       {/* Collapse toggle (desktop only) */}
       <button
         type="button"
+        data-testid="sidebar-collapse-toggle"
         onClick={toggleSidebar}
         className={cn(
           'absolute top-1/2 -translate-y-1/2 -right-3 z-20',

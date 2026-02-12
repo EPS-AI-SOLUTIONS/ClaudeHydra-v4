@@ -14,30 +14,7 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type { MarkdownWorkerRequest, MarkdownWorkerResponse } from '@/workers/markdownWorker';
-
-// ---------------------------------------------------------------------------
-// Content hashing (FNV-1a 32-bit) — fast, no crypto overhead
-// ---------------------------------------------------------------------------
-
-function fnv1a32(str: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
-}
-
-// ---------------------------------------------------------------------------
-// Lightweight sync fallback (mirrors worker pipeline)
-// ---------------------------------------------------------------------------
-
-function processMarkdownSync(raw: string): string {
-  let result = raw.trim().replace(/\n{3,}/g, '\n\n');
-  result = result.replace(/<\s*\/?\s*(script|iframe|object|embed|form)\b[^>]*>/gi, '');
-  result = result.replace(/^```\s*$/gm, '```text');
-  return result;
-}
+import { fnv1a32, processMarkdownSync } from '@/shared/utils/markdownUtils';
 
 // ---------------------------------------------------------------------------
 // Hook

@@ -194,6 +194,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     return (
       <section
+        data-testid="chat-input-area"
         className={cn('flex flex-col gap-2', className)}
         aria-label="Chat input area"
         onDrop={handleDrop}
@@ -273,6 +274,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
+              data-testid="chat-textarea"
               value={input}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
@@ -293,6 +295,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           {/* Send button */}
           <motion.button
             type="button"
+            data-testid="chat-send-btn"
             onClick={handleSend}
             disabled={!canSend}
             whileHover={canSend ? { scale: 1.05 } : undefined}

@@ -14,6 +14,8 @@ export { Input } from './Input';
 
 export { ProgressBar } from './ProgressBar';
 
+export { RuneRain } from './RuneRain';
+
 export { ScanLine } from './ScanLine';
 
 export { Skeleton } from './Skeleton';

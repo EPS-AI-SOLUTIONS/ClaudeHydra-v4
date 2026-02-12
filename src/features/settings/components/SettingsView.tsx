@@ -245,7 +245,7 @@ function ApiKeyField({ provider, state, onKeyChange, onEndpointChange, onTestCon
   const hasKey = state.apiKey.length > 0;
 
   return (
-    <div className="space-y-3 p-3 rounded-lg border border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)]/30">
+    <div data-testid={`settings-provider-${provider.id}`} className="space-y-3 p-3 rounded-lg border border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)]/30">
       {/* Provider Header */}
       <div className="flex items-center gap-2">
         <Icon size={16} className={provider.iconColor} />
@@ -336,7 +336,7 @@ function ThemeSelector({ currentMode, onModeChange }: ThemeSelectorProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div data-testid="settings-theme-selector" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {themes.map((theme) => {
         const ThemeIcon = theme.icon;
         const isActive = currentMode === theme.mode;
@@ -344,6 +344,7 @@ function ThemeSelector({ currentMode, onModeChange }: ThemeSelectorProps) {
           <motion.button
             key={theme.mode}
             type="button"
+            data-testid={`settings-theme-${theme.mode}`}
             onClick={() => onModeChange(theme.mode)}
             className={cn(
               'flex flex-col items-center gap-2 p-4 rounded-lg border transition-all text-center',
@@ -475,7 +476,7 @@ export function SettingsView() {
   }, [settings.providers]);
 
   return (
-    <div className="h-full flex flex-col overflow-auto p-4 sm:p-6">
+    <div data-testid="settings-view" className="h-full flex flex-col overflow-auto p-4 sm:p-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -488,7 +489,7 @@ export function SettingsView() {
             <Settings size={20} className="text-[var(--matrix-accent)]" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Settings</h2>
+            <h2 data-testid="settings-header" className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Settings</h2>
             <p className="text-xs text-[var(--matrix-text-secondary)]">
               Configure API keys, theme, and application preferences
             </p>
@@ -511,12 +512,14 @@ export function SettingsView() {
           <p className="text-xs text-[var(--matrix-text-secondary)] mb-3">
             Select the default AI model used for new chat sessions.
           </p>
-          <ModelSelector
-            models={[...DEFAULT_MODEL_OPTIONS]}
-            selectedId={settings.defaultModel}
-            onSelect={handleModelSelect}
-            placeholder="Select default model..."
-          />
+          <div data-testid="settings-model-selector">
+            <ModelSelector
+              models={[...DEFAULT_MODEL_OPTIONS]}
+              selectedId={settings.defaultModel}
+              onSelect={handleModelSelect}
+              placeholder="Select default model..."
+            />
+          </div>
         </CollapsibleSection>
 
         {/* ============================================ */}
@@ -535,6 +538,7 @@ export function SettingsView() {
             </div>
             <motion.button
               type="button"
+              data-testid="settings-auto-start-toggle"
               onClick={handleAutoStartToggle}
               className={cn(
                 'relative w-14 h-7 rounded-full border transition-colors',
@@ -617,7 +621,7 @@ export function SettingsView() {
           transition={{ duration: 0.2, delay: 0.15 }}
         >
           <Card variant="glass" padding="md">
-            <h3 className="text-sm font-semibold text-[var(--matrix-text-primary)] mb-2">About</h3>
+            <h3 data-testid="settings-about" className="text-sm font-semibold text-[var(--matrix-text-primary)] mb-2">About</h3>
             <div className="text-xs text-[var(--matrix-text-secondary)] space-y-1">
               <p>ClaudeHydra v4.0.0</p>
               <p>AI Swarm Control Center -- Witcher Edition</p>

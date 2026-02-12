@@ -130,11 +130,12 @@ export function HomePage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-grid-pattern p-6 md:p-8 overflow-auto">
+    <div data-testid="home-view" className="flex flex-col items-center justify-center h-full bg-grid-pattern p-6 md:p-8 overflow-auto">
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        data-testid="home-glass-card"
         className="glass-card max-w-2xl w-full p-8 text-center space-y-6"
       >
         {/* Logo + Title */}
@@ -145,23 +146,23 @@ export function HomePage() {
           >
             <Zap className="w-7 h-7 text-[var(--matrix-bg-primary)]" />
           </motion.div>
-          <h1 className="text-3xl font-bold text-[var(--matrix-accent)] text-glow font-mono">ClaudeHydra</h1>
+          <h1 data-testid="home-title" className="text-3xl font-bold text-[var(--matrix-accent)] text-glow font-mono">ClaudeHydra</h1>
         </motion.div>
 
         {/* Subtitle */}
-        <motion.p variants={itemVariants} className="text-[var(--matrix-text-secondary)] text-sm">
+        <motion.p data-testid="home-subtitle" variants={itemVariants} className="text-[var(--matrix-text-secondary)] text-sm">
           AI Swarm Control Center
         </motion.p>
 
         {/* Version badge */}
-        <motion.div variants={itemVariants}>
+        <motion.div data-testid="home-version-badge" variants={itemVariants}>
           <Badge variant="accent" size="sm" icon={<Zap size={10} />}>
             v4.0.0
           </Badge>
         </motion.div>
 
         {/* Feature badges */}
-        <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-2">
+        <motion.div data-testid="home-feature-badges" variants={itemVariants} className="flex flex-wrap justify-center gap-2">
           {FEATURE_BADGES.map((badge) => (
             <Badge key={badge.label} variant="default" size="sm" icon={badge.icon}>
               {badge.label}
@@ -170,7 +171,7 @@ export function HomePage() {
         </motion.div>
 
         {/* Feature cards grid */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+        <motion.div data-testid="home-feature-cards" variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
           {FEATURE_CARDS.map((card) => (
             <FeatureCard key={card.title} icon={card.icon} title={card.title} description={card.description} />
           ))}
@@ -178,13 +179,13 @@ export function HomePage() {
 
         {/* CTA buttons */}
         <motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-3 mt-6">
-          <Button variant="primary" size="md" leftIcon={<MessageSquare size={16} />} onClick={handleStartChat}>
+          <Button data-testid="home-cta-start-chat" variant="primary" size="md" leftIcon={<MessageSquare size={16} />} onClick={handleStartChat}>
             Start Chat
           </Button>
-          <Button variant="secondary" size="md" leftIcon={<Users size={16} />} onClick={handleViewAgents}>
+          <Button data-testid="home-cta-view-agents" variant="secondary" size="md" leftIcon={<Users size={16} />} onClick={handleViewAgents}>
             View Agents
           </Button>
-          <Button variant="ghost" size="md" leftIcon={<Settings size={16} />} onClick={handleSettings}>
+          <Button data-testid="home-cta-settings" variant="ghost" size="md" leftIcon={<Settings size={16} />} onClick={handleSettings}>
             Settings
           </Button>
         </motion.div>
