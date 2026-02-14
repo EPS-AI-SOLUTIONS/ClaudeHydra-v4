@@ -8,21 +8,15 @@ use sysinfo::System;
 use tokio_stream::StreamExt;
 
 use crate::models::*;
-use crate::state::SharedState;
+use crate::state::AppState;
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Health & System
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn health_check(State(state): State<SharedState>) -> Json<Value> {
-    let (uptime, has_anthropic, has_google) = {
-        let st = state.lock().unwrap();
-        (
-            st.start_time.elapsed().as_secs(),
-            st.api_keys.contains_key("ANTHROPIC_API_KEY"),
-            st.api_keys.contains_key("GOOGLE_API_KEY"),
-        )
-    };
+pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
+    let uptime = state.start_time.elapsed().as_secs();
+    let rt = state.runtime.read().await;
 
     let resp = HealthResponse {
         status: "ok".to_string(),
@@ -32,11 +26,11 @@ pub async fn health_check(State(state): State<SharedState>) -> Json<Value> {
         providers: vec![
             ProviderInfo {
                 name: "anthropic".to_string(),
-                available: has_anthropic,
+                available: rt.api_keys.contains_key("ANTHROPIC_API_KEY"),
             },
             ProviderInfo {
                 name: "google".to_string(),
-                available: has_google,
+                available: rt.api_keys.contains_key("GOOGLE_API_KEY"),
             },
         ],
     };
@@ -78,9 +72,8 @@ pub async fn system_stats() -> Json<Value> {
 //  Agents
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn list_agents(State(state): State<SharedState>) -> Json<Value> {
-    let st = state.lock().unwrap();
-    Json(serde_json::to_value(&st.agents).unwrap())
+pub async fn list_agents(State(state): State<AppState>) -> Json<Value> {
+    Json(serde_json::to_value(&state.agents).unwrap())
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -118,13 +111,12 @@ pub async fn claude_models() -> Json<Value> {
 
 /// POST /api/claude/chat — non-streaming Claude request
 pub async fn claude_chat(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Json(req): Json<ChatRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let (api_key, client) = {
-        let st = state.lock().unwrap();
-        let key = st
-            .api_keys
+    let api_key = {
+        let rt = state.runtime.read().await;
+        rt.api_keys
             .get("ANTHROPIC_API_KEY")
             .cloned()
             .ok_or_else(|| {
@@ -132,8 +124,7 @@ pub async fn claude_chat(
                     StatusCode::BAD_REQUEST,
                     Json(json!({ "error": "ANTHROPIC_API_KEY not configured" })),
                 )
-            })?;
-        (key, st.client.clone())
+            })?
     };
 
     let model = req
@@ -157,7 +148,8 @@ pub async fn claude_chat(
         body["temperature"] = json!(temp);
     }
 
-    let resp = client
+    let resp = state
+        .client
         .post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", &api_key)
         .header("anthropic-version", "2023-06-01")
@@ -232,7 +224,7 @@ pub async fn claude_chat(
             role: "assistant".to_string(),
             content,
             model: Some(response_model.clone()),
-            timestamp: Some(now_iso8601()),
+            timestamp: Some(chrono::Utc::now().to_rfc3339()),
         },
         model: response_model,
         usage,
@@ -254,13 +246,12 @@ pub async fn claude_chat(
 /// {"token":"","done":true,"model":"claude-sonnet-4-5-20250929","total_tokens":42}
 /// ```
 pub async fn claude_chat_stream(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Json(req): Json<ChatRequest>,
 ) -> Result<Response, (StatusCode, Json<Value>)> {
-    let (api_key, client) = {
-        let st = state.lock().unwrap();
-        let key = st
-            .api_keys
+    let api_key = {
+        let rt = state.runtime.read().await;
+        rt.api_keys
             .get("ANTHROPIC_API_KEY")
             .cloned()
             .ok_or_else(|| {
@@ -268,8 +259,7 @@ pub async fn claude_chat_stream(
                     StatusCode::BAD_REQUEST,
                     Json(json!({ "error": "ANTHROPIC_API_KEY not configured" })),
                 )
-            })?;
-        (key, st.client.clone())
+            })?
     };
 
     let model = req
@@ -295,7 +285,8 @@ pub async fn claude_chat_stream(
         body["temperature"] = json!(temp);
     }
 
-    let resp = client
+    let resp = state
+        .client
         .post("https://api.anthropic.com/v1/messages")
         .header("x-api-key", &api_key)
         .header("anthropic-version", "2023-06-01")
@@ -429,165 +420,254 @@ pub async fn claude_chat_stream(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Settings
+//  Settings (DB-backed)
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn get_settings(State(state): State<SharedState>) -> Json<Value> {
-    let st = state.lock().unwrap();
-    Json(serde_json::to_value(&st.settings).unwrap())
+pub async fn get_settings(
+    State(state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    let row = sqlx::query_as::<_, SettingsRow>(
+        "SELECT theme, language, default_model, auto_start FROM ch_settings WHERE id = 1",
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch settings: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let settings = AppSettings {
+        theme: row.theme,
+        language: row.language,
+        default_model: row.default_model,
+        auto_start: row.auto_start,
+    };
+
+    Ok(Json(serde_json::to_value(settings).unwrap()))
 }
 
 pub async fn update_settings(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Json(new_settings): Json<AppSettings>,
-) -> Json<Value> {
-    let mut st = state.lock().unwrap();
-    st.settings = new_settings;
-    Json(serde_json::to_value(&st.settings).unwrap())
+) -> Result<Json<Value>, StatusCode> {
+    sqlx::query(
+        "UPDATE ch_settings SET theme = $1, language = $2, default_model = $3, \
+         auto_start = $4, updated_at = NOW() WHERE id = 1",
+    )
+    .bind(&new_settings.theme)
+    .bind(&new_settings.language)
+    .bind(&new_settings.default_model)
+    .bind(new_settings.auto_start)
+    .execute(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to update settings: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(serde_json::to_value(&new_settings).unwrap()))
 }
 
 pub async fn set_api_key(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Json(req): Json<ApiKeyRequest>,
 ) -> Json<Value> {
-    let mut st = state.lock().unwrap();
-    st.api_keys.insert(req.provider.clone(), req.key);
+    let mut rt = state.runtime.write().await;
+    rt.api_keys.insert(req.provider.clone(), req.key);
     Json(json!({ "status": "ok", "provider": req.provider }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Sessions & History
+//  Sessions & History (DB-backed)
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn list_sessions(State(state): State<SharedState>) -> Json<Value> {
-    let st = state.lock().unwrap();
-    let summaries: Vec<SessionSummary> = st
-        .sessions
-        .iter()
-        .map(|s| SessionSummary {
-            id: s.id.clone(),
-            title: s.title.clone(),
-            created_at: s.created_at.clone(),
-            message_count: s.messages.len(),
+pub async fn list_sessions(
+    State(state): State<AppState>,
+) -> Result<Json<Value>, StatusCode> {
+    let rows = sqlx::query_as::<_, SessionSummaryRow>(
+        "SELECT s.id, s.title, s.created_at, \
+         (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
+         FROM ch_sessions s ORDER BY s.updated_at DESC",
+    )
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to list sessions: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let summaries: Vec<SessionSummary> = rows
+        .into_iter()
+        .map(|r| SessionSummary {
+            id: r.id.to_string(),
+            title: r.title,
+            created_at: r.created_at.to_rfc3339(),
+            message_count: r.message_count as usize,
         })
         .collect();
-    Json(serde_json::to_value(summaries).unwrap())
+
+    Ok(Json(serde_json::to_value(summaries).unwrap()))
 }
 
 pub async fn create_session(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Json(req): Json<CreateSessionRequest>,
-) -> (StatusCode, Json<Value>) {
+) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    let row = sqlx::query_as::<_, SessionRow>(
+        "INSERT INTO ch_sessions (title) VALUES ($1) \
+         RETURNING id, title, created_at, updated_at",
+    )
+    .bind(&req.title)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create session: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     let session = Session {
-        id: uuid::Uuid::new_v4().to_string(),
-        title: req.title,
-        created_at: now_iso8601(),
+        id: row.id.to_string(),
+        title: row.title,
+        created_at: row.created_at.to_rfc3339(),
         messages: Vec::new(),
     };
 
-    let mut st = state.lock().unwrap();
-    st.current_session_id = Some(session.id.clone());
-    st.sessions.push(session.clone());
-
-    (
+    Ok((
         StatusCode::CREATED,
         Json(serde_json::to_value(session).unwrap()),
-    )
+    ))
 }
 
 pub async fn get_session(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
-    let st = state.lock().unwrap();
-    let session = st.sessions.iter().find(|s| s.id == id).cloned();
-    match session {
-        Some(s) => Ok(Json(serde_json::to_value(s).unwrap())),
-        None => Err(StatusCode::NOT_FOUND),
-    }
+    let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let session_row = sqlx::query_as::<_, SessionRow>(
+        "SELECT id, title, created_at, updated_at FROM ch_sessions WHERE id = $1",
+    )
+    .bind(session_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get session: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .ok_or(StatusCode::NOT_FOUND)?;
+
+    let message_rows = sqlx::query_as::<_, MessageRow>(
+        "SELECT id, session_id, role, content, model, agent, created_at \
+         FROM ch_messages WHERE session_id = $1 ORDER BY created_at ASC",
+    )
+    .bind(session_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get session messages: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let messages: Vec<HistoryEntry> = message_rows
+        .into_iter()
+        .map(|m| HistoryEntry {
+            id: m.id.to_string(),
+            role: m.role,
+            content: m.content,
+            model: m.model,
+            agent: m.agent,
+            timestamp: m.created_at.to_rfc3339(),
+        })
+        .collect();
+
+    let session = Session {
+        id: session_row.id.to_string(),
+        title: session_row.title,
+        created_at: session_row.created_at.to_rfc3339(),
+        messages,
+    };
+
+    Ok(Json(serde_json::to_value(session).unwrap()))
 }
 
 pub async fn delete_session(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
-    let mut st = state.lock().unwrap();
-    let idx = st.sessions.iter().position(|s| s.id == id);
-    match idx {
-        Some(i) => {
-            st.sessions.remove(i);
-            if st.current_session_id.as_deref() == Some(&id) {
-                st.current_session_id = None;
-            }
-            Ok(Json(json!({ "status": "deleted", "id": id })))
-        }
-        None => Err(StatusCode::NOT_FOUND),
+    let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let result = sqlx::query("DELETE FROM ch_sessions WHERE id = $1")
+        .bind(session_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete session: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if result.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
     }
+
+    Ok(Json(json!({ "status": "deleted", "id": id })))
 }
 
 pub async fn add_session_message(
-    State(state): State<SharedState>,
+    State(state): State<AppState>,
     Path(id): Path<String>,
     Json(req): Json<AddMessageRequest>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
-    let mut st = state.lock().unwrap();
-    let session = st.sessions.iter_mut().find(|s| s.id == id);
-    match session {
-        Some(s) => {
-            let entry = HistoryEntry {
-                id: uuid::Uuid::new_v4().to_string(),
-                role: req.role,
-                content: req.content,
-                model: req.model,
-                agent: req.agent,
-                timestamp: now_iso8601(),
-            };
-            s.messages.push(entry.clone());
-            Ok((
-                StatusCode::CREATED,
-                Json(serde_json::to_value(entry).unwrap()),
-            ))
-        }
-        None => Err(StatusCode::NOT_FOUND),
+    let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Verify session exists
+    let exists = sqlx::query("SELECT 1 FROM ch_sessions WHERE id = $1")
+        .bind(session_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to check session: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if exists.is_none() {
+        return Err(StatusCode::NOT_FOUND);
     }
-}
 
-// ═══════════════════════════════════════════════════════════════════════
-//  Helpers
-// ═══════════════════════════════════════════════════════════════════════
-
-/// Simple ISO-8601 UTC timestamp without pulling in the chrono crate.
-fn now_iso8601() -> String {
-    let dur = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default();
-    let secs = dur.as_secs();
-
-    let days = secs / 86400;
-    let time_of_day = secs % 86400;
-    let h = time_of_day / 3600;
-    let m = (time_of_day % 3600) / 60;
-    let s = time_of_day % 60;
-
-    let (year, month, day) = days_to_ymd(days);
-
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-        year, month, day, h, m, s
+    let row = sqlx::query_as::<_, MessageRow>(
+        "INSERT INTO ch_messages (session_id, role, content, model, agent) \
+         VALUES ($1, $2, $3, $4, $5) \
+         RETURNING id, session_id, role, content, model, agent, created_at",
     )
-}
+    .bind(session_id)
+    .bind(&req.role)
+    .bind(&req.content)
+    .bind(&req.model)
+    .bind(&req.agent)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to add message: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-fn days_to_ymd(days: u64) -> (u64, u64, u64) {
-    // Civil date algorithm (Howard Hinnant)
-    let z = days + 719468;
-    let era = z / 146097;
-    let doe = z - era * 146097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    (y, m, d)
+    // Update session's updated_at timestamp
+    sqlx::query("UPDATE ch_sessions SET updated_at = NOW() WHERE id = $1")
+        .bind(session_id)
+        .execute(&state.db)
+        .await
+        .ok();
+
+    let entry = HistoryEntry {
+        id: row.id.to_string(),
+        role: row.role,
+        content: row.content,
+        model: row.model,
+        agent: row.agent,
+        timestamp: row.created_at.to_rfc3339(),
+    };
+
+    Ok((
+        StatusCode::CREATED,
+        Json(serde_json::to_value(entry).unwrap()),
+    ))
 }

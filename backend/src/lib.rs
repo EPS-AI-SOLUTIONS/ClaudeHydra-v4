@@ -2,8 +2,6 @@ pub mod handlers;
 pub mod models;
 pub mod state;
 
-use std::sync::{Arc, Mutex};
-
 use axum::routing::{get, post};
 use axum::Router;
 
@@ -12,7 +10,7 @@ use state::AppState;
 /// Build the application router with the given shared state.
 /// Extracted from `main()` so integration tests can construct the app
 /// without binding to a network port.
-pub fn create_router(shared_state: Arc<Mutex<AppState>>) -> Router {
+pub fn create_router(state: AppState) -> Router {
     Router::new()
         // Health & system
         .route("/api/health", get(handlers::health_check))
@@ -46,5 +44,5 @@ pub fn create_router(shared_state: Arc<Mutex<AppState>>) -> Router {
             post(handlers::add_session_message),
         )
         // Shared state
-        .with_state(shared_state)
+        .with_state(state)
 }

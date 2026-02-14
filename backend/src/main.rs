@@ -1,18 +1,10 @@
-use std::sync::{Arc, Mutex};
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::state::AppState;
 
-fn build_app() -> axum::Router {
-    let shared_state = Arc::new(Mutex::new(AppState::new()));
-
-    tracing::info!(
-        "Initialised {} Witcher agents",
-        shared_state.lock().unwrap().agents.len()
-    );
-
+fn build_app(state: AppState) -> axum::Router {
     // CORS — allow Vite dev server + Vercel production
     let cors = CorsLayer::new()
         .allow_origin([
@@ -26,7 +18,7 @@ fn build_app() -> axum::Router {
         .allow_methods(tower_http::cors::Any)
         .allow_headers(tower_http::cors::Any);
 
-    claudehydra_backend::create_router(shared_state)
+    claudehydra_backend::create_router(state)
         .layer(cors)
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
         .layer(TraceLayer::new_for_http())
@@ -36,7 +28,21 @@ fn build_app() -> axum::Router {
 #[cfg(feature = "shuttle")]
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
-    Ok(build_app().into())
+    dotenvy::dotenv().ok();
+
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("DB connection failed");
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Migrations failed");
+
+    let state = AppState::new(pool);
+    Ok(build_app(state).into())
 }
 
 // ── Local development entry point ───────────────────────────────────
@@ -51,7 +57,19 @@ async fn main() -> anyhow::Result<()> {
 
     dotenvy::dotenv().ok();
 
-    let app = build_app();
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("DB connection failed");
+    sqlx::migrate!("./migrations")
+        .run(&pool)
+        .await
+        .expect("Migrations failed");
+
+    let state = AppState::new(pool);
+    let app = build_app(state);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| "8082".to_string())

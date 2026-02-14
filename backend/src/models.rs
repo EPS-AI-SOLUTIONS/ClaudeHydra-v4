@@ -1,5 +1,42 @@
 use serde::{Deserialize, Serialize};
 
+// ── DB row types ────────────────────────────────────────────────────────
+
+#[derive(sqlx::FromRow)]
+pub struct SettingsRow {
+    pub theme: String,
+    pub language: String,
+    pub default_model: String,
+    pub auto_start: bool,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct SessionRow {
+    pub id: uuid::Uuid,
+    pub title: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct SessionSummaryRow {
+    pub id: uuid::Uuid,
+    pub title: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub message_count: i64,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct MessageRow {
+    pub id: uuid::Uuid,
+    pub session_id: uuid::Uuid,
+    pub role: String,
+    pub content: String,
+    pub model: Option<String>,
+    pub agent: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
 // ── Agent ───────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

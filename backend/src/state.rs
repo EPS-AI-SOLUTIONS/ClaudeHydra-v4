@@ -1,23 +1,29 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Instant;
 
-use crate::models::{AppSettings, Session, WitcherAgent};
+use sqlx::PgPool;
+use tokio::sync::RwLock;
 
-pub type SharedState = Arc<Mutex<AppState>>;
+use crate::models::WitcherAgent;
 
-pub struct AppState {
-    pub settings: AppSettings,
-    pub agents: Vec<WitcherAgent>,
-    pub sessions: Vec<Session>,
-    pub current_session_id: Option<String>,
+/// Mutable runtime state (not persisted — lost on restart).
+pub struct RuntimeState {
     pub api_keys: HashMap<String, String>,
+}
+
+/// Central application state. Clone-friendly — PgPool and Arc are both Clone.
+#[derive(Clone)]
+pub struct AppState {
+    pub db: PgPool,
+    pub agents: Vec<WitcherAgent>,
+    pub runtime: Arc<RwLock<RuntimeState>>,
     pub start_time: Instant,
     pub client: reqwest::Client,
 }
 
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(db: PgPool) -> Self {
         let mut api_keys = HashMap::new();
         if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
             api_keys.insert("ANTHROPIC_API_KEY".to_string(), key);
@@ -26,21 +32,18 @@ impl AppState {
             api_keys.insert("GOOGLE_API_KEY".to_string(), key);
         }
 
-        let settings = AppSettings {
-            theme: "dark".to_string(),
-            language: "en".to_string(),
-            default_model: "claude-sonnet-4-5-20250929".to_string(),
-            auto_start: false,
-        };
-
         let agents = init_witcher_agents();
 
+        tracing::info!(
+            "AppState initialised — {} agents, keys: {:?}",
+            agents.len(),
+            api_keys.keys().collect::<Vec<_>>()
+        );
+
         Self {
-            settings,
+            db,
             agents,
-            sessions: Vec::new(),
-            current_session_id: None,
-            api_keys,
+            runtime: Arc::new(RwLock::new(RuntimeState { api_keys })),
             start_time: Instant::now(),
             client: reqwest::Client::new(),
         }
