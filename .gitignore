@@ -24,3 +24,15 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Claude/Serena local config
+.claude/
+
+# Playwright artifacts
+playwright-report/
+test-results/
