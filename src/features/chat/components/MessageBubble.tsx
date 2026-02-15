@@ -14,6 +14,7 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from '@/components/molecules/CodeBlock';
 import { cn } from '@/shared/utils/cn';
+import { type ToolInteraction, ToolCallBlock } from './ToolCallBlock';
 
 // ---------------------------------------------------------------------------
 // Helper: extract plain text from React children (handles rehype-highlight spans)
@@ -49,6 +50,7 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   attachments?: MessageAttachment[];
+  toolInteractions?: ToolInteraction[];
   timestamp: Date;
   model?: string;
   streaming?: boolean;
@@ -223,6 +225,15 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
                 )}
                 <span className="truncate max-w-[100px]">{att.name}</span>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Tool interactions (before text content) */}
+        {message.toolInteractions && message.toolInteractions.length > 0 && (
+          <div className="mb-2">
+            {message.toolInteractions.map((ti) => (
+              <ToolCallBlock key={ti.id} interaction={ti} />
             ))}
           </div>
         )}

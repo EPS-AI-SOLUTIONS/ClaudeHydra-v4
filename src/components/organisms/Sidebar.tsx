@@ -585,16 +585,17 @@ export function Sidebar() {
         data-testid="sidebar-collapse-toggle"
         onClick={toggleSidebar}
         className={cn(
-          'absolute top-1/2 -translate-y-1/2 -right-3 z-20',
-          'w-6 h-6 rounded-full flex items-center justify-center',
+          'absolute top-1/2 -translate-y-1/2 -right-4 z-20',
+          'w-9 h-9 rounded-full flex items-center justify-center',
           'bg-[var(--matrix-bg-secondary)] border border-[var(--matrix-border)]',
           'text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)]',
-          'hover:border-[var(--matrix-accent)] transition-colors',
-          'shadow-sm',
+          'hover:border-[var(--matrix-accent)] hover:shadow-[0_0_12px_rgba(255,255,255,0.15)]',
+          'backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
+          'shadow-lg',
         )}
         title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
-        {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        {sidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
       </button>
     </motion.aside>
   );

@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use tokio::sync::RwLock;
 
 use crate::models::WitcherAgent;
+use crate::tools::ToolExecutor;
 
 /// Mutable runtime state (not persisted — lost on restart).
 pub struct RuntimeState {
@@ -20,6 +21,7 @@ pub struct AppState {
     pub runtime: Arc<RwLock<RuntimeState>>,
     pub start_time: Instant,
     pub client: reqwest::Client,
+    pub tool_executor: Arc<ToolExecutor>,
 }
 
 impl AppState {
@@ -46,6 +48,7 @@ impl AppState {
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys })),
             start_time: Instant::now(),
             client: reqwest::Client::new(),
+            tool_executor: Arc::new(ToolExecutor::new()),
         }
     }
 }

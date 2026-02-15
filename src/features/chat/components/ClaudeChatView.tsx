@@ -1,12 +1,12 @@
 /**
  * ClaudeChatView — Full chat interface for Claude API with NDJSON streaming.
  *
- * Replaces OllamaChatView. Uses static Claude model list,
- * streams via /api/claude/chat/stream (NDJSON protocol),
- * and sends a hidden system message to each agent.
+ * Supports agentic tool_use loop: when tools are enabled, Claude can invoke
+ * local file tools (read, list, write, search) and results are displayed
+ * inline as collapsible ToolCallBlock panels.
  */
 
-import { Bot, Trash2 } from 'lucide-react';
+import { Bot, Trash2, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
@@ -14,6 +14,7 @@ import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSel
 import { cn } from '@/shared/utils/cn';
 import { type Attachment, ChatInput } from './ChatInput';
 import { type ChatMessage, MessageBubble } from './MessageBubble';
+import type { ToolInteraction } from './ToolCallBlock';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -27,12 +28,20 @@ interface ClaudeModel {
   available: boolean;
 }
 
-interface StreamChunk {
-  id: string;
-  token: string;
-  done: boolean;
+/** Extended NDJSON chunk — may be a text token, tool_call, or tool_result. */
+interface NdjsonEvent {
+  // Text token (backward-compatible)
+  token?: string;
+  done?: boolean;
   model?: string;
   total_tokens?: number;
+  // Extended tool events
+  type?: 'tool_call' | 'tool_result';
+  tool_use_id?: string;
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+  result?: string;
+  is_error?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +80,8 @@ const SYSTEM_PROMPT = [
   '- Executor (Lambert, Eskel, Regis, Zoltan, Philippa) → Claude Haiku 4.5',
   '',
   'You assist the user with software engineering tasks.',
+  'You have access to local file tools (read_file, list_directory, write_file, search_in_files).',
+  'Use them proactively when the user asks about files or code.',
   'Respond concisely and helpfully. Use markdown formatting when appropriate.',
 ].join('\n');
 
@@ -91,15 +102,13 @@ async function claudeHealthCheck(): Promise<boolean> {
 }
 
 /**
- * NDJSON streaming chat — reads newline-delimited JSON from backend.
- * Backend translates Anthropic SSE into NDJSON:
- * {"token":"text","done":false}
- * {"token":"","done":true,"model":"...","total_tokens":42}
+ * Extended NDJSON streaming — yields text tokens, tool_call, and tool_result events.
  */
 async function* claudeStreamChat(
   model: string,
   messages: Array<{ role: string; content: string }>,
-): AsyncGenerator<StreamChunk> {
+  toolsEnabled: boolean,
+): AsyncGenerator<NdjsonEvent> {
   const res = await fetch('/api/claude/chat/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -108,6 +117,7 @@ async function* claudeStreamChat(
       messages,
       max_tokens: 4096,
       stream: true,
+      tools_enabled: toolsEnabled,
     }),
   });
 
@@ -135,14 +145,8 @@ async function* claudeStreamChat(
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
-        const chunk: { token?: string; done?: boolean; model?: string; total_tokens?: number } = JSON.parse(line);
-        yield {
-          id: crypto.randomUUID(),
-          token: chunk.token ?? '',
-          done: chunk.done ?? false,
-          model: chunk.model,
-          total_tokens: chunk.total_tokens,
-        };
+        const event: NdjsonEvent = JSON.parse(line);
+        yield event;
       } catch {
         // Ignore NDJSON parse errors on partial lines
       }
@@ -200,6 +204,9 @@ export function ClaudeChatView() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Tools toggle
+  const [toolsEnabled, setToolsEnabled] = useState(true);
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -256,7 +263,7 @@ export function ClaudeChatView() {
     setIsLoading(false);
   }, []);
 
-  // ----- Send message with streaming ---------------------------------------
+  // ----- Send message with streaming (extended for tool events) ------------
 
   const handleSend = useCallback(
     async (text: string, attachments: Attachment[]) => {
@@ -292,6 +299,7 @@ export function ClaudeChatView() {
         id: crypto.randomUUID(),
         role: 'assistant',
         content: '',
+        toolInteractions: [],
         timestamp: new Date(),
         model: selectedModel,
         streaming: true,
@@ -314,27 +322,79 @@ export function ClaudeChatView() {
 
         responseBufferRef.current = '';
 
-        for await (const chunk of claudeStreamChat(selectedModel, chatHistory)) {
-          responseBufferRef.current += chunk.token;
+        for await (const event of claudeStreamChat(selectedModel, chatHistory, toolsEnabled)) {
+          // Dispatch based on event type
+          if (event.type === 'tool_call') {
+            // Add a new ToolInteraction in running state
+            const ti: ToolInteraction = {
+              id: event.tool_use_id ?? crypto.randomUUID(),
+              toolName: event.tool_name ?? 'unknown',
+              toolInput: event.tool_input ?? {},
+              status: 'running',
+            };
 
-          setMessages((prev) => {
-            const lastMsg = prev[prev.length - 1];
-            if (lastMsg?.streaming) {
-              return [
-                ...prev.slice(0, -1),
-                {
-                  ...lastMsg,
-                  content: lastMsg.content + chunk.token,
-                  streaming: !chunk.done,
-                },
-              ];
+            setMessages((prev) => {
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.streaming) {
+                return [
+                  ...prev.slice(0, -1),
+                  {
+                    ...lastMsg,
+                    toolInteractions: [...(lastMsg.toolInteractions ?? []), ti],
+                  },
+                ];
+              }
+              return prev;
+            });
+          } else if (event.type === 'tool_result') {
+            // Update existing ToolInteraction with result
+            const toolUseId = event.tool_use_id;
+            setMessages((prev) => {
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.streaming && lastMsg.toolInteractions) {
+                const updatedInteractions = lastMsg.toolInteractions.map((ti) =>
+                  ti.id === toolUseId
+                    ? {
+                        ...ti,
+                        result: event.result,
+                        isError: event.is_error,
+                        status: (event.is_error ? 'error' : 'completed') as ToolInteraction['status'],
+                      }
+                    : ti,
+                );
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastMsg, toolInteractions: updatedInteractions },
+                ];
+              }
+              return prev;
+            });
+          } else {
+            // Text token (backward-compatible)
+            const token = event.token ?? '';
+            if (token) {
+              responseBufferRef.current += token;
             }
-            return prev;
-          });
 
-          if (chunk.done) {
-            setIsLoading(false);
-            responseBufferRef.current = '';
+            setMessages((prev) => {
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.streaming) {
+                return [
+                  ...prev.slice(0, -1),
+                  {
+                    ...lastMsg,
+                    content: lastMsg.content + token,
+                    streaming: !event.done,
+                  },
+                ];
+              }
+              return prev;
+            });
+
+            if (event.done) {
+              setIsLoading(false);
+              responseBufferRef.current = '';
+            }
           }
         }
       } catch (err) {
@@ -356,7 +416,7 @@ export function ClaudeChatView() {
         setIsLoading(false);
       }
     },
-    [selectedModel, isLoading, messages],
+    [selectedModel, isLoading, messages, toolsEnabled],
   );
 
   // ----- Render -------------------------------------------------------------
@@ -382,6 +442,18 @@ export function ClaudeChatView() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Tools toggle */}
+          <Button
+            variant={toolsEnabled ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setToolsEnabled((v) => !v)}
+            title={toolsEnabled ? 'File tools enabled' : 'File tools disabled'}
+            aria-label="Toggle file tools"
+            leftIcon={<Wrench size={14} />}
+          >
+            Tools
+          </Button>
+
           {/* Model selector */}
           <ModelSelector
             models={modelOptions}

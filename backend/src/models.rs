@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 // ── DB row types ────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ pub struct ChatRequest {
     pub temperature: Option<f64>,
     pub max_tokens: Option<u32>,
     pub stream: Option<bool>,
+    pub tools_enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,6 +144,8 @@ pub struct HistoryEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent: Option<String>,
     pub timestamp: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_interactions: Option<Vec<ToolInteractionInfo>>,
 }
 
 // ── Session ─────────────────────────────────────────────────────────────
@@ -176,6 +180,8 @@ pub struct AddMessageRequest {
     pub model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_interactions: Option<Vec<ToolInteractionInfo>>,
 }
 
 // ── System ──────────────────────────────────────────────────────────────
@@ -186,4 +192,72 @@ pub struct SystemStats {
     pub memory_used_mb: f64,
     pub memory_total_mb: f64,
     pub platform: String,
+}
+
+// ── Tool Use (Anthropic API) ────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolDefinition {
+    pub name: String,
+    pub description: String,
+    pub input_schema: Value,
+}
+
+/// Content block in an Anthropic message — text, tool_use, or tool_result.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ContentBlock {
+    #[serde(rename = "text")]
+    Text { text: String },
+    #[serde(rename = "tool_use")]
+    ToolUse {
+        id: String,
+        name: String,
+        input: Value,
+    },
+    #[serde(rename = "tool_result")]
+    ToolResult {
+        tool_use_id: String,
+        content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_error: Option<bool>,
+    },
+}
+
+/// A message in the Anthropic conversation format (supports mixed content).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnthropicMessage {
+    pub role: String,
+    pub content: AnthropicContent,
+}
+
+/// Content can be a plain string or a vec of content blocks.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AnthropicContent {
+    Text(String),
+    Blocks(Vec<ContentBlock>),
+}
+
+/// DB row for tool interactions.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ToolInteractionRow {
+    pub id: uuid::Uuid,
+    pub message_id: uuid::Uuid,
+    pub tool_use_id: String,
+    pub tool_name: String,
+    pub tool_input: Value,
+    pub result: Option<String>,
+    pub is_error: bool,
+    pub executed_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Serializable tool interaction for API responses.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolInteractionInfo {
+    pub tool_use_id: String,
+    pub tool_name: String,
+    pub tool_input: Value,
+    pub result: Option<String>,
+    pub is_error: bool,
 }

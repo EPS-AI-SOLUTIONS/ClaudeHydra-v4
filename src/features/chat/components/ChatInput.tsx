@@ -172,12 +172,23 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleKeyDown = useCallback(
       (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           handleSend();
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          const el = e.currentTarget;
+          const { selectionStart, selectionEnd } = el;
+          const newValue = input.substring(0, selectionStart) + '\n' + input.substring(selectionEnd);
+          setInput(newValue);
+          requestAnimationFrame(() => {
+            el.selectionStart = el.selectionEnd = selectionStart + 1;
+            el.style.height = 'auto';
+            el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+          });
         }
       },
-      [handleSend],
+      [handleSend, input],
     );
 
     // ----- Auto-resize textarea ------------------------------------------
