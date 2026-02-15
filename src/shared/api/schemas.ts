@@ -124,6 +124,7 @@ export const settingsSchema = z.object({
   max_tokens: z.number(),
   language: z.string(),
   theme: z.string(),
+  welcome_message: z.string().optional().default(''),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

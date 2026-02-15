@@ -828,7 +828,7 @@ pub async fn get_settings(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     let row = sqlx::query_as::<_, SettingsRow>(
-        "SELECT theme, language, default_model, auto_start FROM ch_settings WHERE id = 1",
+        "SELECT theme, language, default_model, auto_start, welcome_message FROM ch_settings WHERE id = 1",
     )
     .fetch_one(&state.db)
     .await
@@ -842,6 +842,7 @@ pub async fn get_settings(
         language: row.language,
         default_model: row.default_model,
         auto_start: row.auto_start,
+        welcome_message: row.welcome_message,
     };
 
     Ok(Json(serde_json::to_value(settings).unwrap()))
@@ -853,12 +854,13 @@ pub async fn update_settings(
 ) -> Result<Json<Value>, StatusCode> {
     sqlx::query(
         "UPDATE ch_settings SET theme = $1, language = $2, default_model = $3, \
-         auto_start = $4, updated_at = NOW() WHERE id = 1",
+         auto_start = $4, welcome_message = $5, updated_at = NOW() WHERE id = 1",
     )
     .bind(&new_settings.theme)
     .bind(&new_settings.language)
     .bind(&new_settings.default_model)
     .bind(new_settings.auto_start)
+    .bind(&new_settings.welcome_message)
     .execute(&state.db)
     .await
     .map_err(|e| {

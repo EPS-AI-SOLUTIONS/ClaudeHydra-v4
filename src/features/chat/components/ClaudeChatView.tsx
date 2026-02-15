@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
+import { useSettingsQuery } from '@/features/settings/hooks/useSettings';
 import { cn } from '@/shared/utils/cn';
 import { type Attachment, ChatInput } from './ChatInput';
 import { type ChatMessage, MessageBubble } from './MessageBubble';
@@ -206,6 +207,9 @@ export function ClaudeChatView() {
 
   // Tools toggle
   const [toolsEnabled, setToolsEnabled] = useState(true);
+
+  // Settings (for welcome message)
+  const { data: settings } = useSettingsQuery();
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -486,7 +490,20 @@ export function ClaudeChatView() {
         className={cn('flex-1 p-4 overflow-y-auto relative transition-all rounded-lg', 'scrollbar-thin')}
       >
         {messages.length === 0 ? (
-          <EmptyChatState />
+          settings?.welcome_message ? (
+            <div className="space-y-4">
+              <MessageBubble
+                message={{
+                  id: 'welcome',
+                  role: 'assistant',
+                  content: settings.welcome_message,
+                  timestamp: new Date(),
+                }}
+              />
+            </div>
+          ) : (
+            <EmptyChatState />
+          )
         ) : (
           <div className="space-y-4">
             <AnimatePresence initial={false}>

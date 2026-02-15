@@ -9,6 +9,7 @@ pub struct SettingsRow {
     pub language: String,
     pub default_model: String,
     pub auto_start: bool,
+    pub welcome_message: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -124,6 +125,7 @@ pub struct AppSettings {
     pub language: String,
     pub default_model: String,
     pub auto_start: bool,
+    pub welcome_message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
