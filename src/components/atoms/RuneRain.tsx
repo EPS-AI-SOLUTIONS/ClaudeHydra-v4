@@ -112,7 +112,5 @@ export function RuneRain({ opacity = 0.12 }: RuneRainProps) {
     };
   }, []);
 
-  return (
-    <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" style={{ opacity }} />
-  );
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" style={{ opacity }} />;
 }

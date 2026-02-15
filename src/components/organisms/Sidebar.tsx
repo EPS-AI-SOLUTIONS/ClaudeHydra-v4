@@ -187,6 +187,7 @@ function SessionItem({ session, isActive, collapsed, onSelect, onDelete, onRenam
 
   // Default: session row
   return (
+    // biome-ignore lint/a11y/useSemanticElements: SessionItem uses div with role="button" for complex layout with nested interactive elements
     <div
       role="button"
       tabIndex={0}
@@ -198,7 +199,12 @@ function SessionItem({ session, isActive, collapsed, onSelect, onDelete, onRenam
           : 'hover:bg-[rgba(255,255,255,0.08)] text-[var(--matrix-text-secondary)]',
       )}
       onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(); } }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -471,7 +477,10 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
         {/* Version */}
         {!collapsed && (
-          <p data-testid="sidebar-version" className="text-[10px] text-[var(--matrix-text-secondary)] text-center mt-2 font-mono opacity-50">
+          <p
+            data-testid="sidebar-version"
+            className="text-[10px] text-[var(--matrix-text-secondary)] text-center mt-2 font-mono opacity-50"
+          >
             v4.0.0
           </p>
         )}
@@ -566,10 +575,7 @@ export function Sidebar() {
       initial={false}
       animate={{ width: sidebarCollapsed ? 64 : 240 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className={cn(
-        'glass-panel-dark flex flex-col',
-        'h-full overflow-hidden relative',
-      )}
+      className={cn('glass-panel-dark flex flex-col', 'h-full overflow-hidden relative')}
     >
       <SidebarContent collapsed={sidebarCollapsed} />
 

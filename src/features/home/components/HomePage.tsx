@@ -6,17 +6,7 @@
  * Pixel-perfect port of GeminiHydra WelcomeScreen layout with ClaudeHydra data.
  */
 
-import {
-  Bot,
-  Clock,
-  Layers,
-  MessageSquare,
-  Network,
-  Plus,
-  Settings,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+import { Bot, Clock, Layers, MessageSquare, Network, Plus, Settings, Sparkles, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo } from 'react';
 
@@ -234,7 +224,14 @@ export const HomePage = memo(() => {
           initial="hidden"
           animate="visible"
         >
-          <Button variant="primary" size="md" leftIcon={<Plus size={16} />} onClick={handleNewChat} className="w-full" data-testid="btn-new-chat">
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Plus size={16} />}
+            onClick={handleNewChat}
+            className="w-full"
+            data-testid="btn-new-chat"
+          >
             Start Chat
           </Button>
           <Button
@@ -275,12 +272,7 @@ export const HomePage = memo(() => {
 
             <div className="space-y-2">
               {recentSessions.map((session) => (
-                <SessionRow
-                  key={session.id}
-                  session={session}
-                  onOpen={handleOpenSession}
-                  theme={theme}
-                />
+                <SessionRow key={session.id} session={session} onOpen={handleOpenSession} theme={theme} />
               ))}
             </div>
           </motion.div>

@@ -185,6 +185,7 @@ export function CodeBlock({ code, language, showLineNumbers = false, maxHeight =
               aria-hidden="true"
             >
               {lines.map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: Line numbers are static, never reordered
                 <div key={i} className="leading-relaxed">
                   {i + 1}
                 </div>

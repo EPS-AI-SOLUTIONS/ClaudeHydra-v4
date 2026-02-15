@@ -143,9 +143,27 @@ const PROVIDERS: readonly ProviderConfig[] = [
 // ---------------------------------------------------------------------------
 
 const DEFAULT_MODEL_OPTIONS: readonly ModelOption[] = [
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', provider: 'anthropic', available: true, description: 'Commander tier' },
-  { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', provider: 'anthropic', available: true, description: 'Coordinator tier' },
-  { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', provider: 'anthropic', available: true, description: 'Executor tier' },
+  {
+    id: 'claude-opus-4-6',
+    name: 'Claude Opus 4.6',
+    provider: 'anthropic',
+    available: true,
+    description: 'Commander tier',
+  },
+  {
+    id: 'claude-sonnet-4-5-20250929',
+    name: 'Claude Sonnet 4.5',
+    provider: 'anthropic',
+    available: true,
+    description: 'Coordinator tier',
+  },
+  {
+    id: 'claude-haiku-4-5-20251001',
+    name: 'Claude Haiku 4.5',
+    provider: 'anthropic',
+    available: true,
+    description: 'Executor tier',
+  },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -232,7 +250,10 @@ function ApiKeyField({ provider, state, onKeyChange, onEndpointChange, onTestCon
   const hasKey = state.apiKey.length > 0;
 
   return (
-    <div data-testid={`settings-provider-${provider.id}`} className="space-y-3 p-3 rounded-lg border border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)]/30">
+    <div
+      data-testid={`settings-provider-${provider.id}`}
+      className="space-y-3 p-3 rounded-lg border border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)]/30"
+    >
       {/* Provider Header */}
       <div className="flex items-center gap-2">
         <Icon size={16} className={provider.iconColor} />
@@ -411,60 +432,65 @@ export function SettingsView() {
     }));
   }, []);
 
-  const handleTestConnection = useCallback(async (providerId: ProviderId) => {
-    setSettings((prev) => ({
-      ...prev,
-      providers: {
-        ...prev.providers,
-        [providerId]: {
-          ...prev.providers[providerId],
-          testing: true,
-          testResult: null,
+  const handleTestConnection = useCallback(
+    async (providerId: ProviderId) => {
+      setSettings((prev) => ({
+        ...prev,
+        providers: {
+          ...prev.providers,
+          [providerId]: {
+            ...prev.providers[providerId],
+            testing: true,
+            testResult: null,
+          },
         },
-      },
-    }));
+      }));
 
-    let result: 'success' | 'error' = 'error';
+      let result: 'success' | 'error' = 'error';
 
-    try {
-      if (providerId === 'claude') {
-        // Save the API key to backend, then check health
-        const provider = settings.providers[providerId];
-        if (provider.apiKey.length > 0) {
-          await fetch('/api/settings/api-key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider: 'ANTHROPIC_API_KEY', key: provider.apiKey }),
-          });
-          const healthRes = await fetch('/api/health');
-          if (healthRes.ok) {
-            const data = await healthRes.json();
-            const anthropic = data.providers?.find((p: { name: string; available: boolean }) => p.name === 'anthropic');
-            result = anthropic?.available ? 'success' : 'error';
+      try {
+        if (providerId === 'claude') {
+          // Save the API key to backend, then check health
+          const provider = settings.providers[providerId];
+          if (provider.apiKey.length > 0) {
+            await fetch('/api/settings/api-key', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ provider: 'ANTHROPIC_API_KEY', key: provider.apiKey }),
+            });
+            const healthRes = await fetch('/api/health');
+            if (healthRes.ok) {
+              const data = await healthRes.json();
+              const anthropic = data.providers?.find(
+                (p: { name: string; available: boolean }) => p.name === 'anthropic',
+              );
+              result = anthropic?.available ? 'success' : 'error';
+            }
           }
+        } else {
+          // For other providers, simulate test
+          const provider = settings.providers[providerId];
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          result = provider.apiKey.length > 0 ? 'success' : 'error';
         }
-      } else {
-        // For other providers, simulate test
-        const provider = settings.providers[providerId];
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        result = provider.apiKey.length > 0 ? 'success' : 'error';
+      } catch {
+        result = 'error';
       }
-    } catch {
-      result = 'error';
-    }
 
-    setSettings((prev) => ({
-      ...prev,
-      providers: {
-        ...prev.providers,
-        [providerId]: {
-          ...prev.providers[providerId],
-          testing: false,
-          testResult: result,
+      setSettings((prev) => ({
+        ...prev,
+        providers: {
+          ...prev.providers,
+          [providerId]: {
+            ...prev.providers[providerId],
+            testing: false,
+            testResult: result,
+          },
         },
-      },
-    }));
-  }, [settings.providers]);
+      }));
+    },
+    [settings.providers],
+  );
 
   // -- Model selection --
 
@@ -498,7 +524,12 @@ export function SettingsView() {
             <Settings size={20} className="text-[var(--matrix-accent)]" />
           </div>
           <div>
-            <h2 data-testid="settings-header" className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Settings</h2>
+            <h2
+              data-testid="settings-header"
+              className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle"
+            >
+              Settings
+            </h2>
             <p className="text-xs text-[var(--matrix-text-secondary)]">
               Configure API keys, theme, and application preferences
             </p>
@@ -630,7 +661,9 @@ export function SettingsView() {
           transition={{ duration: 0.2, delay: 0.15 }}
         >
           <Card variant="glass" padding="md">
-            <h3 data-testid="settings-about" className="text-sm font-semibold text-[var(--matrix-text-primary)] mb-2">About</h3>
+            <h3 data-testid="settings-about" className="text-sm font-semibold text-[var(--matrix-text-primary)] mb-2">
+              About
+            </h3>
             <div className="text-xs text-[var(--matrix-text-secondary)] space-y-1">
               <p>ClaudeHydra v4.0.0</p>
               <p>AI Swarm Control Center -- Claude Edition</p>

@@ -8,7 +8,7 @@
 
 import { Bot, Cpu, FileText, Image as ImageIcon, Loader2, User } from 'lucide-react';
 import { motion } from 'motion/react';
-import { type ReactNode, isValidElement, useMemo } from 'react';
+import { isValidElement, type ReactNode, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';

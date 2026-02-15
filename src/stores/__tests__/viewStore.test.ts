@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { useViewStore } from '../viewStore';
 
 // ---------------------------------------------------------------------------
@@ -142,8 +142,8 @@ describe('viewStore — createSession', () => {
     const id = act('createSession', 'My Chat') as string;
     const session = getState().chatSessions.find((s) => s.id === id);
     expect(session).toBeDefined();
-    expect(session!.title).toBe('My Chat');
-    expect(session!.messageCount).toBe(0);
+    expect(session?.title).toBe('My Chat');
+    expect(session?.messageCount).toBe(0);
   });
 
   it('sets the new session as activeSessionId', () => {
@@ -233,13 +233,13 @@ describe('viewStore — renameSession', () => {
 
   it('updates the updatedAt timestamp', () => {
     const id = act('createSession', 'Title') as string;
-    const before = getState().chatSessions.find((s) => s.id === id)!.updatedAt;
+    const before = getState().chatSessions.find((s) => s.id === id)?.updatedAt;
 
     // small delay so timestamp differs
     act('renameSession', id, 'Title v2');
-    const after = getState().chatSessions.find((s) => s.id === id)!.updatedAt;
+    const after = getState().chatSessions.find((s) => s.id === id)?.updatedAt;
 
-    expect(after).toBeGreaterThanOrEqual(before);
+    expect(after).toBeGreaterThanOrEqual(before as number);
   });
 
   it('does not affect other sessions', () => {

@@ -22,8 +22,8 @@
   --color-matrix-warning: #facc15;
   --color-matrix-success: #4ade80;
 
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 
   --shadow-matrix-glow: 0 0 20px rgba(255, 255, 255, 0.15);
   --shadow-matrix-glow-sm: 0 0 10px rgba(255, 255, 255, 0.1);
@@ -118,7 +118,7 @@ body {
 code,
 pre,
 .font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
 }
 
 /* Light mode body background */
@@ -565,7 +565,9 @@ pre,
 
 /* Border Glow */
 .border-glow {
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1), inset 0 0 10px rgba(255, 255, 255, 0.03);
+  box-shadow:
+    0 0 15px rgba(255, 255, 255, 0.1),
+    inset 0 0 10px rgba(255, 255, 255, 0.03);
 }
 
 /* Hide scrollbar */
@@ -751,32 +753,55 @@ pre,
    ANIMATIONS
    ============================================ */
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 5px var(--matrix-accent), 0 0 10px var(--matrix-accent);
+  0%,
+  100% {
+    box-shadow:
+      0 0 5px var(--matrix-accent),
+      0 0 10px var(--matrix-accent);
   }
   50% {
-    box-shadow: 0 0 10px var(--matrix-accent), 0 0 20px var(--matrix-accent), 0 0 30px var(--matrix-accent);
+    box-shadow:
+      0 0 10px var(--matrix-accent),
+      0 0 20px var(--matrix-accent),
+      0 0 30px var(--matrix-accent);
   }
 }
 
 @keyframes scan-line {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes scan-line-vertical {
-  0% { top: -2px; }
-  100% { top: 100%; }
+  0% {
+    top: -2px;
+  }
+  100% {
+    top: 100%;
+  }
 }
 
 @keyframes pulse-slow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .animate-pulse-slow {
@@ -798,29 +823,55 @@ pre,
 }
 
 @keyframes slideUp {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
-  0% { opacity: 0; transform: translateY(-10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes glow {
-  0% { box-shadow: 0 0 5px var(--matrix-accent-glow); }
-  100% { box-shadow: 0 0 20px var(--matrix-accent-glow); }
+  0% {
+    box-shadow: 0 0 5px var(--matrix-accent-glow);
+  }
+  100% {
+    box-shadow: 0 0 20px var(--matrix-accent-glow);
+  }
 }
 
 @keyframes indeterminate {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(150%); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(150%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .animate-slide-up {
@@ -834,8 +885,8 @@ pre,
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
   }
 }

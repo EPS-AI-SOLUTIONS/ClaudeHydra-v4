@@ -13,8 +13,8 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import type { MarkdownWorkerRequest, MarkdownWorkerResponse } from '@/workers/markdownWorker';
 import { fnv1a32, processMarkdownSync } from '@/shared/utils/markdownUtils';
+import type { MarkdownWorkerRequest, MarkdownWorkerResponse } from '@/workers/markdownWorker';
 
 // ---------------------------------------------------------------------------
 // Hook

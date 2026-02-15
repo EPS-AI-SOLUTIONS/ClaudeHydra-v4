@@ -10,6 +10,7 @@ fn build_app(state: AppState) -> axum::Router {
         .allow_origin([
             "http://localhost:5177".parse().unwrap(),
             "http://127.0.0.1:5177".parse().unwrap(),
+            "http://localhost:4173".parse().unwrap(),
             "https://claudehydra-v4.vercel.app".parse().unwrap(),
             "https://claudehydra-v4-pawelserkowskis-projects.vercel.app"
                 .parse()

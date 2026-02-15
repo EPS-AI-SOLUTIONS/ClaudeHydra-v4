@@ -36,9 +36,7 @@ export function StatusFooter({ status = 'healthy', language = 'en' }: StatusFoot
   return (
     <footer
       className={`px-6 py-2 border-t ${
-        isDark
-          ? 'border-white/10 bg-black/20 text-slate-400'
-          : 'border-slate-200/30 bg-white/20 text-slate-600'
+        isDark ? 'border-white/10 bg-black/20 text-slate-400' : 'border-slate-200/30 bg-white/20 text-slate-600'
       } text-xs flex items-center justify-between`}
     >
       <div className="flex items-center gap-4">

@@ -326,7 +326,12 @@ export function AgentsView() {
             <Users size={20} className="text-[var(--matrix-accent)]" />
           </div>
           <div>
-            <h2 data-testid="agents-header" className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Claude AI Agent Swarm</h2>
+            <h2
+              data-testid="agents-header"
+              className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle"
+            >
+              Claude AI Agent Swarm
+            </h2>
             <p data-testid="agents-online-count" className="text-xs text-[var(--matrix-text-secondary)]">
               {onlineCount} of {CLAUDE_AGENTS.length} agents online
             </p>

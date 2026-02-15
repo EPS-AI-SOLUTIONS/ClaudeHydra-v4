@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  healthSchema,
-  systemStatsSchema,
   agentSchema,
   agentsListSchema,
+  claudeChatResponseSchema,
   claudeModelSchema,
   claudeModelsSchema,
-  claudeChatResponseSchema,
-  usageSchema,
-  settingsSchema,
+  healthSchema,
   messageSchema,
-  sessionSummarySchema,
   sessionSchema,
+  sessionSummarySchema,
+  settingsSchema,
+  systemStatsSchema,
+  usageSchema,
 } from '../schemas';
 
 // ===========================================================================
@@ -134,8 +134,20 @@ describe('claudeModelsSchema', () => {
   it('parses array of Claude models', () => {
     const models = [
       { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
-      { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', tier: 'Coordinator', provider: 'anthropic', available: true },
-      { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', tier: 'Executor', provider: 'anthropic', available: true },
+      {
+        id: 'claude-sonnet-4-5-20250929',
+        name: 'Claude Sonnet 4.5',
+        tier: 'Coordinator',
+        provider: 'anthropic',
+        available: true,
+      },
+      {
+        id: 'claude-haiku-4-5-20251001',
+        name: 'Claude Haiku 4.5',
+        tier: 'Executor',
+        provider: 'anthropic',
+        available: true,
+      },
     ];
     expect(claudeModelsSchema.parse(models)).toHaveLength(3);
   });
@@ -169,8 +181,10 @@ describe('claudeChatResponseSchema', () => {
 // ===========================================================================
 describe('usageSchema', () => {
   it('parses valid usage', () => {
-    expect(usageSchema.parse({ input_tokens: 100, output_tokens: 200 }))
-      .toEqual({ input_tokens: 100, output_tokens: 200 });
+    expect(usageSchema.parse({ input_tokens: 100, output_tokens: 200 })).toEqual({
+      input_tokens: 100,
+      output_tokens: 200,
+    });
   });
 
   it('rejects missing output_tokens', () => {

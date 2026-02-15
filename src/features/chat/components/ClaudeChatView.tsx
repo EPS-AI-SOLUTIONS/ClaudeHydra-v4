@@ -41,8 +41,20 @@ interface StreamChunk {
 
 const CLAUDE_MODELS: ClaudeModel[] = [
   { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
-  { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5', tier: 'Coordinator', provider: 'anthropic', available: true },
-  { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5', tier: 'Executor', provider: 'anthropic', available: true },
+  {
+    id: 'claude-sonnet-4-5-20250929',
+    name: 'Claude Sonnet 4.5',
+    tier: 'Coordinator',
+    provider: 'anthropic',
+    available: true,
+  },
+  {
+    id: 'claude-haiku-4-5-20251001',
+    name: 'Claude Haiku 4.5',
+    tier: 'Executor',
+    provider: 'anthropic',
+    available: true,
+  },
 ];
 
 const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
@@ -123,8 +135,7 @@ async function* claudeStreamChat(
     for (const line of lines) {
       if (!line.trim()) continue;
       try {
-        const chunk: { token?: string; done?: boolean; model?: string; total_tokens?: number } =
-          JSON.parse(line);
+        const chunk: { token?: string; done?: boolean; model?: string; total_tokens?: number } = JSON.parse(line);
         yield {
           id: crypto.randomUUID(),
           token: chunk.token ?? '',
@@ -291,7 +302,10 @@ export function ClaudeChatView() {
         // Build history for context — include system prompt as first message
         const chatHistory: Array<{ role: string; content: string }> = [
           { role: 'user', content: SYSTEM_PROMPT },
-          { role: 'assistant', content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.' },
+          {
+            role: 'assistant',
+            content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.',
+          },
         ];
         for (const m of messages) {
           chatHistory.push({ role: m.role, content: m.content });
@@ -362,9 +376,7 @@ export function ClaudeChatView() {
           <div>
             <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">Claude Chat</h2>
             <p data-testid="chat-status-text" className="text-xs text-[var(--matrix-text-secondary)]">
-              {claudeConnected
-                ? `${CLAUDE_MODELS.length} models available`
-                : 'Offline — configure API key in Settings'}
+              {claudeConnected ? `${CLAUDE_MODELS.length} models available` : 'Offline — configure API key in Settings'}
             </p>
           </div>
         </div>

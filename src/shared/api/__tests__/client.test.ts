@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ApiError, apiGet, apiPost, apiPatch, apiDelete } from '../client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from '../client';
 
 // ---------------------------------------------------------------------------
 // In test env (jsdom, non-PROD) BASE_URL resolves to 'http://localhost:8082'
@@ -7,10 +7,7 @@ import { ApiError, apiGet, apiPost, apiPatch, apiDelete } from '../client';
 const BASE = 'http://localhost:8082';
 
 /** Helper — create a minimal Response-like object for the fetch mock. */
-function mockResponse(
-  body: unknown,
-  init: { status?: number; ok?: boolean; headers?: Record<string, string> } = {},
-) {
+function mockResponse(body: unknown, init: { status?: number; ok?: boolean; headers?: Record<string, string> } = {}) {
   const { status = 200, ok = status >= 200 && status < 300 } = init;
   const isJson = typeof body === 'object' && body !== null;
   const text = isJson ? JSON.stringify(body) : String(body ?? '');
@@ -67,9 +64,12 @@ describe('apiGet', () => {
 
     const result = await apiGet('/items/1');
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/items/1`, expect.objectContaining({
-      method: 'GET',
-    }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BASE}/items/1`,
+      expect.objectContaining({
+        method: 'GET',
+      }),
+    );
     expect(result).toEqual(data);
   });
 
@@ -113,10 +113,13 @@ describe('apiPost', () => {
 
     const result = await apiPost('/items', payload);
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/items`, expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BASE}/items`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    );
     expect(result).toEqual(response);
   });
 
@@ -125,9 +128,12 @@ describe('apiPost', () => {
 
     await apiPost('/action', null);
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/action`, expect.objectContaining({
-      body: 'null',
-    }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BASE}/action`,
+      expect.objectContaining({
+        body: 'null',
+      }),
+    );
   });
 
   it('throws ApiError on 422 validation error', async () => {
@@ -158,10 +164,13 @@ describe('apiPatch', () => {
 
     const result = await apiPatch('/items/1', payload);
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/items/1`, expect.objectContaining({
-      method: 'PATCH',
-      body: JSON.stringify(payload),
-    }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BASE}/items/1`,
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+    );
     expect(result).toEqual(response);
   });
 
@@ -189,9 +198,12 @@ describe('apiDelete', () => {
 
     const result = await apiDelete('/items/1');
 
-    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/items/1`, expect.objectContaining({
-      method: 'DELETE',
-    }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BASE}/items/1`,
+      expect.objectContaining({
+        method: 'DELETE',
+      }),
+    );
     expect(result).toEqual(response);
   });
 

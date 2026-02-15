@@ -4,12 +4,11 @@
 export type { Attachment, ChatInputHandle, ChatInputProps } from './components/ChatInput';
 
 export { ChatInput } from './components/ChatInput';
+export { ClaudeChatView } from './components/ClaudeChatView';
 export type {
   ChatMessage,
   MessageAttachment,
   MessageBubbleProps,
   MessageRole,
 } from './components/MessageBubble';
-
 export { MessageBubble } from './components/MessageBubble';
-export { ClaudeChatView } from './components/ClaudeChatView';

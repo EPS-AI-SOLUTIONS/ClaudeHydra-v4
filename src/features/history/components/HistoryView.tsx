@@ -349,8 +349,15 @@ export function HistoryView() {
               <Clock size={20} className="text-[var(--matrix-accent)]" />
             </div>
             <div>
-              <h2 data-testid="history-header" className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle">Approval History</h2>
-              <p data-testid="history-entry-count" className="text-xs text-[var(--matrix-text-secondary)]">{entries.length} total entries</p>
+              <h2
+                data-testid="history-header"
+                className="text-lg font-semibold text-[var(--matrix-accent)] text-glow-subtle"
+              >
+                Approval History
+              </h2>
+              <p data-testid="history-entry-count" className="text-xs text-[var(--matrix-text-secondary)]">
+                {entries.length} total entries
+              </p>
             </div>
           </div>
 
@@ -380,7 +387,13 @@ export function HistoryView() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button data-testid="history-sort-btn" variant="secondary" size="sm" onClick={toggleSortOrder} leftIcon={<ArrowDownUp size={14} />}>
+            <Button
+              data-testid="history-sort-btn"
+              variant="secondary"
+              size="sm"
+              onClick={toggleSortOrder}
+              leftIcon={<ArrowDownUp size={14} />}
+            >
               {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
             </Button>
           </div>
@@ -404,7 +417,13 @@ export function HistoryView() {
 
       {/* History List */}
       {displayEntries.length > 0 ? (
-        <motion.div data-testid="history-list" variants={listVariants} initial="hidden" animate="visible" className="space-y-3">
+        <motion.div
+          data-testid="history-list"
+          variants={listVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-3"
+        >
           <AnimatePresence mode="popLayout">
             {displayEntries.map((entry) => (
               <HistoryItem key={entry.id} entry={entry} onDelete={handleDelete} />
@@ -420,7 +439,11 @@ export function HistoryView() {
           className="flex-1 flex items-center justify-center"
         >
           <Card variant="glass" padding="lg" className="text-center max-w-sm">
-            <Clock data-testid="history-empty-state" size={48} className="mx-auto text-[var(--matrix-text-secondary)] opacity-20 mb-4" />
+            <Clock
+              data-testid="history-empty-state"
+              size={48}
+              className="mx-auto text-[var(--matrix-text-secondary)] opacity-20 mb-4"
+            />
             <p className="text-sm text-[var(--matrix-text-primary)] font-medium mb-2">No history entries</p>
             <p className="text-xs text-[var(--matrix-text-secondary)]">
               {entries.length === 0
