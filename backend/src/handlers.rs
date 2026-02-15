@@ -148,9 +148,13 @@ pub async fn claude_chat(
         body["temperature"] = json!(temp);
     }
 
+    // Route through local anthropic-max-router proxy (OAuth from Claude Max plan)
+    let api_url = std::env::var("ANTHROPIC_API_URL")
+        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+
     let resp = state
         .client
-        .post("https://api.anthropic.com/v1/messages")
+        .post(format!("{}/v1/messages", api_url))
         .header("x-api-key", &api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")
@@ -285,9 +289,13 @@ pub async fn claude_chat_stream(
         body["temperature"] = json!(temp);
     }
 
+    // Route through local anthropic-max-router proxy (OAuth from Claude Max plan)
+    let api_url = std::env::var("ANTHROPIC_API_URL")
+        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+
     let resp = state
         .client
-        .post("https://api.anthropic.com/v1/messages")
+        .post(format!("{}/v1/messages", api_url))
         .header("x-api-key", &api_key)
         .header("anthropic-version", "2023-06-01")
         .header("content-type", "application/json")

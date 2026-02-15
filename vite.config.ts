@@ -22,6 +22,16 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    port: 5199,
+    proxy: {
+      '/api': {
+        target: backendUrl,
+        changeOrigin: true,
+        secure: backendUrl.startsWith('https'),
+      },
+    },
+  },
   build: {
     target: 'esnext',
     sourcemap: true,
