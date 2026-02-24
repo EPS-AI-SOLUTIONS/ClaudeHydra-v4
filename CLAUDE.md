@@ -37,7 +37,7 @@
 - Stack: Rust + Axum 0.8 + SQLx + PostgreSQL 17
 - Route syntax: `{id}` (NOT `:id` — axum 0.8 breaking change)
 - Entry point: `backend/src/lib.rs` → `create_router()` builds all API routes
-- Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState), `models.rs`, `tools.rs`
+- Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState), `models.rs`, `tools.rs`, `model_registry.rs` (dynamic model discovery)
 - DB: `claudehydra` on localhost:5433 (user: claude, pass: claude_local)
 - Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions
 
@@ -64,6 +64,8 @@
 - SQLx sorts by filename prefix — each migration MUST have a unique date prefix
 - Current order: 20260214_001 → 20260215_002 → 20260216_003 → 20260217_004 → 20260224_005
 - All migrations MUST be idempotent (IF NOT EXISTS, ON CONFLICT DO NOTHING) — SQLx checks checksums
+- All migration files MUST use LF line endings (not CRLF) — `.gitattributes` with `*.sql text eol=lf` enforces this
+- Migration 005: model_pins table for pinning preferred models per role
 
 ## Migrations Gotchas (learned the hard way)
 - **Checksum mismatch on deploy**: SQLx stores SHA-256 checksum per migration. If line endings change (CRLF→LF between Windows and Docker), checksum won't match → `VersionMismatch` panic. Fix: reset `_sqlx_migrations` table
@@ -89,5 +91,5 @@
 - Plik: `C:\Users\BIURODOM\Desktop\jaskier_knowledge.db`
 - Zawiera kompletną wiedzę o 4 projektach
 - Tabele: projects, dependencies, components, views, stores, hooks, theme_tokens, i18n_keys, api_endpoints, scripts, public_assets, shared_patterns, store_api_diff, unique_features, source_files
-- 535 rekordów, ostatni sync: 2026-02-24 11:43
+- 535 rekordów, ostatni sync: 2026-02-24 12:31
 - Query: `py -c "import sqlite3; c=sqlite3.connect(r'C:\Users\BIURODOM\Desktop\jaskier_knowledge.db'); [print(r) for r in c.execute('SELECT * FROM projects')]"`
