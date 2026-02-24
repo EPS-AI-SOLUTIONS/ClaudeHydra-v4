@@ -112,6 +112,7 @@ async function* claudeStreamChat(
   model: string,
   messages: Array<{ role: string; content: string }>,
   toolsEnabled: boolean,
+  signal?: AbortSignal,
 ): AsyncGenerator<NdjsonEvent> {
   const res = await fetch('/api/claude/chat/stream', {
     method: 'POST',
@@ -123,6 +124,7 @@ async function* claudeStreamChat(
       stream: true,
       tools_enabled: toolsEnabled,
     }),
+    signal,
   });
 
   if (!res.ok) {
@@ -204,7 +206,12 @@ export function ClaudeChatView() {
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [claudeConnected, setClaudeConnected] = useState(false);
 
-  // Chat state
+  // Per-session message cache & loading state
+  const sessionMessagesRef = useRef<Record<string, ChatMessage[]>>({});
+  const loadingSessionsRef = useRef<Set<string>>(new Set());
+  const abortControllersRef = useRef<Record<string, AbortController>>({});
+
+  // Displayed state (derived from active session)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -221,7 +228,48 @@ export function ClaudeChatView() {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const responseBufferRef = useRef<string>('');
+
+  // ----- Per-session helpers -----------------------------------------------
+
+  /** Update messages for a specific session. Only updates display if session is active. */
+  const updateSessionMessages = useCallback(
+    (sessionId: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => {
+      const prev = sessionMessagesRef.current[sessionId] ?? [];
+      const updated = updater(prev);
+      sessionMessagesRef.current[sessionId] = updated;
+
+      if (sessionId === useViewStore.getState().activeSessionId) {
+        setMessages(updated);
+      }
+    },
+    [],
+  );
+
+  /** Set loading state for a specific session. Only updates display if session is active. */
+  const setSessionLoading = useCallback((sessionId: string, loading: boolean) => {
+    if (loading) {
+      loadingSessionsRef.current.add(sessionId);
+    } else {
+      loadingSessionsRef.current.delete(sessionId);
+    }
+
+    if (sessionId === useViewStore.getState().activeSessionId) {
+      setIsLoading(loading);
+    }
+  }, []);
+
+  // ----- Session switch: save & restore messages ---------------------------
+
+  useEffect(() => {
+    if (activeSessionId) {
+      const cached = sessionMessagesRef.current[activeSessionId] ?? [];
+      setMessages(cached);
+      setIsLoading(loadingSessionsRef.current.has(activeSessionId));
+    } else {
+      setMessages([]);
+      setIsLoading(false);
+    }
+  }, [activeSessionId]);
 
   // ----- Check Claude API connectivity on mount ----------------------------
 
@@ -270,9 +318,16 @@ export function ClaudeChatView() {
   // ----- Clear chat --------------------------------------------------------
 
   const clearChat = useCallback(() => {
+    if (activeSessionId) {
+      sessionMessagesRef.current[activeSessionId] = [];
+      loadingSessionsRef.current.delete(activeSessionId);
+      // Abort any in-progress stream for this session
+      abortControllersRef.current[activeSessionId]?.abort();
+      delete abortControllersRef.current[activeSessionId];
+    }
     setMessages([]);
     setIsLoading(false);
-  }, []);
+  }, [activeSessionId]);
 
   // ----- Copy entire session -----------------------------------------------
 
@@ -321,7 +376,10 @@ export function ClaudeChatView() {
 
   const handleSend = useCallback(
     async (text: string, attachments: Attachment[]) => {
-      if (!selectedModel || isLoading) return;
+      // Capture sessionId at send time — all updates target this session
+      const sessionId = activeSessionId;
+      if (!selectedModel || !sessionId) return;
+      if (loadingSessionsRef.current.has(sessionId)) return;
 
       // Build content with file attachments
       let content = text;
@@ -345,8 +403,11 @@ export function ClaudeChatView() {
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, userMessage]);
-      setIsLoading(true);
+      // Capture messages BEFORE adding new ones — used to build API context
+      const previousMessages = [...(sessionMessagesRef.current[sessionId] ?? [])];
+
+      updateSessionMessages(sessionId, (prev) => [...prev, userMessage]);
+      setSessionLoading(sessionId, true);
 
       // Create placeholder assistant message
       const assistantMessage: ChatMessage = {
@@ -358,7 +419,13 @@ export function ClaudeChatView() {
         model: selectedModel,
         streaming: true,
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      updateSessionMessages(sessionId, (prev) => [...prev, assistantMessage]);
+
+      // AbortController for this stream
+      const controller = new AbortController();
+      abortControllersRef.current[sessionId] = controller;
+
+      let responseBuffer = '';
 
       try {
         // Build history for context — include system prompt as first message
@@ -369,14 +436,13 @@ export function ClaudeChatView() {
             content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.',
           },
         ];
-        for (const m of messages) {
+        // Use messages captured before the new user/assistant were added
+        for (const m of previousMessages) {
           chatHistory.push({ role: m.role, content: m.content });
         }
         chatHistory.push({ role: 'user', content });
 
-        responseBufferRef.current = '';
-
-        for await (const event of claudeStreamChat(selectedModel, chatHistory, toolsEnabled)) {
+        for await (const event of claudeStreamChat(selectedModel, chatHistory, toolsEnabled, controller.signal)) {
           // Dispatch based on event type
           if (event.type === 'tool_call') {
             // Add a new ToolInteraction in running state
@@ -387,7 +453,7 @@ export function ClaudeChatView() {
               status: 'running',
             };
 
-            setMessages((prev) => {
+            updateSessionMessages(sessionId, (prev) => {
               const lastMsg = prev[prev.length - 1];
               if (lastMsg?.streaming) {
                 return [
@@ -403,7 +469,7 @@ export function ClaudeChatView() {
           } else if (event.type === 'tool_result') {
             // Update existing ToolInteraction with result
             const toolUseId = event.tool_use_id;
-            setMessages((prev) => {
+            updateSessionMessages(sessionId, (prev) => {
               const lastMsg = prev[prev.length - 1];
               if (lastMsg?.streaming && lastMsg.toolInteractions) {
                 const updatedInteractions = lastMsg.toolInteractions.map((ti) =>
@@ -424,10 +490,10 @@ export function ClaudeChatView() {
             // Text token (backward-compatible)
             const token = event.token ?? '';
             if (token) {
-              responseBufferRef.current += token;
+              responseBuffer += token;
             }
 
-            setMessages((prev) => {
+            updateSessionMessages(sessionId, (prev) => {
               const lastMsg = prev[prev.length - 1];
               if (lastMsg?.streaming) {
                 return [
@@ -443,22 +509,25 @@ export function ClaudeChatView() {
             });
 
             if (event.done) {
-              setIsLoading(false);
+              setSessionLoading(sessionId, false);
+              delete abortControllersRef.current[sessionId];
               // Persist to DB
-              if (activeSessionId) {
-                addMessageWithSync(activeSessionId, 'user', content, selectedModel);
-                const finalContent = responseBufferRef.current;
-                if (finalContent) {
-                  addMessageWithSync(activeSessionId, 'assistant', finalContent, event.model ?? selectedModel);
-                }
+              addMessageWithSync(sessionId, 'user', content, selectedModel);
+              if (responseBuffer) {
+                addMessageWithSync(sessionId, 'assistant', responseBuffer, event.model ?? selectedModel);
               }
-              responseBufferRef.current = '';
             }
           }
         }
       } catch (err) {
+        // Ignore abort errors (user switched/cleared session)
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          setSessionLoading(sessionId, false);
+          delete abortControllersRef.current[sessionId];
+          return;
+        }
         console.error('Chat error:', err);
-        setMessages((prev) => {
+        updateSessionMessages(sessionId, (prev) => {
           const last = prev[prev.length - 1];
           if (last?.streaming) {
             return [
@@ -472,10 +541,11 @@ export function ClaudeChatView() {
           }
           return prev;
         });
-        setIsLoading(false);
+        setSessionLoading(sessionId, false);
+        delete abortControllersRef.current[sessionId];
       }
     },
-    [selectedModel, isLoading, messages, toolsEnabled, activeSessionId, addMessageWithSync],
+    [selectedModel, activeSessionId, toolsEnabled, addMessageWithSync, updateSessionMessages, setSessionLoading],
   );
 
   // ----- Render -------------------------------------------------------------
