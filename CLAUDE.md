@@ -39,7 +39,7 @@
 - Entry point: `backend/src/lib.rs` → `create_router()` builds all API routes
 - Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState), `models.rs`, `tools.rs`, `model_registry.rs` (dynamic model discovery)
 - DB: `claudehydra` on localhost:5433 (user: claude, pass: claude_local)
-- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions
+- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins
 
 ## Backend Local Dev
 - Wymaga Docker Desktop (PostgreSQL container)
@@ -72,6 +72,18 @@
 - **Duplicate date prefixes**: Multiple files with same prefix cause `duplicate key` error on fresh DB init. Each file MUST have unique prefix (fixed 2026-02-24: 004 was 20260215 → 20260217)
 - **pgvector not on fly.io**: Fly Postgres (`jaskier-db`) does NOT have pgvector. If future migrations need it, use `DO $$ ... EXCEPTION WHEN OTHERS` to skip gracefully
 - **Reset prod DB migrations**: `fly pg connect -a jaskier-db -d claudehydra_v4_backend` then `DROP TABLE _sqlx_migrations CASCADE;` + drop all ch_* tables, then redeploy
+
+## Dynamic Model Registry
+- At startup `model_registry::startup_sync()` fetches all models from Anthropic + Google APIs
+- Caches them in `AppState.model_cache` (TTL 1h, refreshed on demand via `/api/models/refresh`)
+- Auto-selects best model per tier using `version_key()` sort (highest version wins):
+  - **commander**: latest `opus` (prefer non-dated, fallback to dated)
+  - **coordinator**: latest `sonnet` (prefer non-dated, fallback to dated)
+  - **executor**: latest `haiku` (prefer non-dated, fallback to dated)
+- Persists chosen coordinator model into `ch_settings.default_model` at startup
+- No hardcoded model list — adapts automatically when Anthropic releases new models
+- Pin override: `POST /api/models/pin` saves to `ch_model_pins` (priority 1, above auto-selection)
+- API endpoints: `GET /api/models`, `POST /api/models/refresh`, `POST /api/models/pin`, `DELETE /api/models/pin/{use_case}`, `GET /api/models/pins`
 
 ## Agent Tools (all tested & working)
 - `read_file` — reads local files by absolute path
