@@ -2,6 +2,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 
+use claudehydra_backend::model_registry;
 use claudehydra_backend::state::AppState;
 
 fn build_app(state: AppState) -> axum::Router {
@@ -43,6 +44,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .expect("Migrations failed");
 
     let state = AppState::new(pool);
+    model_registry::startup_sync(&state).await;
     Ok(build_app(state).into())
 }
 
@@ -70,6 +72,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = AppState::new(pool);
+    model_registry::startup_sync(&state).await;
     let app = build_app(state);
 
     let port: u16 = std::env::var("PORT")
