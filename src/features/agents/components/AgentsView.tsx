@@ -78,7 +78,7 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
   {
     id: 'sonnet-frontend',
     name: 'Sonnet Frontend',
-    model: 'claude-sonnet-4-5',
+    model: 'claude-sonnet-4-6',
     role: 'Frontend & UX',
     tier: 'Coordinator',
     status: 'online',
@@ -89,7 +89,7 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
   {
     id: 'sonnet-docs',
     name: 'Sonnet Docs',
-    model: 'claude-sonnet-4-5',
+    model: 'claude-sonnet-4-6',
     role: 'Documentation & Comms',
     tier: 'Coordinator',
     status: 'online',
@@ -100,7 +100,7 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
   {
     id: 'sonnet-research',
     name: 'Sonnet Research',
-    model: 'claude-sonnet-4-5',
+    model: 'claude-sonnet-4-6',
     role: 'Intelligence & Research',
     tier: 'Coordinator',
     status: 'online',
@@ -111,7 +111,7 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
   {
     id: 'sonnet-innovator',
     name: 'Sonnet Innovator',
-    model: 'claude-sonnet-4-5',
+    model: 'claude-sonnet-4-6',
     role: 'Innovation & Experiments',
     tier: 'Coordinator',
     status: 'online',
@@ -122,7 +122,7 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
   {
     id: 'sonnet-strategist',
     name: 'Sonnet Strategist',
-    model: 'claude-sonnet-4-5',
+    model: 'claude-sonnet-4-6',
     role: 'Analysis & Strategy',
     tier: 'Coordinator',
     status: 'online',

@@ -78,7 +78,7 @@ describe('agentSchema', () => {
     tier: 'premium',
     status: 'active',
     description: 'Researches topics on the web',
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
   };
 
   it('parses valid agent', () => {
@@ -112,8 +112,8 @@ describe('agentsListSchema', () => {
 // ===========================================================================
 describe('claudeModelSchema', () => {
   const validModel = {
-    id: 'claude-sonnet-4-5-20250929',
-    name: 'Claude Sonnet 4.5',
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
     tier: 'Coordinator',
     provider: 'anthropic',
     available: true,
@@ -135,8 +135,8 @@ describe('claudeModelsSchema', () => {
     const models = [
       { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
       {
-        id: 'claude-sonnet-4-5-20250929',
-        name: 'Claude Sonnet 4.5',
+        id: 'claude-sonnet-4-6',
+        name: 'Claude Sonnet 4.6',
         tier: 'Coordinator',
         provider: 'anthropic',
         available: true,
@@ -160,7 +160,7 @@ describe('claudeChatResponseSchema', () => {
   it('parses valid Claude response', () => {
     const data = {
       content: 'Hi there!',
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       usage: { input_tokens: 10, output_tokens: 25 },
     };
     expect(claudeChatResponseSchema.parse(data)).toEqual(data);
@@ -169,7 +169,7 @@ describe('claudeChatResponseSchema', () => {
   it('rejects response with invalid usage shape', () => {
     const result = claudeChatResponseSchema.safeParse({
       content: 'Hi',
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       usage: { input_tokens: 'ten' },
     });
     expect(result.success).toBe(false);
@@ -198,7 +198,7 @@ describe('usageSchema', () => {
 // ===========================================================================
 describe('settingsSchema', () => {
   const validSettings = {
-    default_model: 'claude-sonnet-4-5-20250929',
+    default_model: 'claude-sonnet-4-6',
     temperature: 0.7,
     max_tokens: 4096,
     language: 'en',

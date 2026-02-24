@@ -67,9 +67,9 @@ impl AppState {
 fn model_for_tier(tier: &str) -> &'static str {
     match tier {
         "Commander" => "claude-opus-4-6",
-        "Coordinator" => "claude-sonnet-4-5-20250929",
+        "Coordinator" => "claude-sonnet-4-6",
         "Executor" => "claude-haiku-4-5-20251001",
-        _ => "claude-sonnet-4-5-20250929",
+        _ => "claude-sonnet-4-6",
     }
 }
 

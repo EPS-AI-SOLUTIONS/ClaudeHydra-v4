@@ -309,9 +309,9 @@ pub async fn get_model_id(state: &AppState, use_case: &str) -> String {
 
     let (model, fallback) = match use_case {
         "commander" | "Commander" => (resolved.commander, "claude-opus-4-6"),
-        "coordinator" | "Coordinator" => (resolved.coordinator, "claude-sonnet-4-5-20250929"),
+        "coordinator" | "Coordinator" => (resolved.coordinator, "claude-sonnet-4-6"),
         "executor" | "Executor" => (resolved.executor, "claude-haiku-4-5-20251001"),
-        _ => (resolved.coordinator, "claude-sonnet-4-5-20250929"),
+        _ => (resolved.coordinator, "claude-sonnet-4-6"),
     };
 
     let id = model.as_ref().map(|m| m.id.as_str()).unwrap_or(fallback);

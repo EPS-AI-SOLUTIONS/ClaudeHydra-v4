@@ -55,8 +55,8 @@ interface NdjsonEvent {
 const CLAUDE_MODELS: ClaudeModel[] = [
   { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
   {
-    id: 'claude-sonnet-4-5-20250929',
-    name: 'Claude Sonnet 4.5',
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
     tier: 'Coordinator',
     provider: 'anthropic',
     available: true,
@@ -70,7 +70,7 @@ const CLAUDE_MODELS: ClaudeModel[] = [
   },
 ];
 
-const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 // ---------------------------------------------------------------------------
 // System prompt (sent as hidden context, not shown in chat)

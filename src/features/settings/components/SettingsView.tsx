@@ -152,8 +152,8 @@ const DEFAULT_MODEL_OPTIONS: readonly ModelOption[] = [
     description: 'Commander tier',
   },
   {
-    id: 'claude-sonnet-4-5-20250929',
-    name: 'Claude Sonnet 4.5',
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
     provider: 'anthropic',
     available: true,
     description: 'Coordinator tier',

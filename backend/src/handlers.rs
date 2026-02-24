@@ -199,7 +199,7 @@ pub async fn claude_models(State(state): State<AppState>) -> Json<Value> {
             available: true,
         },
         ClaudeModelInfo {
-            id: resolved.coordinator.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string()),
+            id: resolved.coordinator.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-sonnet-4-6".to_string()),
             name: resolved.coordinator.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Sonnet".to_string()),
             tier: "Coordinator".to_string(),
             provider: "anthropic".to_string(),
@@ -324,7 +324,7 @@ pub async fn claude_chat(
 /// ```text
 /// {"token":"Hello","done":false}
 /// {"token":" world","done":false}
-/// {"token":"","done":true,"model":"claude-sonnet-4-5-20250929","total_tokens":42}
+/// {"token":"","done":true,"model":"claude-sonnet-4-6","total_tokens":42}
 /// ```
 pub async fn claude_chat_stream(
     State(state): State<AppState>,
