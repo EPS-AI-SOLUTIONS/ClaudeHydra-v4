@@ -11,12 +11,118 @@ use crate::models::*;
 use crate::state::AppState;
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Helpers
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Sanitize JSON Value strings — replace U+FFFD sequences and ensure clean UTF-8.
+/// Recursively walks the Value tree and cleans every string leaf.
+fn sanitize_json_strings(val: &mut Value) {
+    match val {
+        Value::String(s) => {
+            // Remove replacement characters that may have been introduced by lossy UTF-8 conversion
+            if s.contains('\u{FFFD}') {
+                *s = s.replace('\u{FFFD}', "");
+            }
+        }
+        Value::Array(arr) => {
+            for item in arr.iter_mut() {
+                sanitize_json_strings(item);
+            }
+        }
+        Value::Object(map) => {
+            for (_, v) in map.iter_mut() {
+                sanitize_json_strings(v);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn get_anthropic_api_key(api_keys: &std::collections::HashMap<String, String>) -> Result<String, (StatusCode, Json<Value>)> {
+    api_keys
+        .get("ANTHROPIC_API_KEY")
+        .cloned()
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Not authenticated. Please login via Settings → Anthropic OAuth, or configure ANTHROPIC_API_KEY." })),
+            )
+        })
+}
+
+fn build_anthropic_request(
+    client: &reqwest::Client,
+    api_url: &str,
+    api_key: &str,
+    body: &Value,
+    timeout_secs: u64,
+) -> reqwest::RequestBuilder {
+    client
+        .post(format!("{}/v1/messages", api_url))
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("content-type", "application/json")
+        .json(body)
+        .timeout(std::time::Duration::from_secs(timeout_secs))
+}
+
+/// Send a request to Anthropic, preferring OAuth (direct) over API key (proxy).
+async fn send_to_anthropic(
+    state: &AppState,
+    body: &Value,
+    timeout_secs: u64,
+) -> Result<reqwest::Response, (StatusCode, Json<Value>)> {
+    // Try OAuth first (direct to api.anthropic.com)
+    if let Some(access_token) = crate::oauth::get_valid_access_token(state).await {
+        let mut body = body.clone();
+        crate::oauth::ensure_system_prompt(&mut body);
+        return state
+            .client
+            .post("https://api.anthropic.com/v1/messages")
+            .header("Authorization", format!("Bearer {}", access_token))
+            .header("anthropic-version", "2023-06-01")
+            .header("anthropic-beta", crate::oauth::ANTHROPIC_BETA)
+            .header("content-type", "application/json")
+            .json(&body)
+            .timeout(std::time::Duration::from_secs(timeout_secs))
+            .send()
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({ "error": format!("Failed to reach Anthropic API: {}", e) })),
+                )
+            });
+    }
+
+    // Fallback: API key through proxy
+    let api_key = {
+        let rt = state.runtime.read().await;
+        get_anthropic_api_key(&rt.api_keys)?
+    };
+
+    let api_url = std::env::var("ANTHROPIC_API_URL")
+        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+
+    build_anthropic_request(&state.client, &api_url, &api_key, body, timeout_secs)
+        .send()
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": format!("Failed to reach Anthropic API: {}", e) })),
+            )
+        })
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Health & System
 // ═══════════════════════════════════════════════════════════════════════
 
 pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
     let uptime = state.start_time.elapsed().as_secs();
     let rt = state.runtime.read().await;
+    let has_oauth = crate::oauth::has_oauth_tokens(&state).await;
 
     let resp = HealthResponse {
         status: "ok".to_string(),
@@ -26,7 +132,7 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
         providers: vec![
             ProviderInfo {
                 name: "anthropic".to_string(),
-                available: rt.api_keys.contains_key("ANTHROPIC_API_KEY"),
+                available: rt.api_keys.contains_key("ANTHROPIC_API_KEY") || has_oauth,
             },
             ProviderInfo {
                 name: "google".to_string(),
@@ -80,26 +186,28 @@ pub async fn list_agents(State(state): State<AppState>) -> Json<Value> {
 //  Claude API
 // ═══════════════════════════════════════════════════════════════════════
 
-/// GET /api/claude/models — static list of 3 Claude models
-pub async fn claude_models() -> Json<Value> {
+/// GET /api/claude/models — dynamically resolved Claude models per tier
+pub async fn claude_models(State(state): State<AppState>) -> Json<Value> {
+    let resolved = crate::model_registry::resolve_models(&state).await;
+
     let models = vec![
         ClaudeModelInfo {
-            id: "claude-opus-4-6".to_string(),
-            name: "Claude Opus 4.6".to_string(),
+            id: resolved.commander.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-opus-4-6".to_string()),
+            name: resolved.commander.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Opus".to_string()),
             tier: "Commander".to_string(),
             provider: "anthropic".to_string(),
             available: true,
         },
         ClaudeModelInfo {
-            id: "claude-sonnet-4-5-20250929".to_string(),
-            name: "Claude Sonnet 4.5".to_string(),
+            id: resolved.coordinator.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string()),
+            name: resolved.coordinator.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Sonnet".to_string()),
             tier: "Coordinator".to_string(),
             provider: "anthropic".to_string(),
             available: true,
         },
         ClaudeModelInfo {
-            id: "claude-haiku-4-5-20251001".to_string(),
-            name: "Claude Haiku 4.5".to_string(),
+            id: resolved.executor.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-haiku-4-5-20251001".to_string()),
+            name: resolved.executor.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Haiku".to_string()),
             tier: "Executor".to_string(),
             provider: "anthropic".to_string(),
             available: true,
@@ -114,22 +222,8 @@ pub async fn claude_chat(
     State(state): State<AppState>,
     Json(req): Json<ChatRequest>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let api_key = {
-        let rt = state.runtime.read().await;
-        rt.api_keys
-            .get("ANTHROPIC_API_KEY")
-            .cloned()
-            .ok_or_else(|| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({ "error": "ANTHROPIC_API_KEY not configured" })),
-                )
-            })?
-    };
-
-    let model = req
-        .model
-        .unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string());
+    let default_model = crate::model_registry::get_model_id(&state, "coordinator").await;
+    let model = req.model.unwrap_or(default_model);
     let max_tokens = req.max_tokens.unwrap_or(4096);
 
     let messages: Vec<Value> = req
@@ -148,26 +242,9 @@ pub async fn claude_chat(
         body["temperature"] = json!(temp);
     }
 
-    // Route through local anthropic-max-router proxy (OAuth from Claude Max plan)
-    let api_url = std::env::var("ANTHROPIC_API_URL")
-        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+    sanitize_json_strings(&mut body);
 
-    let resp = state
-        .client
-        .post(format!("{}/v1/messages", api_url))
-        .header("x-api-key", &api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&body)
-        .timeout(std::time::Duration::from_secs(120))
-        .send()
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": format!("Failed to reach Anthropic API: {}", e) })),
-            )
-        })?;
+    let resp = send_to_anthropic(&state, &body, 120).await?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -258,23 +335,8 @@ pub async fn claude_chat_stream(
         return claude_chat_stream_with_tools(state, req).await;
     }
 
-    let api_key = {
-        let rt = state.runtime.read().await;
-        rt.api_keys
-            .get("ANTHROPIC_API_KEY")
-            .cloned()
-            .ok_or_else(|| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({ "error": "ANTHROPIC_API_KEY not configured" })),
-                )
-            })?
-    };
-
-    let model = req
-        .model
-        .clone()
-        .unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string());
+    let default_model = crate::model_registry::get_model_id(&state, "coordinator").await;
+    let model = req.model.clone().unwrap_or(default_model);
     let max_tokens = req.max_tokens.unwrap_or(4096);
 
     let messages: Vec<Value> = req
@@ -294,26 +356,9 @@ pub async fn claude_chat_stream(
         body["temperature"] = json!(temp);
     }
 
-    // Route through local anthropic-max-router proxy (OAuth from Claude Max plan)
-    let api_url = std::env::var("ANTHROPIC_API_URL")
-        .unwrap_or_else(|_| "http://localhost:3001".to_string());
+    sanitize_json_strings(&mut body);
 
-    let resp = state
-        .client
-        .post(format!("{}/v1/messages", api_url))
-        .header("x-api-key", &api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&body)
-        .timeout(std::time::Duration::from_secs(300))
-        .send()
-        .await
-        .map_err(|e| {
-            (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": format!("Failed to reach Anthropic API: {}", e) })),
-            )
-        })?;
+    let resp = send_to_anthropic(&state, &body, 300).await?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -444,23 +489,8 @@ async fn claude_chat_stream_with_tools(
     state: AppState,
     req: ChatRequest,
 ) -> Result<Response, (StatusCode, Json<Value>)> {
-    let api_key = {
-        let rt = state.runtime.read().await;
-        rt.api_keys
-            .get("ANTHROPIC_API_KEY")
-            .cloned()
-            .ok_or_else(|| {
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({ "error": "ANTHROPIC_API_KEY not configured" })),
-                )
-            })?
-    };
-
-    let model = req
-        .model
-        .clone()
-        .unwrap_or_else(|| "claude-sonnet-4-5-20250929".to_string());
+    let default_model = crate::model_registry::get_model_id(&state, "coordinator").await;
+    let model = req.model.clone().unwrap_or(default_model);
     let max_tokens = req.max_tokens.unwrap_or(4096);
 
     // Build initial messages
@@ -484,14 +514,10 @@ async fn claude_chat_stream_with_tools(
         })
         .collect();
 
-    let api_url = std::env::var("ANTHROPIC_API_URL")
-        .unwrap_or_else(|_| "http://localhost:3001".to_string());
-
     // Use a channel to send NDJSON lines from the spawned task
     let (tx, rx) = tokio::sync::mpsc::channel::<String>(256);
 
-    let tool_executor = state.tool_executor.clone();
-    let client = state.client.clone();
+    let state_clone = state.clone();
 
     tokio::spawn(async move {
         let mut conversation: Vec<Value> = initial_messages;
@@ -526,23 +552,21 @@ async fn claude_chat_stream_with_tools(
                 body["temperature"] = json!(temp);
             }
 
-            // Send request to Anthropic
-            let resp = match client
-                .post(format!("{}/v1/messages", api_url))
-                .header("x-api-key", &api_key)
-                .header("anthropic-version", "2023-06-01")
-                .header("content-type", "application/json")
-                .json(&body)
-                .timeout(std::time::Duration::from_secs(300))
-                .send()
-                .await
-            {
+            // Sanitize all strings in body to prevent invalid Unicode issues
+            sanitize_json_strings(&mut body);
+
+            // Send request to Anthropic (OAuth-aware)
+            let resp = match send_to_anthropic(&state_clone, &body, 300).await {
                 Ok(r) => r,
-                Err(e) => {
+                Err((_, Json(err_val))) => {
+                    let err_msg = err_val
+                        .get("error")
+                        .and_then(|e| e.as_str())
+                        .unwrap_or("Unknown error");
                     let _ = tx
                         .send(
                             serde_json::to_string(&json!({
-                                "token": format!("\n[API error: {}]", e),
+                                "token": format!("\n[API error: {}]", err_msg),
                                 "done": true,
                                 "model": &model,
                                 "total_tokens": 0,
@@ -555,7 +579,22 @@ async fn claude_chat_stream_with_tools(
             };
 
             if !resp.status().is_success() {
+                let status = resp.status();
                 let err_text = resp.text().await.unwrap_or_default();
+                tracing::error!(
+                    "Anthropic API error (status={}, iteration={}): {}",
+                    status,
+                    iteration,
+                    &err_text[..err_text.len().min(500)]
+                );
+                if err_text.contains("surrogate") || err_text.contains("invalid") {
+                    let body_str = serde_json::to_string(&body).unwrap_or_default();
+                    tracing::error!(
+                        "Request body size: {} chars, conversation messages: {}",
+                        body_str.len(),
+                        conversation.len()
+                    );
+                }
                 let _ = tx
                     .send(
                         serde_json::to_string(&json!({
@@ -571,7 +610,6 @@ async fn claude_chat_stream_with_tools(
             }
 
             // Parse SSE stream — collect content blocks
-            let mut sse_buffer = String::new();
             let mut text_content = String::new();
             let mut tool_uses: Vec<Value> = Vec::new();
             let mut current_tool_id = String::new();
@@ -582,6 +620,7 @@ async fn claude_chat_stream_with_tools(
             let mut total_tokens: u32 = 0;
 
             let mut byte_stream = resp.bytes_stream();
+            let mut raw_buf: Vec<u8> = Vec::new();
 
             while let Some(chunk_result) = byte_stream.next().await {
                 let chunk = match chunk_result {
@@ -589,11 +628,12 @@ async fn claude_chat_stream_with_tools(
                     Err(_) => break,
                 };
 
-                sse_buffer.push_str(&String::from_utf8_lossy(&chunk));
+                raw_buf.extend_from_slice(&chunk);
 
-                while let Some(newline_pos) = sse_buffer.find('\n') {
-                    let line = sse_buffer[..newline_pos].trim().to_string();
-                    sse_buffer = sse_buffer[newline_pos + 1..].to_string();
+                while let Some(newline_pos) = raw_buf.iter().position(|&b| b == b'\n') {
+                    let line_bytes = raw_buf[..newline_pos].to_vec();
+                    raw_buf = raw_buf[newline_pos + 1..].to_vec();
+                    let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
 
                     if line.is_empty() || line.starts_with(':') {
                         continue;
@@ -747,7 +787,7 @@ async fn claude_chat_stream_with_tools(
                     let tool_input = tu.get("input").unwrap_or(&empty_input);
 
                     let (result, is_error) =
-                        tool_executor.execute(tool_name, tool_input).await;
+                        state_clone.tool_executor.execute(tool_name, tool_input).await;
 
                     // Emit tool_result event to frontend
                     let _ = tx
@@ -1022,6 +1062,37 @@ pub async fn get_session(
         title: session_row.title,
         created_at: session_row.created_at.to_rfc3339(),
         messages,
+    };
+
+    Ok(Json(serde_json::to_value(session).unwrap()))
+}
+
+pub async fn update_session(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateSessionRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let row = sqlx::query_as::<_, SessionRow>(
+        "UPDATE ch_sessions SET title = $1, updated_at = NOW() WHERE id = $2 \
+         RETURNING id, title, created_at, updated_at",
+    )
+    .bind(&req.title)
+    .bind(session_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to update session: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .ok_or(StatusCode::NOT_FOUND)?;
+
+    let session = SessionSummary {
+        id: row.id.to_string(),
+        title: row.title,
+        created_at: row.created_at.to_rfc3339(),
+        message_count: 0,
     };
 
     Ok(Json(serde_json::to_value(session).unwrap()))
