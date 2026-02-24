@@ -1,10 +1,25 @@
 {
   "nav": {
-    "home": "Strona Glowna",
+    "home": "Start",
     "chat": "Czat",
     "agents": "Agenci",
     "history": "Historia",
     "settings": "Ustawienia"
+  },
+  "sidebar": {
+    "groups": {
+      "main": "GLOWNE",
+      "tools": "NARZEDZIA",
+      "system": "SYSTEM"
+    },
+    "chats": "CZATY",
+    "newChat": "Nowy czat",
+    "noChats": "Brak czatow",
+    "darkMode": "TRYB CIEMNY",
+    "lightMode": "TRYB JASNY"
+  },
+  "footer": {
+    "tagline": "Roj AI"
   },
   "common": {
     "save": "Zapisz",

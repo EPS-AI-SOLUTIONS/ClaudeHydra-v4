@@ -6,6 +6,21 @@
     "history": "History",
     "settings": "Settings"
   },
+  "sidebar": {
+    "groups": {
+      "main": "MAIN",
+      "tools": "TOOLS",
+      "system": "SYSTEM"
+    },
+    "chats": "CHATS",
+    "newChat": "New chat",
+    "noChats": "No chats yet",
+    "darkMode": "DARK MODE",
+    "lightMode": "LIGHT MODE"
+  },
+  "footer": {
+    "tagline": "AI Swarm"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
