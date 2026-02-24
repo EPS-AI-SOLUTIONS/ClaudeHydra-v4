@@ -1,7 +1,9 @@
 -- ClaudeHydra v4 — ecosystem info in welcome message
 -- Adds cross-project context so agents don't need to re-analyze every time
+-- Idempotent: INSERT ... ON CONFLICT ensures this works on fresh and existing DBs
 
-UPDATE ch_settings SET welcome_message = '## 🐺 Witaj w ClaudeHydra v4 — AI Swarm Control Center!
+INSERT INTO ch_settings (id, welcome_message)
+VALUES (1, '## 🐺 Witaj w ClaudeHydra v4 — AI Swarm Control Center!
 
 Jestem agentem AI opartym na **Claude (Anthropic)**. Specjalizuję się w analizie kodu i zadaniach programistycznych.
 
@@ -68,5 +70,5 @@ React 19 + Vite 7 + TypeScript 5.9 + Zustand 5 + TailwindCSS 4 + motion/react + 
 - Light mode accent: **emerald (#2d6a4f)**, dark mode: **white (#ffffff)**
 - Logo: `/logolight.webp` + `/logodark.webp` w public/
 
-Napisz coś, np. *"przeczytaj plik src/main.tsx"* lub *"wyszukaj TODO w projekcie"*!'
-WHERE id = 1;
+Napisz coś, np. *"przeczytaj plik src/main.tsx"* lub *"wyszukaj TODO w projekcie"*!')
+ON CONFLICT (id) DO UPDATE SET welcome_message = EXCLUDED.welcome_message;

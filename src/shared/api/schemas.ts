@@ -14,8 +14,6 @@ export const providerInfoSchema = z.object({
   available: z.boolean(),
 });
 
-export type ProviderInfo = z.infer<typeof providerInfoSchema>;
-
 export const healthSchema = z.object({
   status: z.string(),
   version: z.string(),
@@ -76,8 +74,6 @@ export const claudeModelSchema = z.object({
 export type ClaudeModel = z.infer<typeof claudeModelSchema>;
 
 export const claudeModelsSchema = z.array(claudeModelSchema);
-
-export type ClaudeModels = z.infer<typeof claudeModelsSchema>;
 
 // ---------------------------------------------------------------------------
 // Claude Chat
