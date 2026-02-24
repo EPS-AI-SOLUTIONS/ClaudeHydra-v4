@@ -46,7 +46,7 @@
 - Image: `postgres:17-alpine` (NO pgvector needed — ClaudeHydra doesn't use embeddings)
 - Start: `docker compose up -d` (from `backend/`)
 - Backend: `DATABASE_URL="postgresql://claude:claude_local@localhost:5433/claudehydra" cargo run --release`
-- Env vars: `DATABASE_URL` (required), `ANTHROPIC_API_KEY` (required), `PORT` (default 8082)
+- Env vars: `DATABASE_URL` (required), `ANTHROPIC_API_KEY` (required), `GOOGLE_API_KEY` (optional, for model_registry Google fetch), `PORT` (default 8082)
 
 ## Fly.io Deploy
 - App: `claudehydra-v4-backend` | Region: `arn` | VM: shared-cpu-1x 256MB
@@ -54,9 +54,10 @@
 - Dockerfile: multi-stage (rust builder → debian:bookworm-slim runtime)
 - DB: Fly Postgres `jaskier-db` → database `claudehydra_v4_backend` (NOT `claudehydra`!)
 - Shared DB cluster `jaskier-db` hosts: geminihydra_v15_backend, claudehydra_v4_backend, tissaia_v4_backend
-- Secrets: `DATABASE_URL`, `ANTHROPIC_API_KEY` (set via `fly secrets set`)
+- Secrets: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` (set via `fly secrets set`)
 - auto_stop_machines=stop, auto_start_machines=true, min_machines=0 (scales to zero)
 - Connect to prod DB: `fly pg connect -a jaskier-db -d claudehydra_v4_backend`
+- Logs: `fly logs --no-tail` or `fly logs`
 - Health: `curl https://claudehydra-v4-backend.fly.dev/api/health`
 
 ## Migrations
@@ -76,10 +77,11 @@
 ## Dynamic Model Registry
 - At startup `model_registry::startup_sync()` fetches all models from Anthropic + Google APIs
 - Caches them in `AppState.model_cache` (TTL 1h, refreshed on demand via `/api/models/refresh`)
+- Currently: 31 models cached (9 Anthropic + 22 Google)
 - Auto-selects best model per tier using `version_key()` sort (highest version wins):
-  - **commander**: latest `opus` (prefer non-dated, fallback to dated)
-  - **coordinator**: latest `sonnet` (prefer non-dated, fallback to dated)
-  - **executor**: latest `haiku` (prefer non-dated, fallback to dated)
+  - **commander**: latest `opus` (prefer non-dated, fallback to dated) → `claude-opus-4-6`
+  - **coordinator**: latest `sonnet` (prefer non-dated, fallback to dated) → `claude-sonnet-4-6`
+  - **executor**: latest `haiku` (prefer non-dated, fallback to dated) → `claude-haiku-4-5-20251001`
 - Persists chosen coordinator model into `ch_settings.default_model` at startup
 - No hardcoded model list — adapts automatically when Anthropic releases new models
 - Pin override: `POST /api/models/pin` saves to `ch_model_pins` (priority 1, above auto-selection)
@@ -103,5 +105,5 @@
 - Plik: `C:\Users\BIURODOM\Desktop\jaskier_knowledge.db`
 - Zawiera kompletną wiedzę o 4 projektach
 - Tabele: projects, dependencies, components, views, stores, hooks, theme_tokens, i18n_keys, api_endpoints, scripts, public_assets, shared_patterns, store_api_diff, unique_features, source_files
-- 535 rekordów, ostatni sync: 2026-02-24 12:31
+- 535 rekordów, ostatni sync: 2026-02-24 13:02
 - Query: `py -c "import sqlite3; c=sqlite3.connect(r'C:\Users\BIURODOM\Desktop\jaskier_knowledge.db'); [print(r) for r in c.execute('SELECT * FROM projects')]"`
