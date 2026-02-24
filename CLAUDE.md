@@ -62,7 +62,7 @@
 ## Migrations
 - Folder: `backend/migrations/`
 - SQLx sorts by filename prefix — each migration MUST have a unique date prefix
-- Current order: 20260214_001 → 20260215_002 → 20260216_003 → 20260217_004
+- Current order: 20260214_001 → 20260215_002 → 20260216_003 → 20260217_004 → 20260224_005
 - All migrations MUST be idempotent (IF NOT EXISTS, ON CONFLICT DO NOTHING) — SQLx checks checksums
 
 ## Migrations Gotchas (learned the hard way)
