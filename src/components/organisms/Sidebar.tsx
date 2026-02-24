@@ -112,6 +112,7 @@ interface SessionItemProps {
 }
 
 function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete, onRename }: SessionItemProps) {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(session.title);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -227,7 +228,7 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
       <div className="flex-1 min-w-0">
         <p className="text-sm truncate">{session.title}</p>
         <p className="text-xs text-[var(--matrix-text-secondary)] truncate">
-          {session.messageCount} message{session.messageCount !== 1 ? 's' : ''}
+          {session.messageCount} {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
         </p>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -238,7 +239,7 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
             setIsEditing(true);
           }}
           className={cn('p-1 rounded', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
-          title="Rename"
+          title={t('sidebar.rename', 'Rename')}
         >
           <Edit2 size={12} />
         </button>
@@ -251,7 +252,7 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
               ? isDark ? 'bg-red-500/30 text-red-300' : 'bg-red-500/20 text-red-600'
               : isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/15 text-red-600',
           )}
-          title={confirmDelete ? 'Click again to delete' : 'Delete'}
+          title={confirmDelete ? t('sidebar.confirmDelete', 'Click again to delete') : t('common.delete', 'Delete')}
         >
           <Trash2 size={12} />
         </button>
@@ -273,7 +274,7 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
           </p>
           <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-[var(--matrix-border)]">
             <span className="text-[9px] text-[var(--matrix-text-secondary)]">
-              {session.messageCount} message{session.messageCount !== 1 ? 's' : ''}
+              {session.messageCount} {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
             </span>
             <span className="text-[9px] text-[var(--matrix-accent)]">{timeAgo(session.updatedAt)}</span>
           </div>
@@ -551,7 +552,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             data-testid="sidebar-new-chat-btn"
             onClick={handleCreateSession}
             className={cn('p-1.5 rounded text-[var(--matrix-accent)] transition-colors', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
-            title="New chat"
+            title={t('sidebar.newChat', 'New chat')}
           >
             <Plus size={14} />
           </button>
@@ -728,7 +729,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             className="nav-item w-full justify-center text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)]"
           >
             <X size={18} />
-            <span className="text-sm">Close</span>
+            <span className="text-sm">{t('common.close', 'Close')}</span>
           </button>
         </div>
       )}
@@ -741,6 +742,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 // ---------------------------------------------------------------------------
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const { sidebarCollapsed, toggleSidebar, mobileDrawerOpen, setMobileDrawerOpen, currentView } = useViewStore();
   const { isDark } = useTheme();
 
@@ -765,7 +767,7 @@ export function Sidebar() {
             'fixed top-3 left-3 z-50 p-2 rounded-lg',
             'glass-panel transition-colors', isDark ? 'hover:bg-white/[0.08]' : 'hover:bg-black/5',
           )}
-          title="Menu"
+          title={t('common.menu', 'Menu')}
         >
           <Menu size={20} className="text-[var(--matrix-accent)]" />
         </button>
@@ -826,7 +828,7 @@ export function Sidebar() {
           'backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
           'shadow-lg',
         )}
-        title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={sidebarCollapsed ? t('sidebar.expandSidebar', 'Expand sidebar') : t('sidebar.collapseSidebar', 'Collapse sidebar')}
       >
         {sidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
       </button>

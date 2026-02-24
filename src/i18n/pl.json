@@ -16,7 +16,13 @@
     "newChat": "Nowy czat",
     "noChats": "Brak czatow",
     "darkMode": "TRYB CIEMNY",
-    "lightMode": "TRYB JASNY"
+    "lightMode": "TRYB JASNY",
+    "rename": "Zmien nazwe",
+    "confirmDelete": "Kliknij ponownie aby usunac",
+    "message": "wiadomosc",
+    "messages": "wiadomosci",
+    "expandSidebar": "Rozwin pasek boczny",
+    "collapseSidebar": "Zwin pasek boczny"
   },
   "footer": {
     "tagline": "Roj AI"
@@ -29,7 +35,9 @@
     "retry": "Ponow",
     "loading": "Ladowanie...",
     "error": "Blad",
-    "confirm": "Potwierdz"
+    "confirm": "Potwierdz",
+    "close": "Zamknij",
+    "menu": "Menu"
   },
   "chat": {
     "modelSelector": "Wybierz model",

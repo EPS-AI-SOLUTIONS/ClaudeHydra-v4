@@ -16,7 +16,13 @@
     "newChat": "New chat",
     "noChats": "No chats yet",
     "darkMode": "DARK MODE",
-    "lightMode": "LIGHT MODE"
+    "lightMode": "LIGHT MODE",
+    "rename": "Rename",
+    "confirmDelete": "Click again to delete",
+    "message": "message",
+    "messages": "messages",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
   },
   "footer": {
     "tagline": "AI Swarm"
@@ -29,7 +35,9 @@
     "retry": "Retry",
     "loading": "Loading...",
     "error": "Error",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "close": "Close",
+    "menu": "Menu"
   },
   "chat": {
     "modelSelector": "Select model",
