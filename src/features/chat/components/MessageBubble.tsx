@@ -14,7 +14,7 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from '@/components/molecules/CodeBlock';
 import { cn } from '@/shared/utils/cn';
-import { type ToolInteraction, ToolCallBlock } from './ToolCallBlock';
+import { ToolCallBlock, type ToolInteraction } from './ToolCallBlock';
 
 // ---------------------------------------------------------------------------
 // Helper: extract plain text from React children (handles rehype-highlight spans)

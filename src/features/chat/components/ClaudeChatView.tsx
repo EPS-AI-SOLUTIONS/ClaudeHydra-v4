@@ -6,13 +6,16 @@
  * inline as collapsible ToolCallBlock panels.
  */
 
-import { Bot, Trash2, Wrench } from 'lucide-react';
+import { Bot, Check, ClipboardList, Trash2, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
+import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useSettingsQuery } from '@/features/settings/hooks/useSettings';
 import { cn } from '@/shared/utils/cn';
+import { useViewStore } from '@/stores/viewStore';
 import { type Attachment, ChatInput } from './ChatInput';
 import { type ChatMessage, MessageBubble } from './MessageBubble';
 import type { ToolInteraction } from './ToolCallBlock';
@@ -208,6 +211,10 @@ export function ClaudeChatView() {
   // Tools toggle
   const [toolsEnabled, setToolsEnabled] = useState(true);
 
+  // DB sync
+  const { addMessageWithSync } = useSessionSync();
+  const activeSessionId = useViewStore((s) => s.activeSessionId);
+
   // Settings (for welcome message)
   const { data: settings } = useSettingsQuery();
 
@@ -266,6 +273,49 @@ export function ClaudeChatView() {
     setMessages([]);
     setIsLoading(false);
   }, []);
+
+  // ----- Copy entire session -----------------------------------------------
+
+  const [sessionCopied, setSessionCopied] = useState(false);
+
+  const handleCopySession = useCallback(async () => {
+    if (messages.length === 0) return;
+
+    const session = useViewStore.getState().chatSessions.find((s) => s.id === activeSessionId);
+    const title = session?.title ?? 'Untitled';
+    const date = session ? new Date(session.createdAt).toLocaleString() : '';
+
+    const lines = [`=== ${title} ===`, date ? `Date: ${date}` : '', `Messages: ${messages.length}`, ''];
+    for (const msg of messages) {
+      const role = msg.role === 'user' ? 'User' : 'Assistant';
+      const time = msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString() : '';
+      const model = msg.model ? ` (${msg.model})` : '';
+      lines.push(`[${role}] ${time}${model}:`);
+      lines.push(msg.content);
+      lines.push('');
+    }
+
+    const text = lines.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    toast.success('Session copied to clipboard');
+    setSessionCopied(true);
+    setTimeout(() => setSessionCopied(false), 2000);
+  }, [messages, activeSessionId]);
+
+  // ----- Prompt history for arrow-key navigation ---------------------------
+
+  const promptHistory = useMemo(() => messages.filter((m) => m.role === 'user').map((m) => m.content), [messages]);
 
   // ----- Send message with streaming (extended for tool events) ------------
 
@@ -366,10 +416,7 @@ export function ClaudeChatView() {
                       }
                     : ti,
                 );
-                return [
-                  ...prev.slice(0, -1),
-                  { ...lastMsg, toolInteractions: updatedInteractions },
-                ];
+                return [...prev.slice(0, -1), { ...lastMsg, toolInteractions: updatedInteractions }];
               }
               return prev;
             });
@@ -397,6 +444,14 @@ export function ClaudeChatView() {
 
             if (event.done) {
               setIsLoading(false);
+              // Persist to DB
+              if (activeSessionId) {
+                addMessageWithSync(activeSessionId, 'user', content, selectedModel);
+                const finalContent = responseBufferRef.current;
+                if (finalContent) {
+                  addMessageWithSync(activeSessionId, 'assistant', finalContent, event.model ?? selectedModel);
+                }
+              }
               responseBufferRef.current = '';
             }
           }
@@ -420,7 +475,7 @@ export function ClaudeChatView() {
         setIsLoading(false);
       }
     },
-    [selectedModel, isLoading, messages, toolsEnabled],
+    [selectedModel, isLoading, messages, toolsEnabled, activeSessionId, addMessageWithSync],
   );
 
   // ----- Render -------------------------------------------------------------
@@ -467,6 +522,19 @@ export function ClaudeChatView() {
             placeholder="Select model"
             className="w-56"
           />
+
+          {/* Copy session */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopySession}
+            disabled={messages.length === 0}
+            title="Copy entire session"
+            aria-label="Copy entire session"
+            leftIcon={sessionCopied ? <Check size={14} className="text-emerald-400" /> : <ClipboardList size={14} />}
+          >
+            {sessionCopied ? 'Copied' : 'Copy'}
+          </Button>
 
           {/* Clear chat */}
           <Button
@@ -533,6 +601,7 @@ export function ClaudeChatView() {
           disabled={!claudeConnected || !selectedModel}
           isLoading={isLoading}
           placeholder={claudeConnected ? 'Type a message... (Shift+Enter = new line)' : 'Configure API key in Settings'}
+          promptHistory={promptHistory}
         />
       </div>
     </div>

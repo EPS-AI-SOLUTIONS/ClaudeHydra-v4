@@ -45,7 +45,7 @@ function ViewRouter() {
   };
 
   return (
-    <div className="flex-1 overflow-hidden relative">
+    <div className="h-full overflow-hidden relative">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}

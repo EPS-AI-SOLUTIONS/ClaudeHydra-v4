@@ -110,7 +110,7 @@ test.describe('Theme', () => {
     expect(await getAppliedTheme(page)).toBe('dark');
 
     const metaColor = await getMetaThemeColor(page);
-    expect(metaColor).toBe('#0a1f0a');
+    expect(metaColor).toBe('#0a0f0d');
   });
 
   test('should update meta theme-color for light mode', async ({ page }) => {
@@ -120,7 +120,7 @@ test.describe('Theme', () => {
     expect(await getAppliedTheme(page)).toBe('light');
 
     const metaColor = await getMetaThemeColor(page);
-    expect(metaColor).toBe('#f5f8f5');
+    expect(metaColor).toBe('#ffffff');
   });
 
   // ── Settings page ──────────────────────────────────────────────────

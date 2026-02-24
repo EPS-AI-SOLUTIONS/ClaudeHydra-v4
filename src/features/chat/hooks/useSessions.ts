@@ -4,8 +4,8 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiDelete, apiGet, apiPost } from '@/shared/api/client';
-import type { Session, SessionsList } from '@/shared/api/schemas';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/api/client';
+import type { Session, SessionSummary, SessionsList } from '@/shared/api/schemas';
 
 /** GET /api/sessions */
 export function useSessionsQuery() {
@@ -30,6 +30,18 @@ export function useCreateSessionMutation() {
 
   return useMutation<Session, Error, { title?: string }>({
     mutationFn: (body) => apiPost<Session>('/api/sessions', body),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    },
+  });
+}
+
+/** PATCH /api/sessions/:id */
+export function useUpdateSessionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<SessionSummary, Error, { id: string; title: string }>({
+    mutationFn: ({ id, title }) => apiPatch<SessionSummary>(`/api/sessions/${id}`, { title }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },

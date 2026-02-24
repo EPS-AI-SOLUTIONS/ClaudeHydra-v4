@@ -1,39 +1,52 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 
-const backendUrl = process.env.VITE_BACKEND_URL || 'http://localhost:8082';
+export default defineConfig(({ mode }) => {
+  // Load ALL env vars (empty prefix = no VITE_ filter)
+  const env = loadEnv(mode, process.cwd(), '');
+  const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:8082';
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, './src'),
+  return {
+    plugins: [react(), tailwindcss()],
+    define: {
+      'import.meta.env.ANTHROPIC_API_KEY': JSON.stringify(env.ANTHROPIC_API_KEY ?? ''),
+      'import.meta.env.OPENAI_API_KEY': JSON.stringify(env.OPENAI_API_KEY ?? ''),
+      'import.meta.env.GOOGLE_API_KEY': JSON.stringify(env.GOOGLE_API_KEY ?? ''),
+      'import.meta.env.GROQ_API_KEY': JSON.stringify(env.GROQ_API_KEY ?? ''),
+      'import.meta.env.MISTRAL_API_KEY': JSON.stringify(env.MISTRAL_API_KEY ?? ''),
+      'import.meta.env.OPENROUTER_API_KEY': JSON.stringify(env.OPENROUTER_API_KEY ?? ''),
+      'import.meta.env.TOGETHER_API_KEY': JSON.stringify(env.TOGETHER_API_KEY ?? ''),
     },
-  },
-  server: {
-    port: 5199,
-    proxy: {
-      '/api': {
-        target: backendUrl,
-        changeOrigin: true,
-        secure: backendUrl.startsWith('https'),
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, './src'),
       },
     },
-  },
-  preview: {
-    port: 5199,
-    proxy: {
-      '/api': {
-        target: backendUrl,
-        changeOrigin: true,
-        secure: backendUrl.startsWith('https'),
+    server: {
+      port: 5199,
+      proxy: {
+        '/api': {
+          target: backendUrl,
+          changeOrigin: true,
+          secure: backendUrl.startsWith('https'),
+        },
       },
     },
-  },
-  build: {
-    target: 'esnext',
-    sourcemap: true,
-  },
+    preview: {
+      port: 5199,
+      proxy: {
+        '/api': {
+          target: backendUrl,
+          changeOrigin: true,
+          secure: backendUrl.startsWith('https'),
+        },
+      },
+    },
+    build: {
+      target: 'esnext',
+      sourcemap: true,
+    },
+  };
 });

@@ -45,8 +45,10 @@ interface ViewState {
   setMobileDrawerOpen: (open: boolean) => void;
   setActiveSessionId: (id: string | null) => void;
   createSession: (title?: string) => string;
+  createSessionWithId: (id: string, title: string) => void;
   deleteSession: (id: string) => void;
   renameSession: (id: string, newTitle: string) => void;
+  hydrateSessions: (sessions: ChatSession[]) => void;
   openTab: (sessionId: string) => void;
   closeTab: (sessionId: string) => void;
 }
@@ -100,6 +102,16 @@ export const useViewStore = create<ViewState>()(
         return id;
       },
 
+      createSessionWithId: (id, title) => {
+        const now = Date.now();
+        set((state) => ({
+          chatSessions: [{ id, title, createdAt: now, updatedAt: now, messageCount: 0 }, ...state.chatSessions],
+          activeSessionId: id,
+          openTabs: state.openTabs.includes(id) ? state.openTabs : [...state.openTabs, id],
+          currentView: 'chat',
+        }));
+      },
+
       deleteSession: (id) =>
         set((state) => {
           const newSessions = state.chatSessions.filter((s) => s.id !== id);
@@ -128,6 +140,16 @@ export const useViewStore = create<ViewState>()(
             s.id === id ? { ...s, title: newTitle, updatedAt: Date.now() } : s,
           ),
         })),
+
+      hydrateSessions: (sessions) =>
+        set((state) => {
+          const existingIds = new Set(state.chatSessions.map((s) => s.id));
+          const newSessions = sessions.filter((s) => !existingIds.has(s.id));
+          if (newSessions.length === 0) return state;
+          return {
+            chatSessions: [...newSessions, ...state.chatSessions].sort((a, b) => b.updatedAt - a.updatedAt),
+          };
+        }),
 
       openTab: (sessionId) =>
         set((state) => ({

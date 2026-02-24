@@ -24,6 +24,12 @@ pub struct ToolExecutor {
     allowed_dirs: Vec<PathBuf>,
 }
 
+impl Default for ToolExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ToolExecutor {
     pub fn new() -> Self {
         let dirs_str =
@@ -221,17 +227,16 @@ impl ToolExecutor {
             }
         }
         // Also block dotfiles like .env
-        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-            if name == ".env" || name.starts_with(".env.") {
+        if let Some(name) = path.file_name().and_then(|n| n.to_str())
+            && (name == ".env" || name.starts_with(".env.")) {
                 return true;
             }
-        }
         false
     }
 
     fn is_binary(data: &[u8]) -> bool {
         let check_len = data.len().min(8192);
-        data[..check_len].iter().any(|&b| b == 0)
+        data[..check_len].contains(&0)
     }
 
     // ── read_file ───────────────────────────────────────────────────────
@@ -435,15 +440,12 @@ impl ToolExecutor {
             }
         };
 
-        if create_dirs {
-            if let Some(parent) = abs_path.parent() {
-                if !parent.exists() {
-                    if let Err(e) = std::fs::create_dir_all(parent) {
+        if create_dirs
+            && let Some(parent) = abs_path.parent()
+                && !parent.exists()
+                    && let Err(e) = std::fs::create_dir_all(parent) {
                         return (format!("Failed to create directories: {}", e), true);
                     }
-                }
-            }
-        }
 
         let path = match self.validate_path(raw_path) {
             Ok(p) => p,

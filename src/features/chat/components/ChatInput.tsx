@@ -43,6 +43,8 @@ export interface ChatInputProps {
   placeholder?: string;
   /** Extra CSS classes on root wrapper */
   className?: string;
+  /** Previous user prompts for arrow-key navigation (newest last). */
+  promptHistory?: string[];
 }
 
 export interface ChatInputHandle {
@@ -68,12 +70,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       isLoading = false,
       placeholder = 'Type a message... (Shift+Enter = new line)',
       className,
+      promptHistory = [],
     },
     ref,
   ) => {
     const [input, setInput] = useState('');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const [isDragging, setIsDragging] = useState(false);
+
+    // Prompt history navigation
+    const [historyIndex, setHistoryIndex] = useState(-1);
+    const savedDraftRef = useRef('');
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -175,20 +182,72 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           handleSend();
+          setHistoryIndex(-1);
+          savedDraftRef.current = '';
         } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           const el = e.currentTarget;
           const { selectionStart, selectionEnd } = el;
-          const newValue = input.substring(0, selectionStart) + '\n' + input.substring(selectionEnd);
+          const newValue = `${input.substring(0, selectionStart)}\n${input.substring(selectionEnd)}`;
           setInput(newValue);
           requestAnimationFrame(() => {
             el.selectionStart = el.selectionEnd = selectionStart + 1;
             el.style.height = 'auto';
             el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
           });
+        } else if (e.key === 'ArrowUp' && promptHistory.length > 0) {
+          const el = e.currentTarget;
+          const isAtStart = el.selectionStart === 0 && el.selectionEnd === 0;
+          const isSingleLine = !input.includes('\n');
+          if (isAtStart || (isSingleLine && historyIndex === -1)) {
+            e.preventDefault();
+            if (historyIndex === -1) {
+              savedDraftRef.current = input;
+            }
+            const nextIndex = historyIndex === -1 ? promptHistory.length - 1 : Math.max(0, historyIndex - 1);
+            setHistoryIndex(nextIndex);
+            const historyValue = promptHistory[nextIndex] ?? '';
+            setInput(historyValue);
+            requestAnimationFrame(() => {
+              if (textareaRef.current) {
+                textareaRef.current.selectionStart = textareaRef.current.selectionEnd = historyValue.length;
+                textareaRef.current.style.height = 'auto';
+                textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+              }
+            });
+          }
+        } else if (e.key === 'ArrowDown' && historyIndex >= 0) {
+          const el = e.currentTarget;
+          const isAtEnd = el.selectionStart === input.length;
+          const isSingleLine = !input.includes('\n');
+          if (isAtEnd || isSingleLine) {
+            e.preventDefault();
+            if (historyIndex >= promptHistory.length - 1) {
+              setHistoryIndex(-1);
+              const draft = savedDraftRef.current;
+              setInput(draft);
+              requestAnimationFrame(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+                }
+              });
+            } else {
+              const nextIndex = historyIndex + 1;
+              setHistoryIndex(nextIndex);
+              const historyValue = promptHistory[nextIndex] ?? '';
+              setInput(historyValue);
+              requestAnimationFrame(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+                }
+              });
+            }
+          }
         }
       },
-      [handleSend, input],
+      [handleSend, input, promptHistory, historyIndex],
     );
 
     // ----- Auto-resize textarea ------------------------------------------

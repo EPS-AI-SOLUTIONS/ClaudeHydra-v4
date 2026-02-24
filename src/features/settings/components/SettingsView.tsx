@@ -22,8 +22,8 @@ import {
   Palette,
   Play,
   Plug,
-  Save,
   Settings,
+  Shield,
   Sparkles,
   Sun,
   X,
@@ -36,6 +36,7 @@ import { Badge, Button, Card, Input } from '@/components/atoms';
 import { type ModelOption, ModelSelector } from '@/components/molecules';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/shared/utils/cn';
+import { OAuthSection } from './OAuthSection';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -167,6 +168,20 @@ const DEFAULT_MODEL_OPTIONS: readonly ModelOption[] = [
 ] as const;
 
 // ---------------------------------------------------------------------------
+// Env Key Mapping — loads API keys injected via vite.config.ts define
+// ---------------------------------------------------------------------------
+
+const ENV_KEY_MAP: Record<ProviderId, string> = {
+  claude: import.meta.env.ANTHROPIC_API_KEY ?? '',
+  openai: import.meta.env.OPENAI_API_KEY ?? '',
+  gemini: import.meta.env.GOOGLE_API_KEY ?? '',
+  groq: import.meta.env.GROQ_API_KEY ?? '',
+  mistral: import.meta.env.MISTRAL_API_KEY ?? '',
+  openrouter: import.meta.env.OPENROUTER_API_KEY ?? '',
+  together: import.meta.env.TOGETHER_API_KEY ?? '',
+};
+
+// ---------------------------------------------------------------------------
 // Initial State
 // ---------------------------------------------------------------------------
 
@@ -174,7 +189,7 @@ function createInitialProviderState(): Record<ProviderId, ProviderState> {
   const result: Record<string, ProviderState> = {};
   for (const p of PROVIDERS) {
     result[p.id] = {
-      apiKey: '',
+      apiKey: ENV_KEY_MAP[p.id] || '',
       endpoint: '',
       testing: false,
       testResult: null,
@@ -248,6 +263,7 @@ function ApiKeyField({ provider, state, onKeyChange, onEndpointChange, onTestCon
   const [showKey, setShowKey] = useState(false);
   const Icon = provider.icon;
   const hasKey = state.apiKey.length > 0;
+  const isFromEnv = ENV_KEY_MAP[provider.id].length > 0 && state.apiKey === ENV_KEY_MAP[provider.id];
 
   return (
     <div
@@ -258,7 +274,13 @@ function ApiKeyField({ provider, state, onKeyChange, onEndpointChange, onTestCon
       <div className="flex items-center gap-2">
         <Icon size={16} className={provider.iconColor} />
         <span className="text-sm font-medium text-[var(--matrix-text-primary)]">{provider.name}</span>
-        {hasKey && (
+        {isFromEnv && (
+          <Badge variant="accent" size="sm">
+            <Shield size={10} className="inline mr-0.5 -mt-px" />
+            ENV
+          </Badge>
+        )}
+        {hasKey && !isFromEnv && (
           <Badge variant="accent" size="sm" dot>
             Configured
           </Badge>
@@ -287,6 +309,7 @@ function ApiKeyField({ provider, state, onKeyChange, onEndpointChange, onTestCon
           placeholder={provider.keyPlaceholder}
           inputSize="sm"
           className="pr-10"
+          readOnly={isFromEnv}
         />
         <button
           type="button"
@@ -299,6 +322,12 @@ function ApiKeyField({ provider, state, onKeyChange, onEndpointChange, onTestCon
           {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
         </button>
       </div>
+      {isFromEnv && (
+        <p className="text-[10px] text-[var(--matrix-accent)]/70">
+          <Shield size={10} className="inline mr-1 -mt-px" />
+          Loaded from environment variable — edit .env to change
+        </p>
+      )}
 
       {/* Endpoint URL */}
       <Input
@@ -607,6 +636,17 @@ export function SettingsView() {
         </CollapsibleSection>
 
         {/* ============================================ */}
+        {/* ANTHROPIC OAUTH SECTION                      */}
+        {/* ============================================ */}
+        <CollapsibleSection
+          title="Anthropic OAuth (MAX Plan)"
+          icon={<Shield size={18} className="text-emerald-400" />}
+          defaultOpen
+        >
+          <OAuthSection />
+        </CollapsibleSection>
+
+        {/* ============================================ */}
         {/* AI PROVIDER API KEYS SECTION                 */}
         {/* ============================================ */}
         <CollapsibleSection
@@ -642,12 +682,12 @@ export function SettingsView() {
         >
           <Card variant="glass" padding="md">
             <div className="flex items-center gap-2 text-xs text-[var(--matrix-text-secondary)]">
-              <Save size={14} />
-              <span>Settings are saved automatically to localStorage.</span>
+              <Shield size={14} className="text-[var(--matrix-accent)]" />
+              <span>API keys marked with ENV are loaded from environment variables (.env file).</span>
             </div>
-            <p className="text-xs text-[var(--matrix-warning)]/70 mt-2">
-              Note: API keys are stored locally in the browser. For production environments, consider using environment
-              variables or a secure vault.
+            <p className="text-xs text-[var(--matrix-text-secondary)]/70 mt-2">
+              Keys from .env are read-only in the UI. To change them, edit the .env file and restart the dev server.
+              Keys without ENV badge are stored in browser memory only (lost on refresh).
             </p>
           </Card>
         </motion.div>

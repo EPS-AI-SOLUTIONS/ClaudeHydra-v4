@@ -5,6 +5,7 @@ use std::time::Instant;
 use sqlx::PgPool;
 use tokio::sync::RwLock;
 
+use crate::model_registry::ModelCache;
 use crate::models::WitcherAgent;
 use crate::tools::ToolExecutor;
 
@@ -13,15 +14,23 @@ pub struct RuntimeState {
     pub api_keys: HashMap<String, String>,
 }
 
+/// Temporary PKCE state for an in-progress OAuth flow.
+pub struct OAuthPkceState {
+    pub code_verifier: String,
+    pub state: String,
+}
+
 /// Central application state. Clone-friendly — PgPool and Arc are both Clone.
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
     pub agents: Vec<WitcherAgent>,
     pub runtime: Arc<RwLock<RuntimeState>>,
+    pub model_cache: Arc<RwLock<ModelCache>>,
     pub start_time: Instant,
     pub client: reqwest::Client,
     pub tool_executor: Arc<ToolExecutor>,
+    pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
 }
 
 impl AppState {
@@ -46,9 +55,11 @@ impl AppState {
             db,
             agents,
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys })),
+            model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
             client: reqwest::Client::new(),
             tool_executor: Arc::new(ToolExecutor::new()),
+            oauth_pkce: Arc::new(RwLock::new(None)),
         }
     }
 }

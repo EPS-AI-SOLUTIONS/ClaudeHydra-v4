@@ -38,9 +38,12 @@ export class SettingsPage extends BasePage {
   }
 
   async selectTheme(mode: 'dark' | 'light' | 'system'): Promise<void> {
-    // First expand the Appearance section if collapsed
-    await this.expandSection('Appearance');
-    await this.themeOption(mode).click();
+    const option = this.themeOption(mode);
+    // If the option is not visible, try to expand the section
+    if (!(await option.isVisible())) {
+      await this.expandSection('Appearance');
+    }
+    await option.click();
   }
 
   async toggleAutoStart(): Promise<void> {

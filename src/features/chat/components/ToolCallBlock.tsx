@@ -3,16 +3,7 @@
  * Styled to match CodeBlock glass-panel aesthetic.
  */
 
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  FileSearch,
-  FolderOpen,
-  Loader2,
-  Pencil,
-  Wrench,
-} from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, FileSearch, FolderOpen, Loader2, Pencil, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { CodeBlock } from '@/components/molecules/CodeBlock';
@@ -87,16 +78,13 @@ export function ToolCallBlock({ interaction }: { interaction: ToolInteraction })
   const label = TOOL_LABELS[interaction.toolName] ?? interaction.toolName;
 
   const resultLooksLikeCode =
-    interaction.result &&
-    (interaction.result.includes('\n') || interaction.result.length > 200);
+    interaction.result && (interaction.result.includes('\n') || interaction.result.length > 200);
 
   return (
     <div
       className={cn(
         'glass-panel overflow-hidden my-2 border',
-        hasError
-          ? 'border-[var(--matrix-error,#ef4444)]/30'
-          : 'border-[var(--matrix-accent)]/20',
+        hasError ? 'border-[var(--matrix-error,#ef4444)]/30' : 'border-[var(--matrix-accent)]/20',
       )}
     >
       {/* Header — clickable toggle */}
@@ -110,17 +98,12 @@ export function ToolCallBlock({ interaction }: { interaction: ToolInteraction })
         )}
       >
         <Icon size={14} className="text-[var(--matrix-accent)] shrink-0" />
-        <span className="text-xs font-semibold text-[var(--matrix-text-primary)] font-mono">
-          {label}
-        </span>
+        <span className="text-xs font-semibold text-[var(--matrix-text-primary)] font-mono">{label}</span>
         <span className="text-[10px] text-[var(--matrix-text-secondary)] truncate flex-1">
           {formatInput(interaction.toolInput)}
         </span>
         <StatusIcon status={interaction.status} />
-        <motion.div
-          animate={{ rotate: expanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-        >
+        <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
           <ChevronDown size={14} className="text-[var(--matrix-text-secondary)]" />
         </motion.div>
       </button>
@@ -152,20 +135,13 @@ export function ToolCallBlock({ interaction }: { interaction: ToolInteraction })
                   <span
                     className={cn(
                       'text-[10px] uppercase tracking-wider font-mono',
-                      hasError
-                        ? 'text-[var(--matrix-error,#ef4444)]'
-                        : 'text-[var(--matrix-text-secondary)]',
+                      hasError ? 'text-[var(--matrix-error,#ef4444)]' : 'text-[var(--matrix-text-secondary)]',
                     )}
                   >
                     {hasError ? 'Error' : 'Result'}
                   </span>
                   {resultLooksLikeCode ? (
-                    <CodeBlock
-                      code={interaction.result}
-                      language="text"
-                      maxHeight="16rem"
-                      className="mt-1"
-                    />
+                    <CodeBlock code={interaction.result} language="text" maxHeight="16rem" className="mt-1" />
                   ) : (
                     <pre
                       className={cn(

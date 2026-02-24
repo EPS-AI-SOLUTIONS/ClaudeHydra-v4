@@ -206,7 +206,10 @@ describe('settingsSchema', () => {
   };
 
   it('parses valid settings', () => {
-    expect(settingsSchema.parse(validSettings)).toEqual(validSettings);
+    expect(settingsSchema.parse(validSettings)).toEqual({
+      ...validSettings,
+      welcome_message: '',
+    });
   });
 
   it('rejects settings with missing theme', () => {

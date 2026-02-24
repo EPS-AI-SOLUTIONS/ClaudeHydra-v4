@@ -31,6 +31,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { cn } from '@/shared/utils/cn';
 import { type ChatSession, useViewStore, type ViewId } from '@/stores/viewStore';
 
@@ -277,17 +278,16 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContentProps) {
+  const { currentView, setView } = useViewStore();
   const {
-    currentView,
-    setView,
     activeSessionId,
     chatSessions,
     setActiveSessionId,
-    createSession,
-    deleteSession,
-    renameSession,
     openTab,
-  } = useViewStore();
+    createSessionWithSync,
+    deleteSessionWithSync,
+    renameSessionWithSync,
+  } = useSessionSync();
 
   const { mode, setMode, isDark } = useTheme();
 
@@ -305,7 +305,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   );
 
   const handleCreateSession = () => {
-    createSession();
+    createSessionWithSync();
   };
 
   const handleSelectSession = (sessionId: string) => {
@@ -316,11 +316,11 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   };
 
   const handleDeleteSession = (sessionId: string) => {
-    deleteSession(sessionId);
+    deleteSessionWithSync(sessionId);
   };
 
   const handleRenameSession = (sessionId: string, newTitle: string) => {
-    renameSession(sessionId, newTitle);
+    renameSessionWithSync(sessionId, newTitle);
   };
 
   // Theme mode cycling: dark -> light -> system -> dark
