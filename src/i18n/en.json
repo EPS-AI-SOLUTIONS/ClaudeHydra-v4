@@ -39,6 +39,28 @@
     "close": "Close",
     "menu": "Menu"
   },
+  "home": {
+    "subtitle": "AI Swarm Control Center — start a new chat or continue a previous conversation.",
+    "startChat": "Start Chat",
+    "viewAgents": "View Agents",
+    "settings": "Settings",
+    "recentChats": "Recent Chats",
+    "noChats": "No chats yet. Start a new conversation!",
+    "msg": "msg",
+    "badges": {
+      "agents": "12 Agents",
+      "claudeApi": "Claude API",
+      "mcpIntegration": "MCP Integration",
+      "streamingChat": "Streaming Chat"
+    }
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{m}}m ago",
+    "hoursAgo": "{{h}}h ago",
+    "yesterday": "yesterday",
+    "daysAgo": "{{d}}d ago"
+  },
   "chat": {
     "modelSelector": "Select model",
     "temperature": "Temperature",
