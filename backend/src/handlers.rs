@@ -125,7 +125,7 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
     let has_oauth = crate::oauth::has_oauth_tokens(&state).await;
 
     let resp = HealthResponse {
-        status: "ok".to_string(),
+        status: if state.is_ready() { "ok" } else { "starting" }.to_string(),
         version: "4.0.0".to_string(),
         app: "ClaudeHydra".to_string(),
         uptime_seconds: uptime,
@@ -142,6 +142,22 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
     };
 
     Json(serde_json::to_value(resp).unwrap())
+}
+
+/// GET /api/health/ready — lightweight readiness probe (no locks, no DB).
+pub async fn readiness(State(state): State<AppState>) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    let ready = state.is_ready();
+    let uptime = state.start_time.elapsed().as_secs();
+    let body = json!({ "ready": ready, "uptime_seconds": uptime });
+
+    if ready {
+        (StatusCode::OK, Json(body)).into_response()
+    } else {
+        (StatusCode::SERVICE_UNAVAILABLE, Json(body)).into_response()
+    }
 }
 
 pub async fn system_stats() -> Json<Value> {

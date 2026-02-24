@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -31,6 +32,19 @@ pub struct AppState {
     pub client: reqwest::Client,
     pub tool_executor: Arc<ToolExecutor>,
     pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
+    /// `true` once startup_sync completes (or times out).
+    pub ready: Arc<AtomicBool>,
+}
+
+impl AppState {
+    pub fn is_ready(&self) -> bool {
+        self.ready.load(Ordering::Relaxed)
+    }
+
+    pub fn mark_ready(&self) {
+        self.ready.store(true, Ordering::Relaxed);
+        tracing::info!("Backend marked as READY");
+    }
 }
 
 impl AppState {
@@ -60,6 +74,7 @@ impl AppState {
             client: reqwest::Client::new(),
             tool_executor: Arc::new(ToolExecutor::new()),
             oauth_pkce: Arc::new(RwLock::new(None)),
+            ready: Arc::new(AtomicBool::new(false)),
         }
     }
 }

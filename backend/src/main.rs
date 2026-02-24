@@ -4,6 +4,7 @@ use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::model_registry;
 use claudehydra_backend::state::AppState;
+use claudehydra_backend::watchdog;
 
 fn build_app(state: AppState) -> axum::Router {
     // CORS — allow Vite dev server + Vercel production
@@ -12,6 +13,8 @@ fn build_app(state: AppState) -> axum::Router {
             "http://localhost:5177".parse().unwrap(),
             "http://127.0.0.1:5177".parse().unwrap(),
             "http://localhost:4173".parse().unwrap(),
+            "http://localhost:5199".parse().unwrap(),
+            "http://127.0.0.1:5199".parse().unwrap(),
             "https://claudehydra-v4.vercel.app".parse().unwrap(),
             "https://claudehydra-v4-pawelserkowskis-projects.vercel.app"
                 .parse()
@@ -45,6 +48,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
 
     let state = AppState::new(pool);
     model_registry::startup_sync(&state).await;
+    state.mark_ready();
     Ok(build_app(state).into())
 }
 
@@ -72,7 +76,25 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = AppState::new(pool);
-    model_registry::startup_sync(&state).await;
+
+    // ── Non-blocking startup: model sync in background ──
+    let startup_state = state.clone();
+    tokio::spawn(async move {
+        let sync_timeout = std::time::Duration::from_secs(90);
+        match tokio::time::timeout(sync_timeout, model_registry::startup_sync(&startup_state)).await
+        {
+            Ok(()) => tracing::info!("startup: model registry sync complete"),
+            Err(_) => tracing::error!(
+                "startup: model registry sync timed out after {}s — using fallback models",
+                sync_timeout.as_secs()
+            ),
+        }
+        startup_state.mark_ready();
+    });
+
+    // ── Spawn background watchdog ──
+    let _watchdog = watchdog::spawn(state.clone());
+
     let app = build_app(state);
 
     let port: u16 = std::env::var("PORT")
