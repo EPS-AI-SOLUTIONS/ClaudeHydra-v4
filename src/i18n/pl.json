@@ -2,15 +2,12 @@
   "nav": {
     "home": "Start",
     "chat": "Czat",
-    "agents": "Agenci",
-    "history": "Historia",
-    "settings": "Ustawienia"
+    "agents": "Agenci"
   },
   "sidebar": {
     "groups": {
       "main": "GLOWNE",
-      "tools": "NARZEDZIA",
-      "system": "SYSTEM"
+      "tools": "NARZEDZIA"
     },
     "chats": "CZATY",
     "newChat": "Nowy czat",
@@ -43,7 +40,6 @@
     "subtitle": "Centrum Sterowania Rojem AI — rozpocznij nowy czat lub kontynuuj rozmowe.",
     "startChat": "Nowy Czat",
     "viewAgents": "Agenci",
-    "settings": "Ustawienia",
     "recentChats": "Ostatnie Czaty",
     "noChats": "Brak czatow. Rozpocznij nowa rozmowe!",
     "msg": "wiad.",

@@ -2,15 +2,12 @@
   "nav": {
     "home": "Home",
     "chat": "Chat",
-    "agents": "Agents",
-    "history": "History",
-    "settings": "Settings"
+    "agents": "Agents"
   },
   "sidebar": {
     "groups": {
       "main": "MAIN",
-      "tools": "TOOLS",
-      "system": "SYSTEM"
+      "tools": "TOOLS"
     },
     "chats": "CHATS",
     "newChat": "New chat",
@@ -43,7 +40,6 @@
     "subtitle": "AI Swarm Control Center — start a new chat or continue a previous conversation.",
     "startChat": "Start Chat",
     "viewAgents": "View Agents",
-    "settings": "Settings",
     "recentChats": "Recent Chats",
     "noChats": "No chats yet. Start a new conversation!",
     "msg": "msg",

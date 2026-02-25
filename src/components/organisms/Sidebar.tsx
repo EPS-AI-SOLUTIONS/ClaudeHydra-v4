@@ -15,7 +15,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Edit2,
   ExternalLink,
   type LucideIcon,
@@ -24,7 +23,6 @@ import {
   MessageSquare,
   MessagesSquare,
   Plus,
-  Settings,
   Sparkles,
   Trash2,
   WifiOff,
@@ -338,25 +336,16 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         { id: 'agents', label: t('nav.agents', 'Agents'), icon: Bot },
       ],
     },
-    {
-      id: 'system',
-      label: t('sidebar.groups.system', 'SYSTEM'),
-      icon: Settings,
-      items: [
-        { id: 'history', label: t('nav.history', 'History'), icon: Clock },
-        { id: 'settings', label: t('nav.settings', 'Settings'), icon: Settings },
-      ],
-    },
   ];
 
   // Grouped navigation - expandable sections (Tissaia style)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem('claudehydra_expanded_groups');
-      const defaults = { main: true, tools: true, system: true };
+      const defaults = { main: true, tools: true };
       return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
     } catch {
-      return { main: true, tools: true, system: true };
+      return { main: true, tools: true };
     }
   });
 

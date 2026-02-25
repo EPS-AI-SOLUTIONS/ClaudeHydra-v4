@@ -18,8 +18,6 @@ import './styles/globals.css';
 const HomePage = lazy(() => import('@/features/home/components/HomePage'));
 const ClaudeChatView = lazy(() => import('@/features/chat/components/ClaudeChatView'));
 const AgentsView = lazy(() => import('@/features/agents/components/AgentsView'));
-const HistoryView = lazy(() => import('@/features/history/components/HistoryView'));
-const SettingsView = lazy(() => import('@/features/settings/components/SettingsView'));
 
 // ---------------------------------------------------------------------------
 // ViewRouter — maps the current view id to the correct lazy component
@@ -37,10 +35,6 @@ function ViewRouter() {
         return <ClaudeChatView />;
       case 'agents':
         return <AgentsView />;
-      case 'history':
-        return <HistoryView />;
-      case 'settings':
-        return <SettingsView />;
     }
   }
 

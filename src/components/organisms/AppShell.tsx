@@ -22,7 +22,7 @@ import { StatusFooter } from '@/components/organisms/StatusFooter';
 import { TabBar } from '@/components/organisms/TabBar';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { useHealthStatus, useSystemStatsQuery } from '@/features/health/hooks/useHealth';
-import { useSettingsQuery } from '@/features/settings/hooks/useSettings';
+import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { useViewStore } from '@/stores/viewStore';
 
 // ---------------------------------------------------------------------------

@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
-import { useSettingsQuery } from '@/features/settings/hooks/useSettings';
+import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { cn } from '@/shared/utils/cn';
 import { useViewStore } from '@/stores/viewStore';
 import { type Attachment, ChatInput } from './ChatInput';

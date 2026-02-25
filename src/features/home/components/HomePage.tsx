@@ -7,7 +7,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import { Bot, Clock, Layers, MessageSquare, Network, Plus, Settings, Sparkles, Users } from 'lucide-react';
+import { Bot, Clock, Layers, MessageSquare, Network, Plus, Sparkles, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -172,9 +172,6 @@ export const HomePage = memo(() => {
     setView('agents');
   }, [setView]);
 
-  const handleOpenSettings = useCallback(() => {
-    setView('settings');
-  }, [setView]);
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 overflow-y-auto">
@@ -225,7 +222,7 @@ export const HomePage = memo(() => {
 
         {/* CTA Buttons */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mt-2"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-2"
           variants={ctaVariants}
           initial="hidden"
           animate="visible"
@@ -248,15 +245,6 @@ export const HomePage = memo(() => {
             className="w-full"
           >
             {t('home.viewAgents', 'View Agents')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="md"
-            leftIcon={<Settings size={16} />}
-            onClick={handleOpenSettings}
-            className="w-full"
-          >
-            {t('home.settings', 'Settings')}
           </Button>
         </motion.div>
       </motion.div>
