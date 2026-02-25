@@ -27,7 +27,9 @@
     "delete": "Delete",
     "close": "Close",
     "menu": "Menu",
-    "loadingView": "Loading view"
+    "loadingView": "Loading view",
+    "loadError": "Failed to load data",
+    "retry": "Retry"
   },
   "chat": {
     "title": "Claude Chat",

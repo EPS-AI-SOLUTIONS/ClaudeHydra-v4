@@ -7,7 +7,7 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 import type { ChatSession, ChatTab } from '@/shared/types/store';
 
 // Re-export shared types so existing imports from '@/stores/viewStore' keep working
@@ -55,8 +55,9 @@ interface ViewState {
 // ---------------------------------------------------------------------------
 
 export const useViewStore = create<ViewState>()(
-  persist(
-    (set, get) => ({
+  devtools(
+    persist(
+      (set, get) => ({
       currentView: 'home',
       sidebarCollapsed: false,
       mobileDrawerOpen: false,
@@ -290,5 +291,7 @@ export const useViewStore = create<ViewState>()(
         activeTabId: state.activeTabId,
       }),
     },
+    ),
+    { name: 'ClaudeHydra/ViewStore', enabled: import.meta.env.DEV },
   ),
 );

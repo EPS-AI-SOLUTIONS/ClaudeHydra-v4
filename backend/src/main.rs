@@ -32,7 +32,8 @@ fn build_app(state: AppState) -> axum::Router {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
+        .max_age(std::time::Duration::from_secs(86_400));
 
     // Rate limiting: 30 req burst, replenish 1 per 2 seconds, per IP
     // Jaskier Shared Pattern -- rate_limit
