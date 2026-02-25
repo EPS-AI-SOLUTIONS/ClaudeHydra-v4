@@ -14,6 +14,7 @@ export interface PartnerSessionSummary {
   created_at: string;
   message_count: number;
   updated_at?: string;
+  preview?: string;
 }
 
 export interface PartnerMessage {

@@ -29,7 +29,7 @@ const SettingsView = lazy(() => import('@/features/settings/components/SettingsV
 function ViewRouter() {
   const currentView = useViewStore((s) => s.currentView);
 
-  const renderView = () => {
+  function renderView() {
     switch (currentView) {
       case 'home':
         return <HomePage />;
@@ -42,7 +42,7 @@ function ViewRouter() {
       case 'settings':
         return <SettingsView />;
     }
-  };
+  }
 
   return (
     <div className="h-full overflow-hidden relative">
