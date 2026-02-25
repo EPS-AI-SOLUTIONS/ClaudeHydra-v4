@@ -155,10 +155,6 @@ export const HomePage = memo(() => {
     [chatSessions],
   );
 
-  const handleNewChat = useCallback(() => {
-    createSession();
-  }, [createSession]);
-
   const handleOpenSession = useCallback(
     (sessionId: string) => {
       selectSession(sessionId);
@@ -226,7 +222,7 @@ export const HomePage = memo(() => {
             variant="primary"
             size="md"
             leftIcon={<Plus size={16} />}
-            onClick={handleNewChat}
+            onClick={() => createSession()}
             className="w-full"
             data-testid="btn-new-chat"
           >

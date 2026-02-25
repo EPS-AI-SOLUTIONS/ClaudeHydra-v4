@@ -12,7 +12,7 @@
 
 import { Bot, Brain, Crown, Filter, GitBranch, Shield, Swords, Users, Wand2, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge, Button, Card } from '@/components/atoms';
 import { StatusIndicator, type StatusState } from '@/components/molecules';
 import { cn } from '@/shared/utils/cn';
@@ -308,10 +308,6 @@ export function AgentsView() {
 
   const onlineCount = useMemo(() => CLAUDE_AGENTS.filter((a) => a.status === 'online').length, []);
 
-  const handleTierFilter = useCallback((tier: TierFilter) => {
-    setActiveTier(tier);
-  }, []);
-
   return (
     <div data-testid="agents-view" className="h-full flex flex-col overflow-auto p-4 sm:p-6">
       {/* Header */}
@@ -351,7 +347,7 @@ export function AgentsView() {
               data-testid={`agents-filter-${tier.toLowerCase()}`}
               variant={activeTier === tier ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => handleTierFilter(tier)}
+              onClick={() => setActiveTier(tier)}
             >
               {tier}
               <span className="ml-1 opacity-70">({tierCounts[tier]})</span>

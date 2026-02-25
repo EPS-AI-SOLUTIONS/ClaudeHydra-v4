@@ -300,10 +300,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
     renameSessionWithSync,
   } = useSessionSync();
 
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
   const theme = useViewTheme();
   const isLight = theme.isLight;
+  const isDark = !isLight;
 
   // Partner sessions (GeminiHydra)
   const { data: partnerSessions, isLoading: partnerLoading, isError: partnerError } = usePartnerSessions();
@@ -361,23 +360,11 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
     [setView, isMobile, onClose],
   );
 
-  const handleCreateSession = () => {
-    createSessionWithSync();
-  };
-
   const handleSelectSession = (sessionId: string) => {
     selectSession(sessionId);
     openTab(sessionId);
     setView('chat');
     if (isMobile && onClose) onClose();
-  };
-
-  const handleDeleteSession = (sessionId: string) => {
-    deleteSessionWithSync(sessionId);
-  };
-
-  const handleRenameSession = (sessionId: string, newTitle: string) => {
-    renameSessionWithSync(sessionId, newTitle);
   };
 
   return (
@@ -496,7 +483,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
           <button
             type="button"
             data-testid="sidebar-new-chat-btn"
-            onClick={handleCreateSession}
+            onClick={() => createSessionWithSync()}
             className={cn('p-1.5 rounded text-[var(--matrix-accent)] transition-colors', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
             title={t('sidebar.newChat', 'New chat')}
           >
@@ -527,8 +514,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                     collapsed={collapsed}
                     isDark={isDark}
                     onSelect={() => handleSelectSession(session.id)}
-                    onDelete={() => handleDeleteSession(session.id)}
-                    onRename={(newTitle) => handleRenameSession(session.id, newTitle)}
+                    onDelete={() => deleteSessionWithSync(session.id)}
+                    onRename={(newTitle) => renameSessionWithSync(session.id, newTitle)}
                   />
                 ))
               )}

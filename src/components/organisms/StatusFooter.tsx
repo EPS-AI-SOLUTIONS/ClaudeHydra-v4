@@ -41,14 +41,14 @@ export interface StatusFooterProps {
 // COMPONENT
 // ============================================================================
 
-const StatusFooterComponent = ({
+function StatusFooterComponent({
   connectionHealth = 'connected',
   selectedModel = 'Claude Sonnet 4',
   cpuUsage = 12,
   ramUsage = 45,
   tagline = 'AI Swarm Control Center',
   statsLoaded = true,
-}: StatusFooterProps) => {
+}: StatusFooterProps) {
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === 'light';
 
@@ -85,13 +85,18 @@ const StatusFooterComponent = ({
 
   // Detect model tier (adapted for Claude models)
   const modelLower = selectedModel.toLowerCase();
-  const modelTier = modelLower.includes('opus') || modelLower.includes('pro')
-    ? { label: 'PRO', icon: Cloud, cls: isLight ? 'text-blue-600' : 'text-blue-400' }
-    : modelLower.includes('sonnet') || modelLower.includes('flash')
-      ? { label: 'FLASH', icon: Zap, cls: isLight ? 'text-amber-600' : 'text-amber-400' }
-      : modelLower.includes('haiku') || modelLower.includes('qwen') || modelLower.includes('llama')
-        ? { label: 'LOCAL', icon: Cpu, cls: isLight ? 'text-emerald-600' : 'text-emerald-400' }
-        : null;
+  const modelTier = (() => {
+    if (modelLower.includes('opus') || modelLower.includes('pro')) {
+      return { label: 'PRO', icon: Cloud, cls: isLight ? 'text-blue-600' : 'text-blue-400' };
+    }
+    if (modelLower.includes('sonnet') || modelLower.includes('flash')) {
+      return { label: 'FLASH', icon: Zap, cls: isLight ? 'text-amber-600' : 'text-amber-400' };
+    }
+    if (modelLower.includes('haiku') || modelLower.includes('qwen') || modelLower.includes('llama')) {
+      return { label: 'LOCAL', icon: Cpu, cls: isLight ? 'text-emerald-600' : 'text-emerald-400' };
+    }
+    return null;
+  })();
 
   // CPU color based on usage
   const cpuColor =
@@ -182,8 +187,7 @@ const StatusFooterComponent = ({
       </div>
     </footer>
   );
-};
-
-StatusFooterComponent.displayName = 'StatusFooter';
+}
 
 export const StatusFooter = memo(StatusFooterComponent);
+StatusFooter.displayName = 'StatusFooter';

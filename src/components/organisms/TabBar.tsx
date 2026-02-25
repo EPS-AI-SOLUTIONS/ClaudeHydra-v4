@@ -169,10 +169,6 @@ export const TabBar = memo(() => {
     [tabs, closeTab],
   );
 
-  const handleNewTab = useCallback(() => {
-    createSession();
-  }, [createSession]);
-
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (scrollRef.current) {
       scrollRef.current.scrollLeft += e.deltaY;
@@ -219,7 +215,7 @@ export const TabBar = memo(() => {
 
       <button
         type="button"
-        onClick={handleNewTab}
+        onClick={() => createSession()}
         className={cn(
           'shrink-0 p-2 mb-1 rounded-xl transition-all',
           theme.isLight

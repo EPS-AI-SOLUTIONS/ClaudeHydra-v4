@@ -274,15 +274,7 @@ export function ClaudeChatView() {
   // ----- Check Claude API connectivity on mount ----------------------------
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const connected = await claudeHealthCheck();
-        setClaudeConnected(connected);
-      } catch {
-        setClaudeConnected(false);
-      }
-    };
-    void checkHealth();
+    void claudeHealthCheck().then(setClaudeConnected);
   }, []);
 
   // ----- Auto-scroll -------------------------------------------------------
@@ -309,7 +301,7 @@ export function ClaudeChatView() {
 
   // ----- Model selection adapter -------------------------------------------
 
-  const modelOptions = CLAUDE_MODELS.map(toModelOption);
+  const modelOptions = useMemo(() => CLAUDE_MODELS.map(toModelOption), []);
 
   const handleModelSelect = useCallback((model: ModelOption) => {
     setSelectedModel(model.id);
