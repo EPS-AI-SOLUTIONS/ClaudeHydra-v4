@@ -8,8 +8,6 @@ export { Button } from './Button';
 export type { CardProps } from './Card';
 export { Card } from './Card';
 
-export { GridBackground } from './GridBackground';
-
 export { Input } from './Input';
 
 export { ProgressBar } from './ProgressBar';
@@ -17,3 +15,5 @@ export { ProgressBar } from './ProgressBar';
 export { RuneRain } from './RuneRain';
 
 export { Skeleton } from './Skeleton';
+
+export { ThemedBackground } from './ThemedBackground';

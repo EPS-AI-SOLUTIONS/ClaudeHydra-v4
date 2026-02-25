@@ -1,3 +1,5 @@
+/** Jaskier Shared Pattern */
+// src/shared/api/client.ts
 /**
  * ClaudeHydra v4 - Typed API Client
  * ===================================
@@ -11,9 +13,9 @@ const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? (import.meta.env.PROD ? 'ht
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
 
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Error class
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 
 export class ApiError extends Error {
   readonly status: number;
@@ -29,9 +31,9 @@ export class ApiError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Retry wrapper
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 
 /** Retry on network errors (TypeError = "Failed to fetch") with exponential backoff. */
 async function fetchWithRetry(
@@ -41,8 +43,11 @@ async function fetchWithRetry(
 ): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await fetch(url, init);
+      const response = await fetch(url, init);
+      // Don't retry on HTTP errors (4xx/5xx) — only network failures
+      return response;
     } catch (err) {
+      // TypeError = network failure ("Failed to fetch")
       if (attempt < retries && err instanceof TypeError) {
         const delay = RETRY_BASE_MS * 2 ** attempt;
         console.warn(
@@ -54,71 +59,72 @@ async function fetchWithRetry(
       throw err;
     }
   }
+  // Should never reach here, but TypeScript needs it
   throw new TypeError('Failed to fetch after retries');
 }
 
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Internal fetch helper
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
-  const res = await fetchWithRetry(url, {
+  const response = await fetchWithRetry(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...options?.headers,
+      ...options.headers,
     },
   });
 
-  if (!res.ok) {
+  if (!response.ok) {
     let body: unknown;
     try {
-      body = await res.json();
+      body = await response.json();
     } catch {
-      body = await res.text().catch(() => null);
+      body = await response.text().catch(() => null);
     }
-    throw new ApiError(res.status, res.statusText, body);
+    throw new ApiError(response.status, response.statusText, body);
   }
 
   // Handle 204 No Content
-  if (res.status === 204) {
+  if (response.status === 204) {
     return undefined as T;
   }
 
-  return res.json() as Promise<T>;
+  return response.json() as Promise<T>;
 }
 
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Public API
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 
-export function apiGet<T>(path: string): Promise<T> {
-  return request<T>(path, { method: 'GET' });
+export async function apiGet<T>(path: string): Promise<T> {
+  return apiFetch<T>(path, { method: 'GET' });
 }
 
-export function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>(path, {
+export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+  return apiFetch<T>(path, {
     method: 'POST',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }
 
-export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>(path, {
+export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+  return apiFetch<T>(path, {
     method: 'PATCH',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }
 
-export function apiDelete<T>(path: string): Promise<T> {
-  return request<T>(path, { method: 'DELETE' });
+export async function apiDelete<T>(path: string): Promise<T> {
+  return apiFetch<T>(path, { method: 'DELETE' });
 }
 
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 // Health check
-// ---------------------------------------------------------------------------
+// -------------------------------------------------------------------
 
 export interface HealthStatus {
   ready: boolean;
@@ -141,10 +147,13 @@ export async function checkHealth(): Promise<HealthStatus> {
     if (response.ok) {
       return (await response.json()) as HealthStatus;
     }
+
+    // 503 = starting up
     if (response.status === 503) {
       const body = (await response.json()) as HealthStatus;
       return { ready: false, uptime_seconds: body.uptime_seconds };
     }
+
     return { ready: false };
   } catch {
     return { ready: false };

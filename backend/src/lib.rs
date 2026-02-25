@@ -3,6 +3,7 @@ pub mod model_registry;
 pub mod models;
 pub mod oauth;
 pub mod state;
+pub mod system_monitor;
 pub mod tools;
 pub mod watchdog;
 

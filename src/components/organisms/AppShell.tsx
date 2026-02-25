@@ -15,7 +15,7 @@
 
 import { type ReactNode, useEffect, useMemo } from 'react';
 
-import { RuneRain } from '@/components/atoms';
+import { RuneRain, ThemedBackground } from '@/components/atoms';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import type { StatusFooterProps } from '@/components/organisms/StatusFooter';
 import { StatusFooter } from '@/components/organisms/StatusFooter';
@@ -114,31 +114,8 @@ function AppShellInner({ children }: AppShellProps) {
           : 'text-black selection:bg-emerald-500 selection:text-white'
       } overflow-hidden font-mono`}
     >
-      {/* Background Layer — crossfade between dark/light */}
-      <div
-        className={`absolute inset-0 z-[1] bg-cover bg-center pointer-events-none transition-opacity duration-1000 ease-in-out bg-[url('/background.webp')] ${
-          isDark ? 'opacity-40' : 'opacity-0'
-        }`}
-      />
-      <div
-        className={`absolute inset-0 z-[1] bg-cover bg-center pointer-events-none transition-opacity duration-1000 ease-in-out bg-[url('/backgroundlight.webp')] ${
-          !isDark ? 'opacity-35' : 'opacity-0'
-        }`}
-      />
-
-      {/* Gradient overlay */}
-      <div
-        className={`absolute inset-0 z-[1] bg-gradient-to-b pointer-events-none transition-opacity duration-1000 opacity-60 ${
-          isDark ? 'from-black/40 via-transparent to-black/60' : 'from-white/30 via-transparent to-slate-100/50'
-        }`}
-      />
-
-      {/* Radial glow */}
-      <div
-        className={`absolute inset-0 z-[1] pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${
-          isDark ? 'from-white/5' : 'from-emerald-500/5'
-        } via-transparent to-transparent`}
-      />
+      {/* Background layers */}
+      <ThemedBackground resolvedTheme={resolvedTheme} />
 
       {/* Rune Rain Effect */}
       <RuneRain opacity={0.1} />

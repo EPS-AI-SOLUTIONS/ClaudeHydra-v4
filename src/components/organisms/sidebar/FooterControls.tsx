@@ -1,4 +1,5 @@
 // src/components/organisms/sidebar/FooterControls.tsx
+/** Jaskier Design System */
 /**
  * Shared FooterControls — theme toggle, language selector, and version display.
  * Extracted from Sidebar for reuse across the Jaskier app family.
@@ -57,10 +58,12 @@ export function FooterControls({ collapsed, version, tagline }: FooterControlsPr
     setShowLangDropdown(false);
   };
 
+  const glassPanel = isLight ? 'glass-panel-light' : 'glass-panel-dark';
+
   return (
     <>
       {/* Theme & Language Panel */}
-      <div className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'p-2 mx-2 space-y-1')}>
+      <div className={cn(glassPanel, 'p-2 space-y-1')}>
         {/* Theme Toggle */}
         <button
           type="button"
@@ -86,6 +89,7 @@ export function FooterControls({ collapsed, version, tagline }: FooterControlsPr
                 'text-base font-mono',
                 theme.textMuted,
                 isLight ? 'group-hover:text-black' : 'group-hover:text-white',
+                'truncate',
               )}
             >
               {getThemeLabel(resolvedTheme)}
