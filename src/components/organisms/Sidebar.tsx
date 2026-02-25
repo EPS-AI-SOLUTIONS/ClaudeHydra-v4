@@ -29,13 +29,14 @@ import {
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, type KeyboardEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { usePartnerSessions } from '@/features/chat/hooks/usePartnerSessions';
-import { PartnerChatModal } from '@/features/chat/components/PartnerChatModal';
+
+const PartnerChatModal = lazy(() => import('@/features/chat/components/PartnerChatModal'));
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatSession, useViewStore, type ViewId } from '@/stores/viewStore';
@@ -608,11 +609,13 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         </AnimatePresence>
       </div>
 
-      {/* Partner session modal */}
-      <PartnerChatModal
-        sessionId={partnerModalSessionId}
-        onClose={() => setPartnerModalSessionId(null)}
-      />
+      {/* Partner session modal (lazy-loaded) */}
+      <Suspense fallback={null}>
+        <PartnerChatModal
+          sessionId={partnerModalSessionId}
+          onClose={() => setPartnerModalSessionId(null)}
+        />
+      </Suspense>
 
       {/* ---- Bottom: Theme & Language + Version ---- */}
       <FooterControls

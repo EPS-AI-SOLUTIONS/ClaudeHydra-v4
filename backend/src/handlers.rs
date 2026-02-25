@@ -10,6 +10,13 @@ use crate::models::*;
 use crate::state::AppState;
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Input length limits — Jaskier Shared Pattern
+// ═══════════════════════════════════════════════════════════════════════
+
+const MAX_TITLE_LENGTH: usize = 200;
+const MAX_MESSAGE_LENGTH: usize = 50_000; // 50KB
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Jaskier Shared Pattern -- error
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -1088,6 +1095,11 @@ pub async fn create_session(
     State(state): State<AppState>,
     Json(req): Json<CreateSessionRequest>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    if req.title.len() > MAX_TITLE_LENGTH {
+        tracing::warn!("create_session: title exceeds {} chars (got {})", MAX_TITLE_LENGTH, req.title.len());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let row = sqlx::query_as::<_, SessionRow>(
         "INSERT INTO ch_sessions (title) VALUES ($1) \
          RETURNING id, title, created_at, updated_at",
@@ -1236,6 +1248,11 @@ pub async fn update_session(
     Path(id): Path<String>,
     Json(req): Json<UpdateSessionRequest>,
 ) -> Result<Json<Value>, StatusCode> {
+    if req.title.len() > MAX_TITLE_LENGTH {
+        tracing::warn!("update_session: title exceeds {} chars (got {})", MAX_TITLE_LENGTH, req.title.len());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
     let row = sqlx::query_as::<_, SessionRow>(
@@ -1304,6 +1321,11 @@ pub async fn add_session_message(
     Path(id): Path<String>,
     Json(req): Json<AddMessageRequest>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
+    if req.content.len() > MAX_MESSAGE_LENGTH {
+        tracing::warn!("add_session_message: content exceeds {} chars (got {})", MAX_MESSAGE_LENGTH, req.content.len());
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // Verify session exists
