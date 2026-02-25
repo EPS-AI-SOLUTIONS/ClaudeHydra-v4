@@ -7,20 +7,21 @@
    TAILWIND THEME CONFIGURATION
    ============================================ */
 @theme {
-  --color-matrix-bg-primary: #0f1419;
-  --color-matrix-bg-secondary: #0a0e13;
-  --color-matrix-bg-tertiary: #141a21;
-  --color-matrix-accent: #ffffff;
-  --color-matrix-accent-dim: #d1d5db;
-  --color-matrix-accent-glow: #e5e7eb;
-  --color-matrix-text: #e5e7eb;
-  --color-matrix-text-dim: #9ca3af;
-  --color-matrix-border: #1e2a35;
-  --color-matrix-glass: rgba(15, 20, 25, 0.8);
+  /* Colors — Dynamic: reference CSS vars so they switch with [data-theme] */
+  --color-matrix-bg-primary: var(--matrix-bg-primary);
+  --color-matrix-bg-secondary: var(--matrix-bg-secondary);
+  --color-matrix-bg-tertiary: var(--matrix-bg-tertiary);
+  --color-matrix-accent: var(--matrix-accent);
+  --color-matrix-accent-dim: var(--matrix-accent-dim);
+  --color-matrix-accent-glow: var(--matrix-accent-glow);
+  --color-matrix-text: var(--matrix-text);
+  --color-matrix-text-dim: var(--matrix-text-secondary);
+  --color-matrix-border: var(--matrix-border);
+  --color-matrix-glass: var(--matrix-glass-bg);
   --color-matrix-glass-light: rgba(255, 255, 255, 0.05);
-  --color-matrix-error: #f87171;
-  --color-matrix-warning: #facc15;
-  --color-matrix-success: #4ade80;
+  --color-matrix-error: var(--matrix-error);
+  --color-matrix-warning: var(--matrix-warning);
+  --color-matrix-success: var(--matrix-success);
 
   --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
@@ -60,6 +61,22 @@
   --matrix-warning: #facc15;
   --matrix-success: #4ade80;
 
+  /* Jaskier Design System — shared aliases */
+  --matrix-text-dim: #9ca3af;
+  --matrix-panel-bg: rgba(15, 20, 25, 0.55);
+  --matrix-input-bg: rgba(10, 14, 19, 0.5);
+  --matrix-hover-bg: rgba(255, 255, 255, 0.08);
+  --matrix-active-bg: rgba(255, 255, 255, 0.12);
+  --matrix-divider: rgba(255, 255, 255, 0.06);
+  --matrix-overlay: rgba(0, 0, 0, 0.6);
+  --matrix-tooltip-bg: rgba(15, 20, 25, 0.95);
+  --matrix-focus-ring: rgba(255, 255, 255, 0.4);
+  --matrix-code-bg: rgba(0, 0, 0, 0.3);
+  --matrix-badge-bg: rgba(255, 255, 255, 0.15);
+  --matrix-error-bg: rgba(127, 29, 29, 0.2);
+  --matrix-warning-bg: rgba(113, 63, 18, 0.2);
+  --matrix-success-bg: rgba(20, 83, 45, 0.2);
+
   /* Glass Physics — Dark (The Butcher of Blaviken) */
   --glass-dark-bg: rgba(17, 25, 40, 0.75);
   --glass-dark-border: 1px solid rgba(255, 255, 255, 0.125);
@@ -94,6 +111,18 @@
   --matrix-text-muted: #4a5a4a;
   --matrix-border: rgba(45, 106, 79, 0.2);
   --matrix-glass-bg: rgba(255, 255, 255, 0.92);
+
+  --matrix-text-dim: #2d3d2d;
+  --matrix-panel-bg: rgba(255, 255, 255, 0.7);
+  --matrix-input-bg: rgba(255, 255, 255, 0.8);
+  --matrix-hover-bg: rgba(5, 150, 105, 0.08);
+  --matrix-active-bg: rgba(5, 150, 105, 0.12);
+  --matrix-divider: rgba(5, 150, 105, 0.08);
+  --matrix-overlay: rgba(255, 255, 255, 0.6);
+  --matrix-tooltip-bg: rgba(255, 255, 255, 0.95);
+  --matrix-focus-ring: rgba(5, 120, 87, 0.4);
+  --matrix-code-bg: rgba(0, 0, 0, 0.06);
+  --matrix-badge-bg: rgba(5, 150, 105, 0.12);
 }
 
 /* ============================================
@@ -179,6 +208,18 @@ pre,
   scrollbar-color: rgba(45, 106, 79, 0.4) transparent;
 }
 
+/* Selection */
+::selection {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  text-shadow: none;
+}
+
+[data-theme="light"] ::selection {
+  background: #a7f3d0;
+  color: #064e3b;
+}
+
 /* ============================================
    GLASS PANEL STYLES
    ============================================ */
@@ -244,16 +285,6 @@ pre,
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.5rem;
-  color: var(--matrix-text-primary);
-  padding: 0.5rem 0.75rem;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.glass-input:focus {
-  border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
 }
 
 /* Glass Button */
@@ -262,12 +293,9 @@ pre,
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
   color: var(--matrix-accent);
-  padding: 0.5rem 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
 }
 
 .glass-button:hover {
@@ -278,6 +306,12 @@ pre,
 
 .glass-button:active {
   transform: scale(0.98);
+}
+
+.glass-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .glass-button-primary {
@@ -340,16 +374,16 @@ pre,
 }
 
 [data-theme="light"] .glass-button {
-  background: rgba(45, 106, 79, 0.1);
+  background: rgba(45, 106, 79, 0.15);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-color: rgba(45, 106, 79, 0.2);
+  border: 1px solid rgba(45, 106, 79, 0.3);
 }
 
 [data-theme="light"] .glass-button:hover {
-  background: rgba(45, 106, 79, 0.2);
-  border-color: rgba(45, 106, 79, 0.4);
-  box-shadow: 0 0 15px rgba(45, 106, 79, 0.15);
+  background: rgba(45, 106, 79, 0.25);
+  border-color: rgba(45, 106, 79, 0.5);
+  box-shadow: 0 0 15px rgba(45, 106, 79, 0.2);
 }
 
 [data-theme="light"] .glass-button-primary {

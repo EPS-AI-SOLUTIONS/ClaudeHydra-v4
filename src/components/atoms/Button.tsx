@@ -5,7 +5,7 @@ import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from 'react';
 import { cn } from '@/shared/utils/cn';
 
 // ============================================
-// BUTTON VARIANTS (ClaudeHydra — Matrix Green Accent)
+// BUTTON VARIANTS (Jaskier Design System)
 // ============================================
 
 const buttonVariants = cva(
@@ -13,34 +13,30 @@ const buttonVariants = cva(
     'inline-flex items-center justify-center gap-2 font-medium',
     'transition-all duration-200',
     'disabled:opacity-50 disabled:cursor-not-allowed',
-    'focus:outline-none focus-visible:ring-2 focus-visible:ring-matrix-accent/50',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--matrix-focus-ring)]',
     'focus-visible:ring-offset-2 focus-visible:ring-offset-matrix-bg-primary',
-    'rounded-lg',
+    'rounded-lg font-mono',
   ].join(' '),
   {
     variants: {
       variant: {
         primary: [
           'bg-matrix-accent text-matrix-bg-primary',
-          'border border-matrix-accent',
           'hover:bg-matrix-accent-glow',
-          'hover:shadow-[0_0_15px_var(--matrix-accent)]',
+          'shadow-[0_0_10px_rgba(255,255,255,0.2)]',
+          'hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]',
         ].join(' '),
-        secondary: [
-          'bg-[var(--glass-bg)] text-[var(--matrix-text-primary)]',
-          'border border-matrix-border',
-          'hover:bg-matrix-bg-tertiary hover:border-matrix-accent-dim',
-        ].join(' '),
+        secondary: ['glass-button', 'text-matrix-text'].join(' '),
         ghost: [
           'bg-transparent',
-          'text-[var(--matrix-text-secondary)]',
-          'hover:text-matrix-accent',
-          'hover:bg-[rgba(255,255,255,0.08)]',
+          'text-matrix-text-dim hover:text-matrix-accent',
+          'hover:bg-[var(--matrix-hover-bg)]',
         ].join(' '),
         danger: [
-          'bg-matrix-error text-white',
-          'border border-matrix-error',
-          'hover:shadow-[0_0_15px_var(--matrix-error)]',
+          'bg-[var(--matrix-error-bg)] text-[var(--matrix-error)]',
+          'border border-[var(--matrix-error)]/30',
+          'hover:border-[var(--matrix-error)]/50',
+          'hover:shadow-[0_0_15px_rgba(248,113,113,0.2)]',
         ].join(' '),
       },
       size: {

@@ -3,21 +3,17 @@ import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/shared/utils/cn';
 
 // ============================================
-// BADGE VARIANTS (ClaudeHydra — Matrix Green Accent)
+// BADGE VARIANTS (Jaskier Design System)
 // ============================================
 
-const badgeVariants = cva('inline-flex items-center gap-1 font-medium rounded-full transition-colors', {
+const badgeVariants = cva('inline-flex items-center gap-1 font-medium rounded-full transition-colors font-mono', {
   variants: {
     variant: {
-      default: [
-        'bg-[rgba(255,255,255,0.05)]',
-        'text-[var(--matrix-text-secondary)]',
-        'border border-[var(--glass-border)]',
-      ].join(' '),
-      accent: ['bg-[rgba(255,255,255,0.1)]', 'text-matrix-accent', 'border border-[rgba(255,255,255,0.2)]'].join(' '),
-      success: ['bg-[rgba(74,222,128,0.15)]', 'text-matrix-success'].join(' '),
-      warning: ['bg-[rgba(255,170,0,0.15)]', 'text-matrix-warning'].join(' '),
-      error: ['bg-[rgba(255,68,68,0.15)]', 'text-matrix-error'].join(' '),
+      default: ['bg-[var(--matrix-badge-bg)]', 'text-matrix-text-dim', 'border border-matrix-accent/10'].join(' '),
+      accent: ['bg-matrix-accent/15 text-matrix-accent', 'border border-matrix-accent/30'].join(' '),
+      success: ['bg-[var(--matrix-success-bg)] text-[var(--matrix-success)]'].join(' '),
+      warning: ['bg-[var(--matrix-warning-bg)] text-[var(--matrix-warning)]'].join(' '),
+      error: ['bg-[var(--matrix-error-bg)] text-[var(--matrix-error)]'].join(' '),
     },
     size: {
       sm: 'text-xs px-2 py-0.5',
@@ -35,11 +31,11 @@ const badgeVariants = cva('inline-flex items-center gap-1 font-medium rounded-fu
 // ============================================
 
 const dotColorMap: Record<string, string> = {
-  default: 'bg-[var(--matrix-text-secondary)]',
+  default: 'bg-matrix-text-dim',
   accent: 'bg-matrix-accent',
-  success: 'bg-matrix-success',
-  warning: 'bg-matrix-warning',
-  error: 'bg-matrix-error',
+  success: 'bg-[var(--matrix-success)]',
+  warning: 'bg-[var(--matrix-warning)]',
+  error: 'bg-[var(--matrix-error)]',
 };
 
 // ============================================
