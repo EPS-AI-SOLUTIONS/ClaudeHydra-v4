@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   // Load ALL env vars (empty prefix = no VITE_ filter)
   const env = loadEnv(mode, process.cwd(), '');
   const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:8082';
+  const partnerBackendUrl = env.VITE_PARTNER_BACKEND_URL || 'http://localhost:8081';
 
   return {
     plugins: [react(), tailwindcss()],
@@ -32,6 +33,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: backendUrl.startsWith('https'),
         },
+        '/partner-api': {
+          target: partnerBackendUrl,
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/partner-api/, '/api'),
+        },
       },
     },
     preview: {
@@ -41,6 +47,11 @@ export default defineConfig(({ mode }) => {
           target: backendUrl,
           changeOrigin: true,
           secure: backendUrl.startsWith('https'),
+        },
+        '/partner-api': {
+          target: partnerBackendUrl,
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/partner-api/, '/api'),
         },
       },
     },

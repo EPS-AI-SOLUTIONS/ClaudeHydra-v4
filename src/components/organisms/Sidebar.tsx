@@ -17,8 +17,10 @@ import {
   ChevronRight,
   Clock,
   Edit2,
+  ExternalLink,
   Globe,
   type LucideIcon,
+  Loader2,
   Menu,
   MessageSquare,
   MessagesSquare,
@@ -28,6 +30,7 @@ import {
   Sparkles,
   Sun,
   Trash2,
+  WifiOff,
   X,
   Zap,
 } from 'lucide-react';
@@ -37,6 +40,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
+import { usePartnerSessions } from '@/features/chat/hooks/usePartnerSessions';
+import { PartnerChatModal } from '@/features/chat/components/PartnerChatModal';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatSession, useViewStore, type ViewId } from '@/stores/viewStore';
@@ -54,13 +59,13 @@ interface NavGroup {
 
 const MOBILE_BREAKPOINT = 768;
 
-const THEME_LABELS: Record<string, Record<string, string>> = {
-  dark: { pl: 'TRYB CIEMNY', en: 'DARK MODE' },
-  light: { pl: 'TRYB JASNY', en: 'LIGHT MODE' },
+const THEME_LABELS: Record<string, string> = {
+  dark: 'TRYB CIEMNY',
+  light: 'TRYB JASNY',
 };
 
-const getThemeLabel = (theme: string, lang: string): string =>
-  THEME_LABELS[theme]?.[lang] ?? THEME_LABELS[theme]?.en ?? 'DARK MODE';
+const getThemeLabel = (theme: string): string =>
+  THEME_LABELS[theme] ?? 'TRYB CIEMNY';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -310,6 +315,15 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   const { resolvedTheme, toggleTheme, isDark } = useTheme();
   const theme = useViewTheme();
   const isLight = theme.isLight;
+
+  // Partner sessions (GeminiHydra)
+  const { data: partnerSessions, isLoading: partnerLoading, isError: partnerError } = usePartnerSessions();
+  const [showPartnerSessions, setShowPartnerSessions] = useState(true);
+  const [partnerModalSessionId, setPartnerModalSessionId] = useState<string | null>(null);
+  const sortedPartnerSessions = useMemo(
+    () => [...(partnerSessions ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [partnerSessions],
+  );
 
   const [showSessions, setShowSessions] = useState(true);
 
@@ -591,6 +605,87 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         </AnimatePresence>
       </div>
 
+      {/* ---- Partner Sessions — GeminiHydra ---- */}
+      <div className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'flex flex-col min-h-0 p-2 mx-2 overflow-hidden')}>
+        <div className="flex items-center justify-between px-1 py-1.5">
+          <button
+            type="button"
+            onClick={() => setShowPartnerSessions(!showPartnerSessions)}
+            className={cn(
+              'flex items-center gap-2 transition-colors',
+              isLight ? theme.textMuted + ' hover:text-black' : theme.textMuted + ' hover:text-white',
+            )}
+          >
+            <div className={cn(
+              'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold flex-shrink-0',
+              isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400',
+            )}>
+              GH
+            </div>
+            {!collapsed && <span className="text-sm font-bold tracking-[0.12em] uppercase">GeminiHydra</span>}
+            {!collapsed && (
+              <ChevronDown
+                size={14}
+                className={cn('transition-transform duration-200', showPartnerSessions ? '' : '-rotate-90')}
+              />
+            )}
+          </button>
+          <div className="flex items-center gap-1">
+            {partnerLoading && <Loader2 size={12} className="animate-spin text-blue-400" />}
+            {partnerError && <WifiOff size={12} className={cn(theme.iconMuted)} />}
+            {!partnerLoading && !partnerError && (
+              <span className={cn('text-xs', theme.textMuted)}>{sortedPartnerSessions.length}</span>
+            )}
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {showPartnerSessions && !collapsed && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="flex-1 space-y-1 overflow-y-auto min-h-0"
+            >
+              {partnerError && (
+                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">Offline</p>
+              )}
+              {!partnerError && sortedPartnerSessions.length === 0 && !partnerLoading && (
+                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">No sessions</p>
+              )}
+              {sortedPartnerSessions.map((ps) => (
+                <button
+                  type="button"
+                  key={ps.id}
+                  onClick={() => setPartnerModalSessionId(ps.id)}
+                  className={cn(
+                    'group relative flex items-center gap-2 p-2 rounded cursor-pointer transition-colors w-full text-left',
+                    isDark ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]' : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
+                  )}
+                  title={ps.title}
+                >
+                  <MessageSquare size={14} className={cn('flex-shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate">{ps.title}</p>
+                    <p className="text-xs text-[var(--matrix-text-secondary)] truncate">
+                      {ps.message_count} {ps.message_count === 1 ? 'message' : 'messages'}
+                    </p>
+                  </div>
+                  <ExternalLink size={10} className="opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0 text-[var(--matrix-text-secondary)]" />
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Partner session modal */}
+      <PartnerChatModal
+        sessionId={partnerModalSessionId}
+        onClose={() => setPartnerModalSessionId(null)}
+      />
+
       {/* ---- Bottom: Theme & Language (Tissaia style) ---- */}
       <div className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'p-2 mx-2 space-y-1')}>
         {/* Theme Toggle */}
@@ -620,7 +715,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                 isLight ? 'group-hover:text-black' : 'group-hover:text-white',
               )}
             >
-              {getThemeLabel(resolvedTheme, i18n.language)}
+              {getThemeLabel(resolvedTheme)}
             </span>
           )}
         </button>
