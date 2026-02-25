@@ -4,7 +4,6 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use axum::Json;
 use serde_json::{json, Value};
-use sysinfo::System;
 use tokio_stream::StreamExt;
 
 use crate::models::*;
@@ -160,33 +159,14 @@ pub async fn readiness(State(state): State<AppState>) -> axum::response::Respons
     }
 }
 
-pub async fn system_stats() -> Json<Value> {
-    let mut sys = System::new_all();
-    sys.refresh_all();
-
-    // Brief pause then re-read CPU so the first sample isn't always 0
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    sys.refresh_cpu_usage();
-
-    let cpu_usage: f32 = {
-        let cpus = sys.cpus();
-        if cpus.is_empty() {
-            0.0
-        } else {
-            cpus.iter().map(|c| c.cpu_usage()).sum::<f32>() / cpus.len() as f32
-        }
-    };
-
-    let total_mem = sys.total_memory() as f64 / 1_048_576.0;
-    let used_mem = sys.used_memory() as f64 / 1_048_576.0;
-
+pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
+    let snap = state.system_monitor.read().await;
     let stats = SystemStats {
-        cpu_usage_percent: cpu_usage,
-        memory_used_mb: used_mem,
-        memory_total_mb: total_mem,
-        platform: std::env::consts::OS.to_string(),
+        cpu_usage_percent: snap.cpu_usage_percent,
+        memory_used_mb: snap.memory_used_mb,
+        memory_total_mb: snap.memory_total_mb,
+        platform: snap.platform.clone(),
     };
-
     Json(serde_json::to_value(stats).unwrap())
 }
 

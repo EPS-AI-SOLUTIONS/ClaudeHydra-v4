@@ -15,6 +15,9 @@ fn build_app(state: AppState) -> axum::Router {
             "http://localhost:4173".parse().unwrap(),
             "http://localhost:5199".parse().unwrap(),
             "http://127.0.0.1:5199".parse().unwrap(),
+            // GeminiHydra frontend (partner app cross-session access)
+            "http://localhost:5176".parse().unwrap(),
+            "http://127.0.0.1:5176".parse().unwrap(),
             "https://claudehydra-v4.vercel.app".parse().unwrap(),
             "https://claudehydra-v4-pawelserkowskis-projects.vercel.app"
                 .parse()
@@ -47,6 +50,38 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .expect("Migrations failed");
 
     let state = AppState::new(pool);
+
+    // ── Background system monitor (CPU/memory every 5s) ──
+    {
+        let monitor = state.system_monitor.clone();
+        tokio::spawn(async move {
+            use claudehydra_backend::state::SystemSnapshot;
+
+            let mut sys = sysinfo::System::new_all();
+            sys.refresh_all();
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                sys.refresh_all();
+
+                let cpu = if sys.cpus().is_empty() {
+                    0.0
+                } else {
+                    sys.cpus().iter().map(|c| c.cpu_usage()).sum::<f32>()
+                        / sys.cpus().len() as f32
+                };
+
+                let snap = SystemSnapshot {
+                    cpu_usage_percent: cpu,
+                    memory_used_mb: sys.used_memory() as f64 / 1_048_576.0,
+                    memory_total_mb: sys.total_memory() as f64 / 1_048_576.0,
+                    platform: std::env::consts::OS.to_string(),
+                };
+
+                *monitor.write().await = snap;
+            }
+        });
+    }
+
     model_registry::startup_sync(&state).await;
     state.mark_ready();
     Ok(build_app(state).into())
@@ -76,6 +111,37 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let state = AppState::new(pool);
+
+    // ── Background system monitor (CPU/memory every 5s) ──
+    {
+        let monitor = state.system_monitor.clone();
+        tokio::spawn(async move {
+            use claudehydra_backend::state::SystemSnapshot;
+
+            let mut sys = sysinfo::System::new_all();
+            sys.refresh_all();
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                sys.refresh_all();
+
+                let cpu = if sys.cpus().is_empty() {
+                    0.0
+                } else {
+                    sys.cpus().iter().map(|c| c.cpu_usage()).sum::<f32>()
+                        / sys.cpus().len() as f32
+                };
+
+                let snap = SystemSnapshot {
+                    cpu_usage_percent: cpu,
+                    memory_used_mb: sys.used_memory() as f64 / 1_048_576.0,
+                    memory_total_mb: sys.total_memory() as f64 / 1_048_576.0,
+                    platform: std::env::consts::OS.to_string(),
+                };
+
+                *monitor.write().await = snap;
+            }
+        });
+    }
 
     // ── Non-blocking startup: model sync in background ──
     let startup_state = state.clone();

@@ -21,6 +21,26 @@ pub struct OAuthPkceState {
     pub state: String,
 }
 
+/// Cached system statistics snapshot, refreshed by background task.
+#[derive(Clone)]
+pub struct SystemSnapshot {
+    pub cpu_usage_percent: f32,
+    pub memory_used_mb: f64,
+    pub memory_total_mb: f64,
+    pub platform: String,
+}
+
+impl Default for SystemSnapshot {
+    fn default() -> Self {
+        Self {
+            cpu_usage_percent: 0.0,
+            memory_used_mb: 0.0,
+            memory_total_mb: 0.0,
+            platform: std::env::consts::OS.to_string(),
+        }
+    }
+}
+
 /// Central application state. Clone-friendly — PgPool and Arc are both Clone.
 #[derive(Clone)]
 pub struct AppState {
@@ -34,6 +54,8 @@ pub struct AppState {
     pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
     /// `true` once startup_sync completes (or times out).
     pub ready: Arc<AtomicBool>,
+    /// Cached system stats, refreshed every 5s by background task.
+    pub system_monitor: Arc<RwLock<SystemSnapshot>>,
 }
 
 impl AppState {
@@ -75,6 +97,7 @@ impl AppState {
             tool_executor: Arc::new(ToolExecutor::new()),
             oauth_pkce: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
+            system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
         }
     }
 }
