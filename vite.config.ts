@@ -19,15 +19,6 @@ export default defineConfig(({ mode }) => {
         ? [visualizer({ open: true, filename: 'dist/stats.html', gzipSize: true })]
         : []),
     ],
-    define: {
-      'import.meta.env.ANTHROPIC_API_KEY': JSON.stringify(env.ANTHROPIC_API_KEY ?? ''),
-      'import.meta.env.OPENAI_API_KEY': JSON.stringify(env.OPENAI_API_KEY ?? ''),
-      'import.meta.env.GOOGLE_API_KEY': JSON.stringify(env.GOOGLE_API_KEY ?? ''),
-      'import.meta.env.GROQ_API_KEY': JSON.stringify(env.GROQ_API_KEY ?? ''),
-      'import.meta.env.MISTRAL_API_KEY': JSON.stringify(env.MISTRAL_API_KEY ?? ''),
-      'import.meta.env.OPENROUTER_API_KEY': JSON.stringify(env.OPENROUTER_API_KEY ?? ''),
-      'import.meta.env.TOGETHER_API_KEY': JSON.stringify(env.TOGETHER_API_KEY ?? ''),
-    },
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
@@ -49,7 +40,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     preview: {
-      port: 5199,
+      port: 4199,
       proxy: {
         '/api': {
           target: backendUrl,

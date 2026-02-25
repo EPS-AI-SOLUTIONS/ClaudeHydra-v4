@@ -8,7 +8,7 @@
 
 import { Bot, Cpu, FileText, Image as ImageIcon, Loader2, User } from 'lucide-react';
 import { motion } from 'motion/react';
-import { isValidElement, type ReactNode, useMemo } from 'react';
+import { isValidElement, memo, type ReactNode, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
@@ -149,7 +149,7 @@ const markdownComponents = {
 // Component
 // ---------------------------------------------------------------------------
 
-export function MessageBubble({ message, className }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message, className }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   const formattedTime = useMemo(
@@ -248,4 +248,4 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
       </div>
     </motion.div>
   );
-}
+});

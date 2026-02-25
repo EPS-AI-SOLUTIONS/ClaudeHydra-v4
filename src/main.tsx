@@ -1,4 +1,5 @@
 import { QueryClientProvider, QueryErrorResetBoundary } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AnimatePresence, motion } from 'motion/react';
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -76,6 +77,7 @@ function App() {
         )}
       </QueryErrorResetBoundary>
       <Toaster position="bottom-right" theme="dark" richColors />
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

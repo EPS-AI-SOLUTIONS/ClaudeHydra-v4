@@ -25,10 +25,11 @@ interface TabItemProps {
   onClose: (tabId: string) => void;
   onTogglePin: (tabId: string) => void;
   onContextMenu?: (x: number, y: number, tabId: string) => void;
+  onArrowNav?: (tabId: string, direction: 'left' | 'right') => void;
   messageCount: number;
 }
 
-const TabItem = memo<TabItemProps>(({ tab, isActive, onSwitch, onClose, onTogglePin, onContextMenu, messageCount }) => {
+const TabItem = memo<TabItemProps>(({ tab, isActive, onSwitch, onClose, onTogglePin, onContextMenu, onArrowNav, messageCount }) => {
   const { t } = useTranslation();
   const theme = useViewTheme();
   const [isHovering, setIsHovering] = useState(false);
@@ -67,16 +68,20 @@ const TabItem = memo<TabItemProps>(({ tab, isActive, onSwitch, onClose, onToggle
     <motion.div
       layout
       layoutId={`tab-${tab.id}`}
+      data-tab-id={tab.id}
       role="tab"
       aria-selected={isActive}
-      tabIndex={0}
+      aria-label={tab.isPinned ? `Pinned tab: ${tab.title || 'New Chat'}` : (tab.title || 'New Chat')}
+      tabIndex={isActive ? 0 : -1}
       onClick={() => onSwitch(tab.id)}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onSwitch(tab.id);
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSwitch(tab.id); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); onArrowNav?.(tab.id, 'left'); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); onArrowNav?.(tab.id, 'right'); }
       }}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -183,6 +188,25 @@ export const TabBar = memo(() => {
     [chatSessions],
   );
 
+  const handleArrowNav = useCallback(
+    (tabId: string, direction: 'left' | 'right') => {
+      const currentIndex = tabs.findIndex((t) => t.id === tabId);
+      if (currentIndex === -1) return;
+      const nextIndex = direction === 'left'
+        ? (currentIndex - 1 + tabs.length) % tabs.length
+        : (currentIndex + 1) % tabs.length;
+      const nextTab = tabs[nextIndex];
+      if (!nextTab) return;
+      switchTab(nextTab.id);
+      // Focus the newly active tab element
+      requestAnimationFrame(() => {
+        const el = scrollRef.current?.querySelector<HTMLElement>(`[data-tab-id="${nextTab.id}"]`);
+        el?.focus();
+      });
+    },
+    [tabs, switchTab],
+  );
+
   if (tabs.length === 0) return null;
 
   return (
@@ -210,6 +234,7 @@ export const TabBar = memo(() => {
               onClose={closeTab}
               onTogglePin={togglePinTab}
               onContextMenu={handleContextMenuOpen}
+              onArrowNav={handleArrowNav}
               messageCount={getMessageCount(tab.sessionId)}
             />
           ))}
@@ -226,6 +251,7 @@ export const TabBar = memo(() => {
             : 'text-white/50 hover:bg-white/15 hover:text-white active:bg-white/25',
         )}
         title={t('tabs.newTab', 'New tab') + ' (Ctrl+T)'}
+        aria-label={t('tabs.newTab', 'New tab')}
       >
         <Plus size={18} strokeWidth={2.5} />
       </button>
@@ -239,6 +265,7 @@ export const TabBar = memo(() => {
               <div
                 className="fixed inset-0 z-50"
                 onClick={() => setContextMenu(null)}
+                role="presentation"
               />
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}

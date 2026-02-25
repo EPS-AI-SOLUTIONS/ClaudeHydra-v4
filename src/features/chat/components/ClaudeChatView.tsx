@@ -6,12 +6,13 @@
  * inline as collapsible ToolCallBlock panels.
  */
 
-import { Bot, Check, ClipboardList, Trash2, Wrench } from 'lucide-react';
+import { Bot, Check, ClipboardList, MessageSquare, Trash2, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
+import { EmptyState } from '@/components/molecules/EmptyState';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
 import { type ClaudeModel, useClaudeModels, FALLBACK_CLAUDE_MODELS } from '@/features/chat/hooks/useClaudeModels';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
@@ -158,7 +159,7 @@ function toModelOption(m: ClaudeModel): ModelOption {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state sub-component
+// Empty state sub-component (uses shared EmptyState molecule)
 // ---------------------------------------------------------------------------
 
 function EmptyChatState() {
@@ -169,14 +170,13 @@ function EmptyChatState() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
       data-testid="chat-empty-state"
-      className="h-full flex items-center justify-center text-[var(--matrix-text-secondary)]"
+      className="h-full flex items-center justify-center"
     >
-      <div className="text-center">
-        <Bot size={64} className="mx-auto mb-4 opacity-30 text-[var(--matrix-accent)]" />
-        <p className="text-lg mb-2 text-[var(--matrix-text-primary)]">{t('chat.startConversation', 'Start a conversation')}</p>
-        <p className="text-sm">{t('chat.selectModelAndType', 'Select a model and type a message')}</p>
-        <p className="text-xs mt-4 opacity-70">{t('chat.dragAndDrop', 'Drag and drop files to add context')}</p>
-      </div>
+      <EmptyState
+        icon={MessageSquare}
+        title={t('chat.startConversation', 'Start a new conversation')}
+        description={t('chat.selectModelAndType', 'Select a model and type a message. Drag and drop files to add context.')}
+      />
     </motion.div>
   );
 }

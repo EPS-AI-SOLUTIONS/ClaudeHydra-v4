@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card } from '@/components/atoms';
+import { EmptyState } from '@/components/molecules/EmptyState';
 import { StatusIndicator, type StatusState } from '@/components/molecules';
 import { cn } from '@/shared/utils/cn';
 
@@ -376,16 +377,12 @@ export function AgentsView() {
 
       {/* Empty State */}
       {filteredAgents.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex-1 flex items-center justify-center"
-        >
-          <div className="text-center py-12">
-            <Users size={40} className="mx-auto text-[var(--matrix-text-secondary)] opacity-30 mb-3" />
-            <p className="text-sm text-[var(--matrix-text-secondary)]">{t('agents.noMatch', 'No agents match the selected tier filter.')}</p>
-          </div>
-        </motion.div>
+        <EmptyState
+          icon={Users}
+          title={t('agents.noMatch', 'No agents match the selected filter')}
+          description={t('agents.noMatchDesc', 'Try selecting a different tier filter to see agents.')}
+          className="flex-1"
+        />
       )}
     </div>
   );

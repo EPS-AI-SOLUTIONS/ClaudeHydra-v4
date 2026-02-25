@@ -214,6 +214,7 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
           onSelect();
         }
       }}
+      aria-label={`Select session: ${session.title}`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -386,6 +387,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.id)}
+                  aria-expanded={isExpanded}
+                  aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${group.label} group`}
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2.5 transition-all group',
                     hasActiveItem
@@ -429,6 +432,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                           : cn(theme.textMuted, isLight ? 'hover:bg-black/5 hover:text-black' : 'hover:bg-white/5 hover:text-white'),
                       )}
                       title={collapsed ? item.label : undefined}
+                      aria-label={`Navigate to ${item.label}`}
                     >
                       <Icon
                         size={16}
@@ -466,6 +470,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             type="button"
             data-testid="sidebar-chats-toggle"
             onClick={() => setShowSessions(!showSessions)}
+            aria-expanded={showSessions}
+            aria-label={`${showSessions ? 'Collapse' : 'Expand'} chat sessions`}
             className={cn(
               'flex items-center gap-2 transition-colors',
               isLight ? theme.textMuted + ' hover:text-black' : theme.textMuted + ' hover:text-white',
@@ -486,6 +492,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             onClick={() => createSessionWithSync()}
             className={cn('p-1.5 rounded text-[var(--matrix-accent)] transition-colors', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
             title={t('sidebar.newChat', 'New chat')}
+            aria-label={t('sidebar.newChat', 'New chat')}
           >
             <Plus size={14} />
           </button>
@@ -530,6 +537,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
           <button
             type="button"
             onClick={() => setShowPartnerSessions(!showPartnerSessions)}
+            aria-expanded={showPartnerSessions}
+            aria-label={`${showPartnerSessions ? 'Collapse' : 'Expand'} GeminiHydra partner sessions`}
             className={cn(
               'flex items-center gap-2 transition-colors',
               isLight ? theme.textMuted + ' hover:text-black' : theme.textMuted + ' hover:text-white',
@@ -662,6 +671,7 @@ export function Sidebar() {
             'glass-panel transition-colors', isDark ? 'hover:bg-white/[0.08]' : 'hover:bg-black/5',
           )}
           title={t('common.menu', 'Menu')}
+          aria-label={t('sidebar.openSidebar', 'Open sidebar')}
         >
           <Menu size={20} className="text-[var(--matrix-accent)]" />
         </button>
@@ -723,6 +733,7 @@ export function Sidebar() {
           'shadow-lg',
         )}
         title={sidebarCollapsed ? t('sidebar.expandSidebar', 'Expand sidebar') : t('sidebar.collapseSidebar', 'Collapse sidebar')}
+        aria-label={sidebarCollapsed ? t('sidebar.expandSidebar', 'Expand sidebar') : t('sidebar.collapseSidebar', 'Collapse sidebar')}
       >
         {sidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
       </button>

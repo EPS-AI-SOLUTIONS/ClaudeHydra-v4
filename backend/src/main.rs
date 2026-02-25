@@ -1,7 +1,6 @@
 use http::{header, Method};
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::CorsLayer;
-use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
@@ -68,7 +67,6 @@ fn build_app(state: AppState) -> axum::Router {
             header::STRICT_TRANSPORT_SECURITY,
             header::HeaderValue::from_static("max-age=63072000; includeSubDomains"),
         ))
-        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
 }

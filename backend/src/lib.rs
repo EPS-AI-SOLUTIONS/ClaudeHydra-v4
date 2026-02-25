@@ -8,6 +8,7 @@ pub mod system_monitor;
 pub mod tools;
 pub mod watchdog;
 
+use axum::extract::DefaultBodyLimit;
 use axum::middleware;
 use axum::routing::{delete, get, post};
 use axum::Router;
@@ -158,5 +159,7 @@ pub fn create_router(state: AppState) -> Router {
         .merge(protected)
         // Swagger UI — no auth required
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        // 60 MB body limit — must be before .with_state() for Json extractor
+        .layer(DefaultBodyLimit::max(60 * 1024 * 1024))
         .with_state(state)
 }
