@@ -25,7 +25,12 @@ export function fnv1a32(str: string): string {
 
 export function processMarkdownSync(raw: string): string {
   let result = raw.trim().replace(/\n{3,}/g, '\n\n');
-  result = result.replace(/<\s*\/?\s*(script|iframe|object|embed|form)\b[^>]*>/gi, '');
+  const dangerousTagPattern = /<\s*\/?\s*(script|iframe|object|embed|form)\b[^>]*>/gi;
+  let prev: string;
+  do {
+    prev = result;
+    result = result.replace(dangerousTagPattern, '');
+  } while (result !== prev);
   result = result.replace(/^```\s*$/gm, '```text');
   return result;
 }
