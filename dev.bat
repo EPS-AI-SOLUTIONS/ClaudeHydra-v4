@@ -1,14 +1,18 @@
 @echo off
-title ClaudeHydra DEV :5199
+echo === ClaudeHydra v4 DEV ===
 
-:: Launch Chrome in debug mode (shared, idempotent)
-call "C:\Users\BIURODOM\Desktop\chrome-debug.bat"
+:: Kill old backend on port 8082
+echo [RESTART] Stopping old backend on port 8082...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8082 " ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
+timeout /t 1 /nobreak >nul
 
-:: Kill old dev server on port 5199
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5199 " ^| findstr "LISTENING"') do (
-    taskkill /PID %%a /F >nul 2>&1
-)
+:: Start new backend
+echo [START] Backend (cargo run)...
+start "ClaudeHydra Backend" /min cmd /c "cd /d %~dp0backend && cargo run"
 
-:: Start dev server
-cd /d "C:\Users\BIURODOM\Desktop\ClaudeHydra-v4"
+:: Open Chrome after delay
+start /b cmd /c "timeout /t 5 /nobreak >nul && start chrome --new-window http://localhost:5199"
+
+:: Start frontend dev server
+echo [DEV] Starting frontend dev server...
 pnpm dev
