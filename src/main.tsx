@@ -7,6 +7,7 @@ import { ViewSkeleton } from '@/components/molecules/ViewSkeleton';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ErrorBoundary } from '@/components/organisms/ErrorBoundary';
 import { queryClient } from '@/shared/api/queryClient';
+import { reportWebVitals } from '@/shared/utils/reportWebVitals';
 import { useViewStore } from '@/stores/viewStore';
 import '@/i18n';
 import './styles/globals.css';
@@ -113,4 +114,7 @@ if (rootElement) {
       root.unmount();
     });
   }
+
+  // Report Web Vitals performance metrics
+  reportWebVitals();
 }
