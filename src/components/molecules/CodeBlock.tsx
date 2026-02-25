@@ -14,6 +14,7 @@
 import { Check, Clipboard, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { copyToClipboard } from '@/shared/utils/clipboard';
 import { cn } from '@/shared/utils/cn';
 
 // ---------------------------------------------------------------------------
@@ -95,20 +96,8 @@ export function CodeBlock({ code, language, showLineNumbers = false, maxHeight =
   // ----- Copy to clipboard ---------------------------------------------
 
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const textarea = document.createElement('textarea');
-      textarea.value = code;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+    const ok = await copyToClipboard(code);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

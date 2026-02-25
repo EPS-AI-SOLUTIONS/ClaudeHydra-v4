@@ -1,5 +1,5 @@
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use axum::Json;
@@ -1026,17 +1026,40 @@ pub async fn set_api_key(
 //  Sessions & History (DB-backed)
 // ═══════════════════════════════════════════════════════════════════════
 
+/// Pagination query params for session/message listing.
+/// Backwards-compatible: all fields optional with sensible defaults.
+#[derive(Debug, serde::Deserialize)]
+pub struct PaginationParams {
+    /// Max items to return (clamped to 500).
+    #[serde(default)]
+    pub limit: Option<i64>,
+    /// Number of items to skip.
+    #[serde(default)]
+    pub offset: Option<i64>,
+}
+
 #[utoipa::path(get, path = "/api/sessions", tag = "sessions",
+    params(
+        ("limit" = Option<i64>, Query, description = "Max sessions to return (default 100, max 500)"),
+        ("offset" = Option<i64>, Query, description = "Number of sessions to skip (default 0)"),
+    ),
     responses((status = 200, description = "List of session summaries", body = Vec<SessionSummary>))
 )]
 pub async fn list_sessions(
     State(state): State<AppState>,
+    Query(params): Query<PaginationParams>,
 ) -> Result<Json<Value>, StatusCode> {
+    let limit = params.limit.unwrap_or(100).clamp(1, 500);
+    let offset = params.offset.unwrap_or(0).max(0);
+
     let rows = sqlx::query_as::<_, SessionSummaryRow>(
         "SELECT s.id, s.title, s.created_at, \
          (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
-         FROM ch_sessions s ORDER BY s.updated_at DESC",
+         FROM ch_sessions s ORDER BY s.updated_at DESC \
+         LIMIT $1 OFFSET $2",
     )
+    .bind(limit)
+    .bind(offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
@@ -1091,7 +1114,11 @@ pub async fn create_session(
 }
 
 #[utoipa::path(get, path = "/api/sessions/{id}", tag = "sessions",
-    params(("id" = String, Path, description = "Session UUID")),
+    params(
+        ("id" = String, Path, description = "Session UUID"),
+        ("limit" = Option<i64>, Query, description = "Max messages to return (default 200, max 500)"),
+        ("offset" = Option<i64>, Query, description = "Number of messages to skip (default 0)"),
+    ),
     responses(
         (status = 200, description = "Session with messages", body = Session),
         (status = 404, description = "Session not found")
@@ -1100,8 +1127,11 @@ pub async fn create_session(
 pub async fn get_session(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    Query(params): Query<PaginationParams>,
 ) -> Result<Json<Value>, StatusCode> {
     let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+    let msg_limit = params.limit.unwrap_or(200).clamp(1, 500);
+    let msg_offset = params.offset.unwrap_or(0).max(0);
 
     let session_row = sqlx::query_as::<_, SessionRow>(
         "SELECT id, title, created_at, updated_at FROM ch_sessions WHERE id = $1",
@@ -1115,11 +1145,17 @@ pub async fn get_session(
     })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
+    // Fetch the most recent N messages (subquery DESC, then re-sort ASC)
     let message_rows = sqlx::query_as::<_, MessageRow>(
-        "SELECT id, session_id, role, content, model, agent, created_at \
-         FROM ch_messages WHERE session_id = $1 ORDER BY created_at ASC",
+        "SELECT * FROM (\
+            SELECT id, session_id, role, content, model, agent, created_at \
+            FROM ch_messages WHERE session_id = $1 \
+            ORDER BY created_at DESC LIMIT $2 OFFSET $3\
+        ) sub ORDER BY created_at ASC",
     )
     .bind(session_id)
+    .bind(msg_limit)
+    .bind(msg_offset)
     .fetch_all(&state.db)
     .await
     .map_err(|e| {
@@ -1127,19 +1163,23 @@ pub async fn get_session(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    // Load tool interactions for all messages in this session
-    let ti_rows = sqlx::query_as::<_, ToolInteractionRow>(
-        "SELECT ti.id, ti.message_id, ti.tool_use_id, ti.tool_name, \
-         ti.tool_input, ti.result, ti.is_error, ti.executed_at \
-         FROM ch_tool_interactions ti \
-         INNER JOIN ch_messages m ON ti.message_id = m.id \
-         WHERE m.session_id = $1 \
-         ORDER BY ti.executed_at ASC",
-    )
-    .bind(session_id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
+    // Load tool interactions only for the fetched messages
+    let message_ids: Vec<uuid::Uuid> = message_rows.iter().map(|m| m.id).collect();
+    let ti_rows = if message_ids.is_empty() {
+        Vec::new()
+    } else {
+        sqlx::query_as::<_, ToolInteractionRow>(
+            "SELECT ti.id, ti.message_id, ti.tool_use_id, ti.tool_name, \
+             ti.tool_input, ti.result, ti.is_error, ti.executed_at \
+             FROM ch_tool_interactions ti \
+             WHERE ti.message_id = ANY($1) \
+             ORDER BY ti.executed_at ASC",
+        )
+        .bind(&message_ids)
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default()
+    };
 
     // Group tool interactions by message_id
     let mut ti_map: std::collections::HashMap<uuid::Uuid, Vec<ToolInteractionInfo>> =

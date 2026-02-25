@@ -13,9 +13,11 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
+import { type ClaudeModel, useClaudeModels, FALLBACK_CLAUDE_MODELS } from '@/features/chat/hooks/useClaudeModels';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { env } from '@/shared/config/env';
+import { copyToClipboard } from '@/shared/utils/clipboard';
 import { cn } from '@/shared/utils/cn';
 import { useViewStore } from '@/stores/viewStore';
 import { type Attachment, ChatInput } from './ChatInput';
@@ -25,14 +27,6 @@ import type { ToolInteraction } from './ToolCallBlock';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-interface ClaudeModel {
-  id: string;
-  name: string;
-  tier: string;
-  provider: string;
-  available: boolean;
-}
 
 /** Extended NDJSON chunk — may be a text token, tool_call, or tool_result. */
 interface NdjsonEvent {
@@ -49,28 +43,6 @@ interface NdjsonEvent {
   result?: string;
   is_error?: boolean;
 }
-
-// ---------------------------------------------------------------------------
-// Static Claude models
-// ---------------------------------------------------------------------------
-
-const CLAUDE_MODELS: ClaudeModel[] = [
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
-  {
-    id: 'claude-sonnet-4-6',
-    name: 'Claude Sonnet 4.6',
-    tier: 'Coordinator',
-    provider: 'anthropic',
-    available: true,
-  },
-  {
-    id: 'claude-haiku-4-5-20251001',
-    name: 'Claude Haiku 4.5',
-    tier: 'Executor',
-    provider: 'anthropic',
-    available: true,
-  },
-];
 
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
@@ -216,6 +188,10 @@ function EmptyChatState() {
 export function ClaudeChatView() {
   const { t } = useTranslation();
 
+  // Dynamic model registry (falls back to hardcoded list)
+  const { data: claudeModels } = useClaudeModels();
+  const models = claudeModels ?? FALLBACK_CLAUDE_MODELS;
+
   // Model state
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [claudeConnected, setClaudeConnected] = useState(false);
@@ -315,7 +291,7 @@ export function ClaudeChatView() {
 
   // ----- Model selection adapter -------------------------------------------
 
-  const modelOptions = useMemo(() => CLAUDE_MODELS.map(toModelOption), []);
+  const modelOptions = useMemo(() => models.map(toModelOption), [models]);
 
   const handleModelSelect = useCallback((model: ModelOption) => {
     setSelectedModel(model.id);
@@ -357,21 +333,14 @@ export function ClaudeChatView() {
     }
 
     const text = lines.join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      toast.success('Session copied to clipboard');
+      setSessionCopied(true);
+      setTimeout(() => setSessionCopied(false), 2000);
+    } else {
+      toast.error('Failed to copy session');
     }
-    toast.success('Session copied to clipboard');
-    setSessionCopied(true);
-    setTimeout(() => setSessionCopied(false), 2000);
   }, [messages, activeSessionId]);
 
   // ----- Prompt history for arrow-key navigation ---------------------------
@@ -578,7 +547,7 @@ export function ClaudeChatView() {
           <div>
             <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">{t('chat.title', 'Claude Chat')}</h2>
             <p data-testid="chat-status-text" className="text-xs text-[var(--matrix-text-secondary)]">
-              {claudeConnected ? `${CLAUDE_MODELS.length} models available` : 'Offline — configure API key in Settings'}
+              {claudeConnected ? `${models.length} models available` : 'Offline — configure API key in Settings'}
             </p>
           </div>
         </div>

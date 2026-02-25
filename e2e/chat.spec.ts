@@ -1,7 +1,7 @@
 /**
  * Chat view E2E tests for ClaudeHydra-v4.
  * Verifies chat UI elements, offline state indicators, and input controls.
- * Ollama is NOT running — chat should display offline status throughout.
+ * Backend is NOT running — chat should display offline status throughout.
  */
 
 import { test, expect } from './fixtures/base.fixture';
@@ -30,17 +30,17 @@ test.describe('Chat View', () => {
 
   // ── Header ────────────────────────────────────────────────────────────
 
-  test('should show chat header with "Ollama Chat" title', async () => {
+  test('should show chat header with "Claude Chat" title', async () => {
     await expect(chat.header).toBeVisible();
-    await expect(chat.header).toContainText('Ollama Chat');
+    await expect(chat.header).toContainText('Claude Chat');
   });
 
   // ── Offline status ────────────────────────────────────────────────────
 
-  test('should show offline status text "Offline — start Ollama to connect"', async () => {
+  test('should show offline status text "Offline — configure API key in Settings"', async () => {
     await expect(chat.statusText).toBeVisible();
     await expect(chat.statusText).toContainText('Offline');
-    await expect(chat.statusText).toContainText('start Ollama to connect');
+    await expect(chat.statusText).toContainText('configure API key in Settings');
   });
 
   // ── Empty state ───────────────────────────────────────────────────────
@@ -56,9 +56,9 @@ test.describe('Chat View', () => {
     await expect(chat.messageArea).toBeVisible();
   });
 
-  // ── Textarea input (disabled when Ollama is offline) ──────────────────
+  // ── Textarea input (disabled when backend is offline) ─────────────────
 
-  test('should have a disabled textarea when Ollama is offline', async () => {
+  test('should have a disabled textarea when backend is offline', async () => {
     await expect(chat.textarea).toBeVisible();
     await expect(chat.textarea).toBeDisabled();
   });
@@ -86,6 +86,6 @@ test.describe('Chat View', () => {
 
   test('should have textarea with correct placeholder text for offline state', async () => {
     const placeholder = await chat.textarea.getAttribute('placeholder');
-    expect(placeholder).toContain('Ollama is offline');
+    expect(placeholder).toContain('Configure API key in Settings');
   });
 });
