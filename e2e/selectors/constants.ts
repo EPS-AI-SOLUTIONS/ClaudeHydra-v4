@@ -37,7 +37,6 @@ export const SEL = {
   homeFeatureBadges: '[data-testid="home-feature-badges"]',
   homeFeatureCards: '[data-testid="home-feature-cards"]',
   homeCtaStartChat: '[data-testid="home-cta-start-chat"]',
-  homeCtaViewAgents: '[data-testid="home-cta-view-agents"]',
   homeCtaSettings: '[data-testid="home-cta-settings"]',
 
   // Chat
@@ -52,15 +51,6 @@ export const SEL = {
   chatTextarea: '[data-testid="chat-textarea"]',
   chatSendBtn: '[data-testid="chat-send-btn"]',
   chatMessageBubble: '[data-testid="chat-message-bubble"]',
-
-  // Agents
-  agentsView: '[data-testid="agents-view"]',
-  agentsHeader: '[data-testid="agents-header"]',
-  agentsOnlineCount: '[data-testid="agents-online-count"]',
-  agentsFilterBar: '[data-testid="agents-filter-bar"]',
-  agentsFilter: (tier: string) => `[data-testid="agents-filter-${tier}"]`,
-  agentsGrid: '[data-testid="agents-grid"]',
-  agentCard: (id: string) => `[data-testid="agent-card-${id}"]`,
 
   // History
   historyView: '[data-testid="history-view"]',

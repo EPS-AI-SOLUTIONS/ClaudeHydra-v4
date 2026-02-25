@@ -37,20 +37,12 @@ export class HomePage extends BasePage {
     return this.page.locator(SEL.homeCtaStartChat);
   }
 
-  get ctaViewAgents(): Locator {
-    return this.page.locator(SEL.homeCtaViewAgents);
-  }
-
   get ctaSettings(): Locator {
     return this.page.locator(SEL.homeCtaSettings);
   }
 
   async clickStartChat(): Promise<void> {
     await this.ctaStartChat.click();
-  }
-
-  async clickViewAgents(): Promise<void> {
-    await this.ctaViewAgents.click();
   }
 
   async clickSettings(): Promise<void> {

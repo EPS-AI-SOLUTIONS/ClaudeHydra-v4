@@ -84,9 +84,6 @@ describe('viewStore — setView', () => {
   });
 
   it('can switch between multiple views', () => {
-    act('setView', 'agents');
-    expect(getState().currentView).toBe('agents');
-
     act('setView', 'chat');
     expect(getState().currentView).toBe('chat');
 

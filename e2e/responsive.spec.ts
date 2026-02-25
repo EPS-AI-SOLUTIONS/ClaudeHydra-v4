@@ -54,7 +54,7 @@ test.describe('Responsive Layout', () => {
     await sidebar.openMobileDrawer();
 
     // All 5 nav items should be visible inside the drawer
-    const navIds = ['home', 'chat', 'agents', 'history', 'settings'];
+    const navIds = ['home', 'chat'];
     for (const id of navIds) {
       const navBtn = page.locator(`${SEL.mobileDrawer} ${SEL.nav(id)}`);
       // If the nav buttons are direct children of drawer, look inside drawer
@@ -106,13 +106,13 @@ test.describe('Responsive Layout', () => {
     await page.reload();
     await expect(page.locator(SEL.appShell)).toBeVisible({ timeout: 15_000 });
 
-    // Open drawer and navigate to agents
+    // Open drawer and navigate to chat
     await sidebar.openMobileDrawer();
-    await page.locator(SEL.nav('agents')).click();
+    await page.locator(SEL.nav('chat')).click();
     await page.waitForTimeout(500);
 
-    // Agents view should be visible
-    await expect(page.locator(SEL.agentsView)).toBeVisible();
+    // Chat view should be visible
+    await expect(page.locator(SEL.chatView)).toBeVisible();
 
     // Drawer should auto-close after navigation
     await sidebar.expectDrawerClosed();

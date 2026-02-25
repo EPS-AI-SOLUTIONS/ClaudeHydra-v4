@@ -7,7 +7,7 @@
  */
 
 import type { TFunction } from 'i18next';
-import { Bot, Clock, Layers, MessageSquare, Network, Plus, Sparkles, Users } from 'lucide-react';
+import { Bot, Clock, MessageSquare, Network, Plus, Sparkles, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -168,11 +168,6 @@ export const HomePage = memo(() => {
     [selectSession, openTab, setView],
   );
 
-  const handleViewAgents = useCallback(() => {
-    setView('agents');
-  }, [setView]);
-
-
   return (
     <div className="h-full flex flex-col items-center justify-center p-8 overflow-y-auto">
       {/* ====== Hero Card ====== */}
@@ -220,9 +215,9 @@ export const HomePage = memo(() => {
           ))}
         </motion.div>
 
-        {/* CTA Buttons */}
+        {/* CTA Button */}
         <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-2"
+          className="w-full mt-2"
           variants={ctaVariants}
           initial="hidden"
           animate="visible"
@@ -236,15 +231,6 @@ export const HomePage = memo(() => {
             data-testid="btn-new-chat"
           >
             {t('home.startChat', 'Start Chat')}
-          </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            leftIcon={<Layers size={16} />}
-            onClick={handleViewAgents}
-            className="w-full"
-          >
-            {t('home.viewAgents', 'View Agents')}
           </Button>
         </motion.div>
       </motion.div>

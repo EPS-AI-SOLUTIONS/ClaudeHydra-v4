@@ -10,7 +10,6 @@
  */
 
 import {
-  Bot,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -328,24 +327,16 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         { id: 'chat', label: t('nav.chat', 'Chat'), icon: MessageSquare },
       ],
     },
-    {
-      id: 'tools',
-      label: t('sidebar.groups.tools', 'TOOLS'),
-      icon: Bot,
-      items: [
-        { id: 'agents', label: t('nav.agents', 'Agents'), icon: Bot },
-      ],
-    },
   ];
 
   // Grouped navigation - expandable sections (Tissaia style)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem('claudehydra_expanded_groups');
-      const defaults = { main: true, tools: true };
+      const defaults = { main: true };
       return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
     } catch {
-      return { main: true, tools: true };
+      return { main: true };
     }
   });
 

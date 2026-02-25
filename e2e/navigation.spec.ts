@@ -27,12 +27,6 @@ test.describe('Navigation', () => {
     await expect(page.locator(SEL.chatView)).toBeVisible();
   });
 
-  test('should navigate to agents via sidebar', async ({ page }) => {
-    await sidebar.navigateTo('agents');
-    await page.waitForTimeout(500);
-    await expect(page.locator(SEL.agentsView)).toBeVisible();
-  });
-
   test('should navigate to history via sidebar', async ({ page }) => {
     await sidebar.navigateTo('history');
     await page.waitForTimeout(500);
@@ -70,15 +64,6 @@ test.describe('Navigation', () => {
     await expect(page.locator(SEL.chatView)).toBeVisible();
   });
 
-  test('should navigate to agents via Home CTA "View Agents" button', async ({ page }) => {
-    const home = new HomePage(page);
-    await home.waitForVisible();
-
-    await home.clickViewAgents();
-    await page.waitForTimeout(500);
-    await expect(page.locator(SEL.agentsView)).toBeVisible();
-  });
-
   test('should navigate to settings via Home CTA "Settings" button', async ({ page }) => {
     const home = new HomePage(page);
     await home.waitForVisible();
@@ -91,15 +76,15 @@ test.describe('Navigation', () => {
   // ── Active nav highlight ────────────────────────────────────────────
 
   test('should highlight active nav item', async ({ page }) => {
-    // Navigate to agents and verify its nav button has the active styling
-    await sidebar.navigateTo('agents');
+    // Navigate to chat and verify its nav button has the active styling
+    await sidebar.navigateTo('chat');
     await page.waitForTimeout(500);
 
-    const agentsNavBtn = sidebar.navButton('agents');
-    await expect(agentsNavBtn).toBeVisible();
+    const chatNavBtn = sidebar.navButton('chat');
+    await expect(chatNavBtn).toBeVisible();
 
     // The active nav button should have the matrix-accent background class
-    const className = await agentsNavBtn.getAttribute('class');
+    const className = await chatNavBtn.getAttribute('class');
     expect(className).toContain('matrix-accent');
 
     // Other nav buttons should NOT have the active accent
