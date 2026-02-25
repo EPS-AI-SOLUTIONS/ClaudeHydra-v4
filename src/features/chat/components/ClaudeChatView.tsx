@@ -91,6 +91,12 @@ const SYSTEM_PROMPT = [
 ].join('\n');
 
 // ---------------------------------------------------------------------------
+// Auth secret (for direct fetch calls that bypass the shared API client)
+// ---------------------------------------------------------------------------
+
+const AUTH_SECRET = import.meta.env.VITE_AUTH_SECRET as string | undefined;
+
+// ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
 
@@ -117,7 +123,10 @@ async function* claudeStreamChat(
 ): AsyncGenerator<NdjsonEvent> {
   const res = await fetch('/api/claude/chat/stream', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(AUTH_SECRET ? { Authorization: `Bearer ${AUTH_SECRET}` } : {}),
+    },
     body: JSON.stringify({
       model,
       messages,

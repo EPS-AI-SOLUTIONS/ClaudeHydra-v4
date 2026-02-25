@@ -62,6 +62,8 @@ pub struct AppState {
     pub ready: Arc<AtomicBool>,
     /// Cached system stats (CPU, memory) refreshed every 5s by background task.
     pub system_monitor: Arc<RwLock<SystemSnapshot>>,
+    /// Optional auth secret from AUTH_SECRET env. None = dev mode (no auth).
+    pub auth_secret: Option<String>,
 }
 
 // ── Shared: readiness helpers ───────────────────────────────────────────────
@@ -86,6 +88,13 @@ impl AppState {
             api_keys.insert("GOOGLE_API_KEY".to_string(), key);
         }
 
+        let auth_secret = std::env::var("AUTH_SECRET").ok().filter(|s| !s.is_empty());
+        if auth_secret.is_some() {
+            tracing::info!("AUTH_SECRET configured — authentication enabled");
+        } else {
+            tracing::info!("AUTH_SECRET not set — authentication disabled (dev mode)");
+        }
+
         let agents = init_witcher_agents();
 
         tracing::info!(
@@ -105,6 +114,7 @@ impl AppState {
             oauth_pkce: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
+            auth_secret,
         }
     }
 }

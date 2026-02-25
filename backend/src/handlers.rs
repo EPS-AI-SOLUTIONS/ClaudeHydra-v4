@@ -159,6 +159,13 @@ pub async fn readiness(State(state): State<AppState>) -> axum::response::Respons
     }
 }
 
+/// GET /api/auth/mode — tells frontend whether auth is required
+pub async fn auth_mode(State(state): State<AppState>) -> Json<Value> {
+    Json(json!({
+        "auth_required": state.auth_secret.is_some()
+    }))
+}
+
 pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
     let snap = state.system_monitor.read().await;
     let stats = SystemStats {
