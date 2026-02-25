@@ -219,7 +219,7 @@ export function ClaudeChatView() {
   const [toolsEnabled, setToolsEnabled] = useState(true);
 
   // DB sync
-  const { addMessageWithSync } = useSessionSync();
+  const { addMessageWithSync, renameSessionWithSync } = useSessionSync();
   const activeSessionId = useViewStore((s) => s.activeSessionId);
 
   // Settings (for welcome message)
@@ -406,6 +406,12 @@ export function ClaudeChatView() {
       // Capture messages BEFORE adding new ones — used to build API context
       const previousMessages = [...(sessionMessagesRef.current[sessionId] ?? [])];
 
+      // Auto-name session on first user message
+      if (previousMessages.length === 0) {
+        const autoTitle = text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
+        renameSessionWithSync(sessionId, autoTitle || 'New Chat');
+      }
+
       updateSessionMessages(sessionId, (prev) => [...prev, userMessage]);
       setSessionLoading(sessionId, true);
 
@@ -545,7 +551,7 @@ export function ClaudeChatView() {
         delete abortControllersRef.current[sessionId];
       }
     },
-    [selectedModel, activeSessionId, toolsEnabled, addMessageWithSync, updateSessionMessages, setSessionLoading],
+    [selectedModel, activeSessionId, toolsEnabled, addMessageWithSync, renameSessionWithSync, updateSessionMessages, setSessionLoading],
   );
 
   // ----- Render -------------------------------------------------------------
