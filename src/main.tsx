@@ -67,16 +67,7 @@ function App() {
           <ViewRouter />
         </AppShell>
       </ErrorBoundary>
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: 'var(--matrix-glass-bg)',
-            border: '1px solid var(--matrix-border)',
-            color: 'var(--matrix-text-primary)',
-          },
-        }}
-      />
+      <Toaster position="bottom-right" theme="dark" richColors />
     </QueryClientProvider>
   );
 }

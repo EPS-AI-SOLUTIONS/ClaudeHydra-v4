@@ -15,6 +15,7 @@ import { Button } from '@/components/atoms/Button';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
+import { env } from '@/shared/config/env';
 import { cn } from '@/shared/utils/cn';
 import { useViewStore } from '@/stores/viewStore';
 import { type Attachment, ChatInput } from './ChatInput';
@@ -94,7 +95,7 @@ const SYSTEM_PROMPT = [
 // Auth secret (for direct fetch calls that bypass the shared API client)
 // ---------------------------------------------------------------------------
 
-const AUTH_SECRET = import.meta.env.VITE_AUTH_SECRET as string | undefined;
+const AUTH_SECRET = env.VITE_AUTH_SECRET;
 
 // ---------------------------------------------------------------------------
 // API helpers
@@ -538,6 +539,7 @@ export function ClaudeChatView() {
           return;
         }
         console.error('Chat error:', err);
+        toast.error('Failed to get response');
         updateSessionMessages(sessionId, (prev) => {
           const last = prev[prev.length - 1];
           if (last?.streaming) {

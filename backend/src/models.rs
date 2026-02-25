@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 
 // ── DB row types ────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ pub struct MessageRow {
 
 // ── Agent ───────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WitcherAgent {
     pub id: String,
     pub name: String,
@@ -54,7 +55,7 @@ pub struct WitcherAgent {
 
 // ── Health ──────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HealthResponse {
     pub status: String,
     pub version: String,
@@ -63,7 +64,7 @@ pub struct HealthResponse {
     pub providers: Vec<ProviderInfo>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProviderInfo {
     pub name: String,
     pub available: bool,
@@ -71,7 +72,7 @@ pub struct ProviderInfo {
 
 // ── Chat ────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
     pub model: Option<String>,
@@ -81,7 +82,7 @@ pub struct ChatRequest {
     pub tools_enabled: Option<bool>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
@@ -91,7 +92,7 @@ pub struct ChatMessage {
     pub timestamp: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatResponse {
     pub id: String,
     pub message: ChatMessage,
@@ -99,7 +100,7 @@ pub struct ChatResponse {
     pub usage: Option<UsageInfo>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UsageInfo {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
@@ -108,7 +109,7 @@ pub struct UsageInfo {
 
 // ── Claude Models ───────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ClaudeModelInfo {
     pub id: String,
     pub name: String,
@@ -119,7 +120,7 @@ pub struct ClaudeModelInfo {
 
 // ── Settings ────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AppSettings {
     pub theme: String,
     pub language: String,
@@ -128,7 +129,7 @@ pub struct AppSettings {
     pub welcome_message: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeyRequest {
     pub provider: String,
     pub key: String,
@@ -136,7 +137,7 @@ pub struct ApiKeyRequest {
 
 // ── History ─────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HistoryEntry {
     pub id: String,
     pub role: String,
@@ -152,7 +153,7 @@ pub struct HistoryEntry {
 
 // ── Session ─────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Session {
     pub id: String,
     pub title: String,
@@ -161,7 +162,7 @@ pub struct Session {
 }
 
 /// Lightweight view returned in session listing (no messages body).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SessionSummary {
     pub id: String,
     pub title: String,
@@ -169,17 +170,17 @@ pub struct SessionSummary {
     pub message_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateSessionRequest {
     pub title: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateSessionRequest {
     pub title: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AddMessageRequest {
     pub role: String,
     pub content: String,
@@ -193,7 +194,7 @@ pub struct AddMessageRequest {
 
 // ── System ──────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SystemStats {
     pub cpu_usage_percent: f32,
     pub memory_used_mb: f64,
@@ -224,10 +225,11 @@ pub struct ToolInteractionRow {
 }
 
 /// Serializable tool interaction for API responses.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ToolInteractionInfo {
     pub tool_use_id: String,
     pub tool_name: String,
+    #[schema(value_type = Object)]
     pub tool_input: Value,
     pub result: Option<String>,
     pub is_error: bool,

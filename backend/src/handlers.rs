@@ -10,6 +10,62 @@ use crate::models::*;
 use crate::state::AppState;
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Jaskier Shared Pattern -- error
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Centralized API error type for all handlers.
+/// Logs full details server-side, returns sanitized JSON to the client.
+#[derive(Debug, thiserror::Error)]
+pub enum ApiError {
+    #[error("Bad request: {0}")]
+    BadRequest(String),
+
+    #[error("Not found: {0}")]
+    NotFound(String),
+
+    #[error("Upstream API error: {0}")]
+    Upstream(String),
+
+    #[error("Internal error: {0}")]
+    Internal(String),
+
+    #[error("Not authenticated: {0}")]
+    Unauthorized(String),
+
+    #[error("Service unavailable: {0}")]
+    Unavailable(String),
+}
+
+impl axum::response::IntoResponse for ApiError {
+    fn into_response(self) -> axum::response::Response {
+        let status = match &self {
+            ApiError::BadRequest(_) => StatusCode::BAD_REQUEST,
+            ApiError::NotFound(_) => StatusCode::NOT_FOUND,
+            ApiError::Upstream(_) => StatusCode::BAD_GATEWAY,
+            ApiError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
+            ApiError::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
+        };
+
+        // Log full detail server-side
+        tracing::error!("API error ({}): {}", status.as_u16(), self);
+
+        // Return sanitised message to client — never leak internal details
+        let message = match &self {
+            ApiError::BadRequest(m) => m.clone(),
+            ApiError::NotFound(_) => "Resource not found".to_string(),
+            ApiError::Upstream(_) => "Upstream service error".to_string(),
+            ApiError::Internal(_) => "Internal server error".to_string(),
+            ApiError::Unauthorized(m) => m.clone(),
+            ApiError::Unavailable(m) => m.clone(),
+        };
+
+        let body = json!({ "error": message });
+        (status, Json(body)).into_response()
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Helpers
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -118,6 +174,9 @@ async fn send_to_anthropic(
 //  Health & System
 // ═══════════════════════════════════════════════════════════════════════
 
+#[utoipa::path(get, path = "/api/health", tag = "health",
+    responses((status = 200, description = "Health check with provider status", body = HealthResponse))
+)]
 pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
     let uptime = state.start_time.elapsed().as_secs();
     let rt = state.runtime.read().await;
@@ -144,6 +203,12 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
 }
 
 /// GET /api/health/ready — lightweight readiness probe (no locks, no DB).
+#[utoipa::path(get, path = "/api/health/ready", tag = "health",
+    responses(
+        (status = 200, description = "Service ready", body = Value),
+        (status = 503, description = "Service not ready", body = Value)
+    )
+)]
 pub async fn readiness(State(state): State<AppState>) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
@@ -160,12 +225,18 @@ pub async fn readiness(State(state): State<AppState>) -> axum::response::Respons
 }
 
 /// GET /api/auth/mode — tells frontend whether auth is required
+#[utoipa::path(get, path = "/api/auth/mode", tag = "auth",
+    responses((status = 200, description = "Auth mode info", body = Value))
+)]
 pub async fn auth_mode(State(state): State<AppState>) -> Json<Value> {
     Json(json!({
         "auth_required": state.auth_secret.is_some()
     }))
 }
 
+#[utoipa::path(get, path = "/api/system/stats", tag = "system",
+    responses((status = 200, description = "System resource usage", body = SystemStats))
+)]
 pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
     let snap = state.system_monitor.read().await;
     let stats = SystemStats {
@@ -181,6 +252,9 @@ pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
 //  Agents
 // ═══════════════════════════════════════════════════════════════════════
 
+#[utoipa::path(get, path = "/api/agents", tag = "agents",
+    responses((status = 200, description = "List of configured agents", body = Vec<WitcherAgent>))
+)]
 pub async fn list_agents(State(state): State<AppState>) -> Json<Value> {
     Json(serde_json::to_value(&state.agents).unwrap())
 }
@@ -190,6 +264,9 @@ pub async fn list_agents(State(state): State<AppState>) -> Json<Value> {
 // ═══════════════════════════════════════════════════════════════════════
 
 /// GET /api/claude/models — dynamically resolved Claude models per tier
+#[utoipa::path(get, path = "/api/claude/models", tag = "chat",
+    responses((status = 200, description = "Claude models per tier", body = Vec<ClaudeModelInfo>))
+)]
 pub async fn claude_models(State(state): State<AppState>) -> Json<Value> {
     let resolved = crate::model_registry::resolve_models(&state).await;
 
@@ -221,6 +298,13 @@ pub async fn claude_models(State(state): State<AppState>) -> Json<Value> {
 }
 
 /// POST /api/claude/chat — non-streaming Claude request
+#[utoipa::path(post, path = "/api/claude/chat", tag = "chat",
+    request_body = ChatRequest,
+    responses(
+        (status = 200, description = "Chat completion", body = ChatResponse),
+        (status = 502, description = "Upstream error", body = Value)
+    )
+)]
 pub async fn claude_chat(
     State(state): State<AppState>,
     Json(req): Json<ChatRequest>,
@@ -329,6 +413,10 @@ pub async fn claude_chat(
 /// {"token":" world","done":false}
 /// {"token":"","done":true,"model":"claude-sonnet-4-6","total_tokens":42}
 /// ```
+#[utoipa::path(post, path = "/api/claude/chat/stream", tag = "chat",
+    request_body = ChatRequest,
+    responses((status = 200, description = "NDJSON stream of chat tokens", content_type = "application/x-ndjson"))
+)]
 pub async fn claude_chat_stream(
     State(state): State<AppState>,
     Json(req): Json<ChatRequest>,
@@ -867,6 +955,9 @@ async fn claude_chat_stream_with_tools(
 //  Settings (DB-backed)
 // ═══════════════════════════════════════════════════════════════════════
 
+#[utoipa::path(get, path = "/api/settings", tag = "settings",
+    responses((status = 200, description = "Current application settings", body = AppSettings))
+)]
 pub async fn get_settings(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
@@ -891,6 +982,10 @@ pub async fn get_settings(
     Ok(Json(serde_json::to_value(settings).unwrap()))
 }
 
+#[utoipa::path(post, path = "/api/settings", tag = "settings",
+    request_body = AppSettings,
+    responses((status = 200, description = "Updated settings", body = AppSettings))
+)]
 pub async fn update_settings(
     State(state): State<AppState>,
     Json(new_settings): Json<AppSettings>,
@@ -914,6 +1009,10 @@ pub async fn update_settings(
     Ok(Json(serde_json::to_value(&new_settings).unwrap()))
 }
 
+#[utoipa::path(post, path = "/api/settings/api-key", tag = "auth",
+    request_body = ApiKeyRequest,
+    responses((status = 200, description = "API key set", body = Value))
+)]
 pub async fn set_api_key(
     State(state): State<AppState>,
     Json(req): Json<ApiKeyRequest>,
@@ -927,6 +1026,9 @@ pub async fn set_api_key(
 //  Sessions & History (DB-backed)
 // ═══════════════════════════════════════════════════════════════════════
 
+#[utoipa::path(get, path = "/api/sessions", tag = "sessions",
+    responses((status = 200, description = "List of session summaries", body = Vec<SessionSummary>))
+)]
 pub async fn list_sessions(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
@@ -955,6 +1057,10 @@ pub async fn list_sessions(
     Ok(Json(serde_json::to_value(summaries).unwrap()))
 }
 
+#[utoipa::path(post, path = "/api/sessions", tag = "sessions",
+    request_body = CreateSessionRequest,
+    responses((status = 201, description = "Session created", body = Session))
+)]
 pub async fn create_session(
     State(state): State<AppState>,
     Json(req): Json<CreateSessionRequest>,
@@ -984,6 +1090,13 @@ pub async fn create_session(
     ))
 }
 
+#[utoipa::path(get, path = "/api/sessions/{id}", tag = "sessions",
+    params(("id" = String, Path, description = "Session UUID")),
+    responses(
+        (status = 200, description = "Session with messages", body = Session),
+        (status = 404, description = "Session not found")
+    )
+)]
 pub async fn get_session(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -1070,6 +1183,14 @@ pub async fn get_session(
     Ok(Json(serde_json::to_value(session).unwrap()))
 }
 
+#[utoipa::path(patch, path = "/api/sessions/{id}", tag = "sessions",
+    params(("id" = String, Path, description = "Session UUID")),
+    request_body = UpdateSessionRequest,
+    responses(
+        (status = 200, description = "Session updated", body = SessionSummary),
+        (status = 404, description = "Session not found")
+    )
+)]
 pub async fn update_session(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -1101,6 +1222,13 @@ pub async fn update_session(
     Ok(Json(serde_json::to_value(session).unwrap()))
 }
 
+#[utoipa::path(delete, path = "/api/sessions/{id}", tag = "sessions",
+    params(("id" = String, Path, description = "Session UUID")),
+    responses(
+        (status = 200, description = "Session deleted", body = Value),
+        (status = 404, description = "Session not found")
+    )
+)]
 pub async fn delete_session(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -1123,6 +1251,14 @@ pub async fn delete_session(
     Ok(Json(json!({ "status": "deleted", "id": id })))
 }
 
+#[utoipa::path(post, path = "/api/sessions/{id}/messages", tag = "sessions",
+    params(("id" = String, Path, description = "Session UUID")),
+    request_body = AddMessageRequest,
+    responses(
+        (status = 201, description = "Message added", body = HistoryEntry),
+        (status = 404, description = "Session not found")
+    )
+)]
 pub async fn add_session_message(
     State(state): State<AppState>,
     Path(id): Path<String>,

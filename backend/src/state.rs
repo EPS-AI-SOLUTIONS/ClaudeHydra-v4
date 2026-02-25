@@ -109,12 +109,41 @@ impl AppState {
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys })),
             model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .connect_timeout(std::time::Duration::from_secs(5))
+                .build()
+                .expect("Failed to build HTTP client"),
             tool_executor: Arc::new(ToolExecutor::new()),
             oauth_pkce: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret,
+        }
+    }
+
+    /// Test-only constructor — uses `connect_lazy` so no real DB is needed.
+    /// Only suitable for endpoints that don't issue SQL queries (or that
+    /// gracefully handle DB errors, e.g. `.ok()?`).
+    #[doc(hidden)]
+    pub fn new_test() -> Self {
+        let agents = init_witcher_agents();
+
+        Self {
+            db: PgPool::connect_lazy("postgres://test@localhost:19999/test").expect("lazy pool"),
+            agents,
+            runtime: Arc::new(RwLock::new(RuntimeState { api_keys: HashMap::new() })),
+            model_cache: Arc::new(RwLock::new(ModelCache::new())),
+            start_time: Instant::now(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(5))
+                .build()
+                .expect("Failed to build HTTP client"),
+            tool_executor: Arc::new(ToolExecutor::new()),
+            oauth_pkce: Arc::new(RwLock::new(None)),
+            ready: Arc::new(AtomicBool::new(false)),
+            system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
+            auth_secret: None,
         }
     }
 }

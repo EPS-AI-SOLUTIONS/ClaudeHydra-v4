@@ -4,11 +4,13 @@
  * Prod: direct call to GeminiHydra fly.io backend
  */
 
+import { env } from '../config/env';
+
 const PARTNER_BASE = import.meta.env.PROD
   ? 'https://geminihydra-v15-backend.fly.dev/api'
   : '/partner-api';
 
-const PARTNER_AUTH_SECRET = import.meta.env.VITE_PARTNER_AUTH_SECRET as string | undefined;
+const PARTNER_AUTH_SECRET = env.VITE_PARTNER_AUTH_SECRET;
 
 interface PartnerSessionSummary {
   id: string;

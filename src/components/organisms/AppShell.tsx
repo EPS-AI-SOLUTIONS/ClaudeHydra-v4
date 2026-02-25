@@ -117,6 +117,14 @@ function AppShellInner({ children }: AppShellProps) {
           : 'text-black selection:bg-emerald-500 selection:text-white',
       )}
     >
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-matrix-accent focus:text-white"
+      >
+        Skip to content
+      </a>
+
       {/* Background layers */}
       <ThemedBackground resolvedTheme={resolvedTheme} />
 
@@ -129,7 +137,7 @@ function AppShellInner({ children }: AppShellProps) {
         <Sidebar />
 
         {/* Main content area */}
-        <main className={cn('flex-1 flex flex-col min-w-0 overflow-hidden relative', glassPanel)}>
+        <main id="main-content" className={cn('flex-1 flex flex-col min-w-0 overflow-hidden relative', glassPanel)}>
           {currentView === 'chat' && <TabBar />}
           {/* View Content — animations handled by ViewRouter */}
           <div className="flex-1 min-h-0 overflow-hidden">{children}</div>

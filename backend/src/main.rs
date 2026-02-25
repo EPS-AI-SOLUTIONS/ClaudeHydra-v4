@@ -3,6 +3,7 @@ use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
+use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::model_registry;
@@ -13,8 +14,6 @@ fn build_app(state: AppState) -> axum::Router {
     // CORS — allow Vite dev server + Vercel production
     let cors = CorsLayer::new()
         .allow_origin([
-            "http://localhost:5177".parse().unwrap(),
-            "http://127.0.0.1:5177".parse().unwrap(),
             "http://localhost:4173".parse().unwrap(),
             "http://localhost:5199".parse().unwrap(),
             "http://127.0.0.1:5199".parse().unwrap(),
@@ -58,8 +57,19 @@ fn build_app(state: AppState) -> axum::Router {
             header::REFERRER_POLICY,
             header::HeaderValue::from_static("strict-origin-when-cross-origin"),
         ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::CONTENT_SECURITY_POLICY,
+            header::HeaderValue::from_static(
+                "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://generativelanguage.googleapis.com https://api.anthropic.com https://api.openai.com; img-src 'self' data: blob:",
+            ),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::STRICT_TRANSPORT_SECURITY,
+            header::HeaderValue::from_static("max-age=63072000; includeSubDomains"),
+        ))
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
         .layer(TraceLayer::new_for_http())
+        .layer(CompressionLayer::new())
 }
 
 // ── Shuttle deployment entry point ──────────────────────────────────
@@ -71,6 +81,9 @@ async fn main() -> shuttle_axum::ShuttleAxum {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(5)
+        .acquire_timeout(std::time::Duration::from_secs(3))
+        .idle_timeout(std::time::Duration::from_secs(600))
+        .max_lifetime(std::time::Duration::from_secs(1800))
         .connect(&database_url)
         .await
         .expect("DB connection failed");
@@ -95,15 +108,26 @@ async fn main() -> shuttle_axum::ShuttleAxum {
 async fn main() -> anyhow::Result<()> {
     use tracing_subscriber::EnvFilter;
 
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .init();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
+    if std::env::var("RUST_LOG_FORMAT").as_deref() == Ok("json") {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .json()
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
+            .init();
+    }
 
     dotenvy::dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL required");
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(5)
+        .acquire_timeout(std::time::Duration::from_secs(3))
+        .idle_timeout(std::time::Duration::from_secs(600))
+        .max_lifetime(std::time::Duration::from_secs(1800))
         .connect(&database_url)
         .await
         .expect("DB connection failed");
@@ -149,7 +173,26 @@ async fn main() -> anyhow::Result<()> {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+    #[cfg(unix)]
+    {
+        let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = sigterm.recv() => {},
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await.ok();
+    }
+    tracing::info!("Shutdown signal received, starting graceful shutdown");
 }

@@ -2,6 +2,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
@@ -11,7 +12,13 @@ export default defineConfig(({ mode }) => {
   const partnerBackendUrl = env.VITE_PARTNER_BACKEND_URL || 'http://localhost:8081';
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      ...(mode === 'analyze'
+        ? [visualizer({ open: true, filename: 'dist/stats.html', gzipSize: true })]
+        : []),
+    ],
     define: {
       'import.meta.env.ANTHROPIC_API_KEY': JSON.stringify(env.ANTHROPIC_API_KEY ?? ''),
       'import.meta.env.OPENAI_API_KEY': JSON.stringify(env.OPENAI_API_KEY ?? ''),

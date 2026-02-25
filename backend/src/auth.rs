@@ -9,6 +9,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use subtle::ConstantTimeEq;
 
 use crate::state::AppState;
 
@@ -32,7 +33,7 @@ pub async fn require_auth(
     match auth_header {
         Some(header) if header.starts_with("Bearer ") => {
             let token = &header[7..];
-            if token == secret {
+            if bool::from(token.as_bytes().ct_eq(secret.as_bytes())) {
                 Ok(next.run(request).await)
             } else {
                 tracing::warn!("Auth failed: invalid token");
@@ -51,7 +52,9 @@ pub async fn require_auth(
 /// Used internally by `require_auth` middleware.
 pub fn check_bearer_token(header_value: Option<&str>, expected_secret: &str) -> bool {
     match header_value {
-        Some(header) if header.starts_with("Bearer ") => &header[7..] == expected_secret,
+        Some(header) if header.starts_with("Bearer ") => {
+            bool::from(header[7..].as_bytes().ct_eq(expected_secret.as_bytes()))
+        }
         _ => false,
     }
 }
