@@ -1,9 +1,9 @@
 /**
- * viewStore — Zustand store for SPA view routing & sidebar state.
- * Ported from ClaudeHydra v3 claudeStore (sidebarCollapsed, activeSessionId,
- * chatSessions, openTabs, navigation logic from Sidebar.tsx).
+ * viewStore — Zustand store for SPA view routing, sidebar, sessions & tabs.
  *
- * Uses client-side view switching. Can be replaced with react-router later.
+ * v2: Browser-style ChatTab system ported from GeminiHydra-v15.
+ * Each tab links to a session via sessionId. Supports pin, reorder,
+ * context menu close, and per-session streaming isolation.
  */
 
 import { create } from 'zustand';
@@ -24,33 +24,42 @@ export interface ChatSession {
   preview?: string;
 }
 
-interface ViewState {
-  /** Currently active view / page */
-  currentView: ViewId;
-  /** Whether the sidebar is collapsed */
-  sidebarCollapsed: boolean;
-  /** Whether the mobile drawer is open */
-  mobileDrawerOpen: boolean;
-  /** Active chat session ID */
-  activeSessionId: string | null;
-  /** List of chat sessions (summary data for sidebar) */
-  chatSessions: ChatSession[];
-  /** IDs of open tabs */
-  openTabs: string[];
+export interface ChatTab {
+  id: string;
+  sessionId: string;
+  title: string;
+  isPinned: boolean;
+}
 
-  // Actions
+interface ViewState {
+  currentView: ViewId;
+  sidebarCollapsed: boolean;
+  mobileDrawerOpen: boolean;
+  activeSessionId: string | null;
+  chatSessions: ChatSession[];
+  tabs: ChatTab[];
+  activeTabId: string | null;
+
+  // View actions
   setView: (view: ViewId) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
   setMobileDrawerOpen: (open: boolean) => void;
+
+  // Session actions
   setActiveSessionId: (id: string | null) => void;
   createSession: (title?: string) => string;
   createSessionWithId: (id: string, title: string) => void;
   deleteSession: (id: string) => void;
   renameSession: (id: string, newTitle: string) => void;
   hydrateSessions: (sessions: ChatSession[]) => void;
+
+  // Tab actions
   openTab: (sessionId: string) => void;
-  closeTab: (sessionId: string) => void;
+  closeTab: (tabId: string) => void;
+  switchTab: (tabId: string) => void;
+  reorderTabs: (fromIndex: number, toIndex: number) => void;
+  togglePinTab: (tabId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,7 +74,10 @@ export const useViewStore = create<ViewState>()(
       mobileDrawerOpen: false,
       activeSessionId: null,
       chatSessions: [],
-      openTabs: [],
+      tabs: [],
+      activeTabId: null,
+
+      // -- View actions ------------------------------------------------------
 
       setView: (view) => set({ currentView: view }),
 
@@ -77,25 +89,23 @@ export const useViewStore = create<ViewState>()(
 
       setActiveSessionId: (id) => set({ activeSessionId: id }),
 
+      // -- Session actions ---------------------------------------------------
+
       createSession: (title) => {
         const id = crypto.randomUUID();
         const now = Date.now();
         const sessions = get().chatSessions;
         const sessionTitle = title ?? `Chat ${sessions.length + 1}`;
+        const tabId = crypto.randomUUID();
 
         set((state) => ({
           chatSessions: [
-            {
-              id,
-              title: sessionTitle,
-              createdAt: now,
-              updatedAt: now,
-              messageCount: 0,
-            },
+            { id, title: sessionTitle, createdAt: now, updatedAt: now, messageCount: 0 },
             ...state.chatSessions,
           ],
           activeSessionId: id,
-          openTabs: state.openTabs.includes(id) ? state.openTabs : [...state.openTabs, id],
+          tabs: [...state.tabs, { id: tabId, sessionId: id, title: sessionTitle, isPinned: false }],
+          activeTabId: tabId,
           currentView: 'chat',
         }));
 
@@ -104,33 +114,51 @@ export const useViewStore = create<ViewState>()(
 
       createSessionWithId: (id, title) => {
         const now = Date.now();
-        set((state) => ({
-          chatSessions: [{ id, title, createdAt: now, updatedAt: now, messageCount: 0 }, ...state.chatSessions],
-          activeSessionId: id,
-          openTabs: state.openTabs.includes(id) ? state.openTabs : [...state.openTabs, id],
-          currentView: 'chat',
-        }));
+        const tabId = crypto.randomUUID();
+        set((state) => {
+          const existingTab = state.tabs.find((t) => t.sessionId === id);
+          return {
+            chatSessions: [
+              { id, title, createdAt: now, updatedAt: now, messageCount: 0 },
+              ...state.chatSessions,
+            ],
+            activeSessionId: id,
+            tabs: existingTab
+              ? state.tabs
+              : [...state.tabs, { id: tabId, sessionId: id, title, isPinned: false }],
+            activeTabId: existingTab?.id ?? tabId,
+            currentView: 'chat',
+          };
+        });
       },
 
       deleteSession: (id) =>
         set((state) => {
           const newSessions = state.chatSessions.filter((s) => s.id !== id);
-          const newTabs = state.openTabs.filter((t) => t !== id);
-          let newActiveId = state.activeSessionId;
+          const deletedTabIdx = state.tabs.findIndex((t) => t.sessionId === id);
+          const newTabs = state.tabs.filter((t) => t.sessionId !== id);
+          let newActiveSessionId = state.activeSessionId;
+          let newActiveTabId = state.activeTabId;
 
           if (state.activeSessionId === id) {
-            const closedIdx = state.openTabs.indexOf(id);
             if (newTabs.length > 0) {
-              newActiveId = newTabs[Math.min(closedIdx, newTabs.length - 1)] ?? null;
+              const nextIdx = Math.min(Math.max(0, deletedTabIdx), newTabs.length - 1);
+              const nextTab = newTabs[nextIdx];
+              newActiveTabId = nextTab?.id ?? null;
+              newActiveSessionId = nextTab?.sessionId ?? null;
             } else {
-              newActiveId = newSessions.length > 0 ? (newSessions[0]?.id ?? null) : null;
+              newActiveTabId = null;
+              newActiveSessionId = newSessions.length > 0 ? (newSessions[0]?.id ?? null) : null;
             }
+          } else if (state.activeTabId && !newTabs.some((t) => t.id === state.activeTabId)) {
+            newActiveTabId = newTabs.length > 0 ? (newTabs[0]?.id ?? null) : null;
           }
 
           return {
             chatSessions: newSessions,
-            activeSessionId: newActiveId,
-            openTabs: newTabs,
+            activeSessionId: newActiveSessionId,
+            activeTabId: newActiveTabId,
+            tabs: newTabs,
           };
         }),
 
@@ -139,6 +167,7 @@ export const useViewStore = create<ViewState>()(
           chatSessions: state.chatSessions.map((s) =>
             s.id === id ? { ...s, title: newTitle, updatedAt: Date.now() } : s,
           ),
+          tabs: state.tabs.map((t) => (t.sessionId === id ? { ...t, title: newTitle } : t)),
         })),
 
       hydrateSessions: (sessions) =>
@@ -151,41 +180,126 @@ export const useViewStore = create<ViewState>()(
           };
         }),
 
+      // -- Tab actions -------------------------------------------------------
+
       openTab: (sessionId) =>
-        set((state) => ({
-          openTabs: state.openTabs.includes(sessionId) ? state.openTabs : [...state.openTabs, sessionId],
-          activeSessionId: sessionId,
-        })),
-
-      closeTab: (sessionId) =>
         set((state) => {
-          const newTabs = state.openTabs.filter((t) => t !== sessionId);
-          let newActiveId = state.activeSessionId;
+          const existing = state.tabs.find((t) => t.sessionId === sessionId);
+          if (existing) {
+            return { activeTabId: existing.id, activeSessionId: sessionId };
+          }
+          const session = state.chatSessions.find((s) => s.id === sessionId);
+          const newTab: ChatTab = {
+            id: crypto.randomUUID(),
+            sessionId,
+            title: session?.title || 'New Chat',
+            isPinned: false,
+          };
+          return {
+            tabs: [...state.tabs, newTab],
+            activeTabId: newTab.id,
+            activeSessionId: sessionId,
+          };
+        }),
 
-          if (state.activeSessionId === sessionId) {
-            const closedIdx = state.openTabs.indexOf(sessionId);
+      closeTab: (tabId) =>
+        set((state) => {
+          const tabIndex = state.tabs.findIndex((t) => t.id === tabId);
+          if (tabIndex === -1) return state;
+          const tab = state.tabs[tabIndex];
+          if (tab?.isPinned) return state;
+
+          const newTabs = state.tabs.filter((t) => t.id !== tabId);
+          let newActiveTabId = state.activeTabId;
+          let newActiveSessionId = state.activeSessionId;
+
+          if (state.activeTabId === tabId) {
             if (newTabs.length > 0) {
-              newActiveId = newTabs[Math.min(closedIdx, newTabs.length - 1)] ?? null;
+              const nextIdx = Math.min(tabIndex, newTabs.length - 1);
+              const nextTab = newTabs[nextIdx];
+              newActiveTabId = nextTab?.id ?? null;
+              newActiveSessionId = nextTab?.sessionId ?? null;
             } else {
-              newActiveId = null;
+              newActiveTabId = null;
+              newActiveSessionId = null;
             }
           }
 
           return {
-            openTabs: newTabs,
-            activeSessionId: newActiveId,
+            tabs: newTabs,
+            activeTabId: newActiveTabId,
+            activeSessionId: newActiveSessionId,
           };
         }),
+
+      switchTab: (tabId) =>
+        set((state) => {
+          const tab = state.tabs.find((t) => t.id === tabId);
+          if (!tab) return state;
+          return {
+            activeTabId: tabId,
+            activeSessionId: tab.sessionId,
+            currentView: 'chat',
+          };
+        }),
+
+      reorderTabs: (fromIndex, toIndex) =>
+        set((state) => {
+          if (
+            fromIndex < 0 ||
+            fromIndex >= state.tabs.length ||
+            toIndex < 0 ||
+            toIndex >= state.tabs.length
+          ) {
+            return state;
+          }
+          const newTabs = [...state.tabs];
+          const moved = newTabs.splice(fromIndex, 1)[0];
+          if (!moved) return state;
+          newTabs.splice(toIndex, 0, moved);
+          return { tabs: newTabs };
+        }),
+
+      togglePinTab: (tabId) =>
+        set((state) => ({
+          tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, isPinned: !t.isPinned } : t)),
+        })),
     }),
     {
       name: 'claude-hydra-v4-view',
-      version: 1,
+      version: 2,
+      migrate: (persisted: unknown, version: number) => {
+        const state = persisted as Record<string, unknown>;
+        if (version < 2) {
+          // Migrate openTabs: string[] → tabs: ChatTab[]
+          const openTabs = (state.openTabs as string[]) ?? [];
+          const chatSessions = (state.chatSessions as ChatSession[]) ?? [];
+          const activeSessionId = state.activeSessionId as string | null;
+
+          const tabs: ChatTab[] = openTabs.map((sessionId) => {
+            const session = chatSessions.find((s) => s.id === sessionId);
+            return {
+              id: crypto.randomUUID(),
+              sessionId,
+              title: session?.title ?? 'New Chat',
+              isPinned: false,
+            };
+          });
+
+          delete state.openTabs;
+          state.tabs = tabs;
+          state.activeTabId =
+            tabs.find((t) => t.sessionId === activeSessionId)?.id ?? null;
+        }
+        return state;
+      },
       partialize: (state) => ({
         currentView: state.currentView,
         sidebarCollapsed: state.sidebarCollapsed,
         activeSessionId: state.activeSessionId,
         chatSessions: state.chatSessions,
-        openTabs: state.openTabs,
+        tabs: state.tabs,
+        activeTabId: state.activeTabId,
       }),
     },
   ),

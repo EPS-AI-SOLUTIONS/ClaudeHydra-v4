@@ -6,18 +6,21 @@
  *  - ThemeProvider wrapper
  *  - Background layers (RuneRain, background image, gradient, glow)
  *  - Sidebar (collapsible navigation)
+ *  - TabBar (browser-style chat tabs, shown only in chat view)
  *  - Content area (children slot)
  *  - StatusFooter
  *
  * Matches Tissaia v4 style with p-4 gap-4 spacing.
  */
 
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 
 import { RuneRain } from '@/components/atoms';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import { StatusFooter } from '@/components/organisms/StatusFooter';
+import { TabBar } from '@/components/organisms/TabBar';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { useViewStore } from '@/stores/viewStore';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,10 +37,23 @@ interface AppShellProps {
 
 function AppShellInner({ children }: AppShellProps) {
   const { isDark } = useTheme();
+  const currentView = useViewStore((s) => s.currentView);
 
   const glassPanel = isDark
     ? 'bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl'
     : 'bg-white/40 backdrop-blur-xl border border-white/20 shadow-lg rounded-2xl';
+
+  // Ctrl+T: create new tab (chat view only)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 't' && useViewStore.getState().currentView === 'chat') {
+        e.preventDefault();
+        useViewStore.getState().createSession();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div
@@ -84,6 +100,7 @@ function AppShellInner({ children }: AppShellProps) {
 
         {/* Main content area */}
         <main className={`flex-1 flex flex-col min-w-0 overflow-hidden relative ${glassPanel}`}>
+          {currentView === 'chat' && <TabBar />}
           <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
           <StatusFooter />
         </main>
