@@ -9,7 +9,7 @@ import { z } from 'zod';
 // Health
 // ---------------------------------------------------------------------------
 
-export const providerInfoSchema = z.object({
+const providerInfoSchema = z.object({
   name: z.string(),
   available: z.boolean(),
 });
@@ -57,8 +57,6 @@ export type Agent = z.infer<typeof agentSchema>;
 
 export const agentsListSchema = z.array(agentSchema);
 
-export type AgentsList = z.infer<typeof agentsListSchema>;
-
 // ---------------------------------------------------------------------------
 // Claude Models
 // ---------------------------------------------------------------------------
@@ -86,29 +84,11 @@ export const usageSchema = z.object({
 
 export type Usage = z.infer<typeof usageSchema>;
 
-export const claudeChatRequestSchema = z.object({
-  model: z.string(),
-  messages: z.array(
-    z.object({
-      role: z.string(),
-      content: z.string(),
-    }),
-  ),
-  max_tokens: z.number().optional(),
-  temperature: z.number().optional(),
-  system: z.string().optional(),
-  stream: z.boolean().optional(),
-});
-
-export type ClaudeChatRequest = z.infer<typeof claudeChatRequestSchema>;
-
 export const claudeChatResponseSchema = z.object({
   content: z.string(),
   model: z.string(),
   usage: usageSchema,
 });
-
-export type ClaudeChatResponse = z.infer<typeof claudeChatResponseSchema>;
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -152,7 +132,7 @@ export const sessionSummarySchema = z.object({
 
 export type SessionSummary = z.infer<typeof sessionSummarySchema>;
 
-export const sessionsListSchema = z.array(sessionSummarySchema);
+const sessionsListSchema = z.array(sessionSummarySchema);
 
 export type SessionsList = z.infer<typeof sessionsListSchema>;
 

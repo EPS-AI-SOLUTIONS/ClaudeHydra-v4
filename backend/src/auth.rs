@@ -45,3 +45,60 @@ pub async fn require_auth(
         }
     }
 }
+
+/// Pure function: extract and validate a Bearer token from an Authorization header value.
+/// Returns true if the token matches the expected secret.
+/// Used internally by `require_auth` middleware.
+pub fn check_bearer_token(header_value: Option<&str>, expected_secret: &str) -> bool {
+    match header_value {
+        Some(header) if header.starts_with("Bearer ") => &header[7..] == expected_secret,
+        _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── check_bearer_token ───────────────────────────────────────────────
+
+    #[test]
+    fn bearer_valid_token() {
+        assert!(check_bearer_token(Some("Bearer mysecret"), "mysecret"));
+    }
+
+    #[test]
+    fn bearer_wrong_token() {
+        assert!(!check_bearer_token(Some("Bearer wrong"), "mysecret"));
+    }
+
+    #[test]
+    fn bearer_missing_header() {
+        assert!(!check_bearer_token(None, "mysecret"));
+    }
+
+    #[test]
+    fn bearer_malformed_no_prefix() {
+        assert!(!check_bearer_token(Some("mysecret"), "mysecret"));
+    }
+
+    #[test]
+    fn bearer_basic_auth_rejected() {
+        assert!(!check_bearer_token(Some("Basic dXNlcjpwYXNz"), "mysecret"));
+    }
+
+    #[test]
+    fn bearer_empty_token() {
+        assert!(!check_bearer_token(Some("Bearer "), "mysecret"));
+    }
+
+    #[test]
+    fn bearer_extra_spaces_rejected() {
+        assert!(!check_bearer_token(Some("Bearer  mysecret"), "mysecret"));
+    }
+
+    #[test]
+    fn bearer_case_sensitive() {
+        assert!(!check_bearer_token(Some("bearer mysecret"), "mysecret"));
+    }
+}

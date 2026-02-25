@@ -15,15 +15,6 @@ export function useSessionsQuery() {
   });
 }
 
-/** GET /api/sessions/:id */
-export function useSessionQuery(id: string | null) {
-  return useQuery<Session>({
-    queryKey: ['session', id],
-    queryFn: () => apiGet<Session>(`/api/sessions/${id}`),
-    enabled: id !== null,
-  });
-}
-
 /** POST /api/sessions */
 export function useCreateSessionMutation() {
   const queryClient = useQueryClient();

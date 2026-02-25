@@ -36,7 +36,7 @@ function extractText(node: ReactNode): string {
 // Types
 // ---------------------------------------------------------------------------
 
-export interface MessageAttachment {
+interface MessageAttachment {
   id: string;
   name: string;
   type: 'file' | 'image';
@@ -57,7 +57,7 @@ export interface ChatMessage {
   streaming?: boolean;
 }
 
-export interface MessageBubbleProps {
+interface MessageBubbleProps {
   message: ChatMessage;
   className?: string;
 }

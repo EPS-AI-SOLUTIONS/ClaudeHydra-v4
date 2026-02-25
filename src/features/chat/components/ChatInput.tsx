@@ -33,7 +33,7 @@ export interface Attachment {
   mimeType: string;
 }
 
-export interface ChatInputProps {
+interface ChatInputProps {
   /** Called when the user submits the message */
   onSend: (message: string, attachments: Attachment[]) => void;
   /** Whether the input should be disabled (e.g. during streaming) */
@@ -48,7 +48,7 @@ export interface ChatInputProps {
   promptHistory?: string[];
 }
 
-export interface ChatInputHandle {
+interface ChatInputHandle {
   focus: () => void;
   clear: () => void;
 }

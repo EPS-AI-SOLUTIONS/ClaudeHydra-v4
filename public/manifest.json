@@ -1,0 +1,17 @@
+{
+  "name": "ClaudeHydra — Jaskier App",
+  "short_name": "ClaudeHydra",
+  "description": "AI Swarm Control Center",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "/logodark.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    }
+  ]
+}

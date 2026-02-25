@@ -502,3 +502,181 @@ pub async fn list_pins(State(state): State<AppState>) -> Json<Value> {
     let pins = get_pins_map(&state).await;
     Json(json!({ "pins": pins }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Helper: make a ModelInfo ──────────────────────────────────────────
+
+    fn model(id: &str, provider: &str) -> ModelInfo {
+        ModelInfo {
+            id: id.to_string(),
+            provider: provider.to_string(),
+            display_name: None,
+            capabilities: vec!["text".to_string()],
+        }
+    }
+
+    // ── version_key ──────────────────────────────────────────────────────
+
+    #[test]
+    fn version_key_claude_opus_4_6() {
+        let (v, _) = version_key("claude-opus-4-6");
+        assert_eq!(v, 6000);
+    }
+
+    #[test]
+    fn version_key_claude_sonnet_4_6() {
+        let (v, _) = version_key("claude-sonnet-4-6");
+        assert_eq!(v, 6000);
+    }
+
+    #[test]
+    fn version_key_claude_haiku_with_date() {
+        let (v, d) = version_key("claude-haiku-4-5-20251001");
+        assert_eq!(v, 5000);
+        assert_eq!(d, "20251001");
+    }
+
+    #[test]
+    fn version_key_gemini_2_5_flash() {
+        // "2.5" → major=2, minor=5 → 2*1000 + 5 = 2005
+        let (v, _) = version_key("gemini-2.5-flash");
+        assert_eq!(v, 2005);
+    }
+
+    #[test]
+    fn version_key_gemini_3_1_pro() {
+        let (v, _) = version_key("gemini-3.1-pro-preview");
+        assert_eq!(v, 3001);
+    }
+
+    #[test]
+    fn version_key_no_version() {
+        let (v, d) = version_key("some-model-name");
+        assert_eq!(v, 0);
+        assert!(d.is_empty());
+    }
+
+    #[test]
+    fn version_key_ordering_claude_models() {
+        let (v_opus, _) = version_key("claude-opus-4-6");
+        let (v_haiku_dated, d) = version_key("claude-haiku-4-5-20251001");
+        // opus 4-6 has version 6000, haiku 4-5 has version 5000
+        assert!(v_opus > v_haiku_dated);
+        assert_eq!(d, "20251001");
+    }
+
+    // ── select_best ──────────────────────────────────────────────────────
+
+    #[test]
+    fn select_best_picks_highest_version() {
+        let models = vec![
+            model("claude-haiku-4-5-20251001", "anthropic"),
+            model("claude-sonnet-4-6", "anthropic"),
+            model("claude-opus-4-6", "anthropic"),
+        ];
+
+        let best = select_best(&models, &[], &[]);
+        // Both opus and sonnet have version 6000, but opus sorts first alphabetically
+        // Actually they have identical version_key — sort is stable so first in sorted order wins
+        let best_id = best.unwrap().id;
+        assert!(
+            best_id == "claude-sonnet-4-6" || best_id == "claude-opus-4-6",
+            "Expected opus or sonnet, got: {}",
+            best_id
+        );
+    }
+
+    #[test]
+    fn select_best_opus_filter() {
+        let models = vec![
+            model("claude-haiku-4-5-20251001", "anthropic"),
+            model("claude-sonnet-4-6", "anthropic"),
+            model("claude-opus-4-6", "anthropic"),
+        ];
+
+        let best = select_best(&models, &["opus"], &[]);
+        assert_eq!(best.unwrap().id, "claude-opus-4-6");
+    }
+
+    #[test]
+    fn select_best_sonnet_filter() {
+        let models = vec![
+            model("claude-haiku-4-5-20251001", "anthropic"),
+            model("claude-sonnet-4-6", "anthropic"),
+            model("claude-sonnet-4-5-20250929", "anthropic"),
+            model("claude-opus-4-6", "anthropic"),
+        ];
+
+        let best = select_best(&models, &["sonnet"], &[]);
+        assert_eq!(best.unwrap().id, "claude-sonnet-4-6");
+    }
+
+    #[test]
+    fn select_best_haiku_filter() {
+        let models = vec![
+            model("claude-haiku-4-5-20251001", "anthropic"),
+            model("claude-sonnet-4-6", "anthropic"),
+        ];
+
+        let best = select_best(&models, &["haiku"], &[]);
+        assert_eq!(best.unwrap().id, "claude-haiku-4-5-20251001");
+    }
+
+    #[test]
+    fn select_best_exclude_dated_prefers_non_dated() {
+        let models = vec![
+            model("claude-sonnet-4-5-20250929", "anthropic"),
+            model("claude-sonnet-4-6", "anthropic"),
+        ];
+
+        // Excluding "20" removes dated variants
+        let best = select_best(&models, &["sonnet"], &["20"]);
+        assert_eq!(best.unwrap().id, "claude-sonnet-4-6");
+    }
+
+    #[test]
+    fn select_best_no_match() {
+        let models = vec![
+            model("claude-sonnet-4-6", "anthropic"),
+        ];
+
+        let best = select_best(&models, &["nonexistent"], &[]);
+        assert!(best.is_none());
+    }
+
+    #[test]
+    fn select_best_empty_list() {
+        let best = select_best(&[], &[], &[]);
+        assert!(best.is_none());
+    }
+
+    // ── ModelCache ───────────────────────────────────────────────────────
+
+    #[test]
+    fn model_cache_new_is_stale() {
+        let cache = ModelCache::new();
+        assert!(cache.is_stale());
+    }
+
+    #[test]
+    fn model_cache_default_is_stale() {
+        let cache = ModelCache::default();
+        assert!(cache.is_stale());
+    }
+
+    #[test]
+    fn model_cache_fresh_after_set() {
+        let mut cache = ModelCache::new();
+        cache.fetched_at = Some(std::time::Instant::now());
+        assert!(!cache.is_stale());
+    }
+
+    #[test]
+    fn model_cache_empty_models_by_default() {
+        let cache = ModelCache::new();
+        assert!(cache.models.is_empty());
+    }
+}
