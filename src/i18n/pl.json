@@ -1,57 +1,54 @@
 {
   "nav": {
     "home": "Start",
-    "chat": "Czat",
-    "agents": "Agenci"
+    "chat": "Czat"
   },
   "sidebar": {
     "groups": {
-      "main": "GLOWNE",
-      "tools": "NARZEDZIA"
+      "main": "GŁÓWNE"
     },
     "chats": "CZATY",
     "newChat": "Nowy czat",
-    "noChats": "Brak czatow",
+    "noChats": "Brak czatów",
     "darkMode": "TRYB CIEMNY",
     "lightMode": "TRYB JASNY",
-    "rename": "Zmien nazwe",
-    "confirmDelete": "Kliknij ponownie aby usunac",
-    "message": "wiadomosc",
-    "messages": "wiadomosci",
-    "expandSidebar": "Rozwin pasek boczny",
-    "collapseSidebar": "Zwin pasek boczny"
+    "rename": "Zmień nazwę",
+    "confirmDelete": "Kliknij ponownie aby usunąć",
+    "message": "wiadomość",
+    "messages": "wiadomości",
+    "expandSidebar": "Rozwiń pasek boczny",
+    "collapseSidebar": "Zwiń pasek boczny"
   },
   "footer": {
-    "tagline": "Roj AI"
+    "tagline": "Rój AI"
   },
   "common": {
     "save": "Zapisz",
     "cancel": "Anuluj",
-    "delete": "Usun",
-    "send": "Wyslij",
-    "retry": "Ponow",
-    "loading": "Ladowanie...",
-    "error": "Blad",
-    "confirm": "Potwierdz",
+    "delete": "Usuń",
+    "send": "Wyślij",
+    "retry": "Ponów",
+    "loading": "Ładowanie...",
+    "error": "Błąd",
+    "confirm": "Potwierdź",
     "close": "Zamknij",
     "menu": "Menu"
   },
   "home": {
-    "subtitle": "Centrum Sterowania Rojem AI — rozpocznij nowy czat lub kontynuuj rozmowe.",
+    "subtitle": "Centrum Sterowania Rojem AI — rozpocznij nowy czat lub kontynuuj rozmowę.",
     "startChat": "Nowy Czat",
-    "viewAgents": "Agenci",
     "recentChats": "Ostatnie Czaty",
-    "noChats": "Brak czatow. Rozpocznij nowa rozmowe!",
+    "noChats": "Brak czatów. Rozpocznij nową rozmowę!",
     "msg": "wiad.",
     "badges": {
-      "agents": "12 Agentow",
+      "agents": "12 Agentów",
       "claudeApi": "Claude API",
       "mcpIntegration": "Integracja MCP",
       "streamingChat": "Czat Strumieniowy"
     }
   },
   "time": {
-    "justNow": "przed chwila",
+    "justNow": "przed chwilą",
     "minutesAgo": "{{m}} min temu",
     "hoursAgo": "{{h}} godz. temu",
     "yesterday": "wczoraj",
@@ -61,8 +58,8 @@
     "modelSelector": "Wybierz model",
     "temperature": "Temperatura",
     "systemPrompt": "Prompt systemowy",
-    "placeholder": "Wpisz wiadomosc...",
-    "emptyState": "Rozpocznij rozmowe",
-    "clearChat": "Wyczysc czat"
+    "placeholder": "Wpisz wiadomość...",
+    "emptyState": "Rozpocznij rozmowę",
+    "clearChat": "Wyczyść czat"
   }
 }
