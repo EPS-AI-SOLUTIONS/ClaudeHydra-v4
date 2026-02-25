@@ -368,8 +368,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             data-testid="chat-send-btn"
             onClick={handleSend}
             disabled={!canSend}
-            whileHover={canSend ? { scale: 1.05 } : undefined}
-            whileTap={canSend ? { scale: 0.95 } : undefined}
+            {...(canSend && { whileHover: { scale: 1.05 }, whileTap: { scale: 0.95 } })}
             className={cn(
               'glass-button glass-button-primary p-2.5 rounded-lg flex-shrink-0 transition-all',
               canSend

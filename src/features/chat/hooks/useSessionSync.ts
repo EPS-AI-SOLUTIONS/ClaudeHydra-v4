@@ -101,7 +101,7 @@ export function useSessionSync() {
 
   const addMessageWithSync = useCallback(
     (sessionId: string, role: string, content: string, model?: string) => {
-      addMessageMutation.mutate({ sessionId, role, content, model });
+      addMessageMutation.mutate({ sessionId, role, content, ...(model !== undefined && { model }) });
     },
     [addMessageMutation],
   );

@@ -124,7 +124,7 @@ async function* claudeStreamChat(
       stream: true,
       tools_enabled: toolsEnabled,
     }),
-    signal,
+    ...(signal !== undefined && { signal }),
   });
 
   if (!res.ok) {
@@ -474,8 +474,8 @@ export function ClaudeChatView() {
                   ti.id === toolUseId
                     ? {
                         ...ti,
-                        result: event.result,
-                        isError: event.is_error,
+                        ...(event.result !== undefined && { result: event.result }),
+                        ...(event.is_error !== undefined && { isError: event.is_error }),
                         status: (event.is_error ? 'error' : 'completed') as ToolInteraction['status'],
                       }
                     : ti,

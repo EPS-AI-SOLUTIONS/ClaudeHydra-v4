@@ -98,9 +98,9 @@ const markdownComponents = {
     children,
     node,
   }: {
-    className?: string;
-    children?: ReactNode;
-    node?: { position?: { start: { line: number }; end: { line: number } } };
+    className?: string | undefined;
+    children?: ReactNode | undefined;
+    node?: { position?: { start: { line: number }; end: { line: number } } } | undefined;
   }) {
     const match = /language-(\w+)/.exec(className ?? '');
     const isInline = !node?.position || (node.position.start.line === node.position.end.line && !match);
@@ -110,21 +110,21 @@ const markdownComponents = {
       return <InlineCode>{children}</InlineCode>;
     }
 
-    return <CodeBlock code={codeContent} language={match?.[1]} className={className} />;
+    return <CodeBlock code={codeContent} {...(match?.[1] != null && { language: match[1] })} {...(className != null && { className })} />;
   },
-  pre({ children }: { children?: ReactNode }) {
+  pre({ children }: { children?: ReactNode | undefined }) {
     return <>{children}</>;
   },
-  p({ children }: { children?: ReactNode }) {
+  p({ children }: { children?: ReactNode | undefined }) {
     return <p className="mb-2 last:mb-0">{children}</p>;
   },
-  ul({ children }: { children?: ReactNode }) {
+  ul({ children }: { children?: ReactNode | undefined }) {
     return <ul className="list-disc list-inside mb-2">{children}</ul>;
   },
-  ol({ children }: { children?: ReactNode }) {
+  ol({ children }: { children?: ReactNode | undefined }) {
     return <ol className="list-decimal list-inside mb-2">{children}</ol>;
   },
-  a({ href, children }: { href?: string; children?: ReactNode }) {
+  a({ href, children }: { href?: string | undefined; children?: ReactNode | undefined }) {
     return (
       <a
         href={href}
@@ -136,7 +136,7 @@ const markdownComponents = {
       </a>
     );
   },
-  blockquote({ children }: { children?: ReactNode }) {
+  blockquote({ children }: { children?: ReactNode | undefined }) {
     return (
       <blockquote className="border-l-2 border-[var(--matrix-accent)]/40 pl-3 my-2 text-[var(--matrix-text-secondary)] italic">
         {children}
