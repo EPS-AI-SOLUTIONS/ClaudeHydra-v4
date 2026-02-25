@@ -58,6 +58,16 @@ export default defineConfig(({ mode }) => {
     build: {
       target: 'esnext',
       sourcemap: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-motion': ['motion'],
+            'vendor-i18n': ['i18next', 'react-i18next'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-ui': ['sonner', 'tailwind-merge', 'clsx'],
+          },
+        },
+      },
     },
   };
 });

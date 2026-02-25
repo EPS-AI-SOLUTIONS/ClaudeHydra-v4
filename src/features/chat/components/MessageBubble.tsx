@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from '@/components/molecules/CodeBlock';
+import { chatLanguages } from '@/shared/utils/highlightLanguages';
 import { cn } from '@/shared/utils/cn';
 import { ToolCallBlock, type ToolInteraction } from './ToolCallBlock';
 
@@ -240,7 +241,7 @@ export function MessageBubble({ message, className }: MessageBubbleProps) {
 
         {/* Content — Markdown rendered */}
         <div className="prose prose-invert prose-sm max-w-none text-[var(--matrix-text-primary)]">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeHighlight, { languages: chatLanguages }]]} components={markdownComponents}>
             {displayContent}
           </ReactMarkdown>
         </div>
