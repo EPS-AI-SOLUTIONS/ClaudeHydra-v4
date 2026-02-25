@@ -8,28 +8,16 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ChatSession, ChatTab } from '@/shared/types/store';
+
+// Re-export shared types so existing imports from '@/stores/viewStore' keep working
+export type { ChatSession, ChatTab } from '@/shared/types/store';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type ViewId = 'home' | 'chat' | 'agents' | 'history' | 'settings';
-
-export interface ChatSession {
-  id: string;
-  title: string;
-  createdAt: number;
-  updatedAt: number;
-  messageCount: number;
-  preview?: string;
-}
-
-export interface ChatTab {
-  id: string;
-  sessionId: string;
-  title: string;
-  isPinned: boolean;
-}
 
 interface ViewState {
   currentView: ViewId;
@@ -47,11 +35,11 @@ interface ViewState {
   setMobileDrawerOpen: (open: boolean) => void;
 
   // Session actions
-  setActiveSessionId: (id: string | null) => void;
+  selectSession: (id: string | null) => void;
   createSession: (title?: string) => string;
   createSessionWithId: (id: string, title: string) => void;
   deleteSession: (id: string) => void;
-  renameSession: (id: string, newTitle: string) => void;
+  updateSessionTitle: (id: string, newTitle: string) => void;
   hydrateSessions: (sessions: ChatSession[]) => void;
 
   // Tab actions
@@ -87,7 +75,7 @@ export const useViewStore = create<ViewState>()(
 
       setMobileDrawerOpen: (open) => set({ mobileDrawerOpen: open }),
 
-      setActiveSessionId: (id) => set({ activeSessionId: id }),
+      selectSession: (id) => set({ activeSessionId: id }),
 
       // -- Session actions ---------------------------------------------------
 
@@ -162,7 +150,7 @@ export const useViewStore = create<ViewState>()(
           };
         }),
 
-      renameSession: (id, newTitle) =>
+      updateSessionTitle: (id, newTitle) =>
         set((state) => ({
           chatSessions: state.chatSessions.map((s) =>
             s.id === id ? { ...s, title: newTitle, updatedAt: Date.now() } : s,
@@ -176,7 +164,7 @@ export const useViewStore = create<ViewState>()(
           const newSessions = sessions.filter((s) => !existingIds.has(s.id));
           if (newSessions.length === 0) return state;
           return {
-            chatSessions: [...newSessions, ...state.chatSessions].sort((a, b) => b.updatedAt - a.updatedAt),
+            chatSessions: [...newSessions, ...state.chatSessions].sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt)),
           };
         }),
 

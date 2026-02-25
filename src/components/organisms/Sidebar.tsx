@@ -18,24 +18,21 @@ import {
   Clock,
   Edit2,
   ExternalLink,
-  Globe,
   type LucideIcon,
   Loader2,
   Menu,
   MessageSquare,
   MessagesSquare,
-  Moon,
   Plus,
   Settings,
   Sparkles,
-  Sun,
   Trash2,
   WifiOff,
   X,
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/contexts/ThemeContext';
@@ -45,6 +42,8 @@ import { PartnerChatModal } from '@/features/chat/components/PartnerChatModal';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatSession, useViewStore, type ViewId } from '@/stores/viewStore';
+import { FooterControls } from './sidebar/FooterControls';
+import { LogoButton } from './sidebar/LogoButton';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -58,14 +57,6 @@ interface NavGroup {
 }
 
 const MOBILE_BREAKPOINT = 768;
-
-const THEME_LABELS: Record<string, string> = {
-  dark: 'TRYB CIEMNY',
-  light: 'TRYB JASNY',
-};
-
-const getThemeLabel = (theme: string): string =>
-  THEME_LABELS[theme] ?? 'TRYB CIEMNY';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -281,7 +272,7 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
             <span className="text-[9px] text-[var(--matrix-text-secondary)]">
               {session.messageCount} {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
             </span>
-            <span className="text-[9px] text-[var(--matrix-accent)]">{timeAgo(session.updatedAt)}</span>
+            <span className="text-[9px] text-[var(--matrix-accent)]">{timeAgo(session.updatedAt ?? session.createdAt)}</span>
           </div>
         </div>
       )}
@@ -300,19 +291,19 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContentProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { currentView, setView } = useViewStore();
   const {
     activeSessionId,
     chatSessions,
-    setActiveSessionId,
+    selectSession,
     openTab,
     createSessionWithSync,
     deleteSessionWithSync,
     renameSessionWithSync,
   } = useSessionSync();
 
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const theme = useViewTheme();
   const isLight = theme.isLight;
@@ -379,35 +370,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
     setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  // Language dropdown state (Tissaia style)
-  const [showLangDropdown, setShowLangDropdown] = useState(false);
-  const langDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showLangDropdown) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (langDropdownRef.current && !langDropdownRef.current.contains(e.target as Node)) {
-        setShowLangDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showLangDropdown]);
-
-  const languages = [
-    { code: 'en', name: 'English', flag: '\u{1F1EC}\u{1F1E7}' },
-    { code: 'pl', name: 'Polski', flag: '\u{1F1F5}\u{1F1F1}' },
-  ];
-
-  const selectLanguage = (langCode: string) => {
-    i18n.changeLanguage(langCode);
-    setShowLangDropdown(false);
-  };
-
-  const currentLang = languages.find((l) => l.code === i18n.language) || languages[1];
-
   // Sort sessions by updatedAt descending
-  const sortedSessions = useMemo(() => [...chatSessions].sort((a, b) => b.updatedAt - a.updatedAt), [chatSessions]);
+  const sortedSessions = useMemo(() => [...chatSessions].sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt)), [chatSessions]);
 
   const navigateTo = useCallback(
     (view: ViewId) => {
@@ -422,7 +386,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   };
 
   const handleSelectSession = (sessionId: string) => {
-    setActiveSessionId(sessionId);
+    selectSession(sessionId);
     openTab(sessionId);
     setView('chat');
     if (isMobile && onClose) onClose();
@@ -439,20 +403,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   return (
     <>
       {/* ---- Logo ---- */}
-      <div className="p-4 flex items-center justify-center">
-        <button
-          type="button"
-          data-testid="sidebar-logo"
-          onClick={() => navigateTo('home')}
-          className="hover:opacity-80 transition-opacity"
-        >
-          <img
-            src={isDark ? '/logodark.webp' : '/logolight.webp'}
-            alt="EPS AI Solutions"
-            className={collapsed ? 'w-16 h-16 object-contain' : 'h-36 object-contain'}
-          />
-        </button>
-      </div>
+      <LogoButton collapsed={collapsed} onClick={() => navigateTo('home')} />
 
       {/* ---- Grouped Navigation (Tissaia style) ---- */}
       <nav className="flex flex-col gap-2 flex-shrink-0 px-2">
@@ -687,133 +638,12 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         onClose={() => setPartnerModalSessionId(null)}
       />
 
-      {/* ---- Bottom: Theme & Language (Tissaia style) ---- */}
-      <div className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'p-2 mx-2 space-y-1')}>
-        {/* Theme Toggle */}
-        <button
-          type="button"
-          data-testid="sidebar-theme-toggle"
-          onClick={toggleTheme}
-          className={cn(
-            'flex items-center gap-3 w-full p-2 rounded-lg transition-all group',
-            collapsed ? 'justify-center' : 'justify-start',
-            isLight ? 'hover:bg-black/5' : 'hover:bg-white/5',
-          )}
-          title={collapsed ? `Theme: ${resolvedTheme === 'dark' ? 'Dark' : 'Light'}` : undefined}
-        >
-          <div className="relative">
-            {resolvedTheme === 'dark' ? (
-              <Moon size={18} className={cn(theme.iconMuted, 'group-hover:text-white transition-colors')} />
-            ) : (
-              <Sun size={18} className="text-amber-500 group-hover:text-amber-400 transition-colors" />
-            )}
-          </div>
-          {!collapsed && (
-            <span
-              className={cn(
-                'text-base font-mono',
-                theme.textMuted,
-                isLight ? 'group-hover:text-black' : 'group-hover:text-white',
-              )}
-            >
-              {getThemeLabel(resolvedTheme)}
-            </span>
-          )}
-        </button>
-
-        {/* Language Selector */}
-        <div className="relative" ref={langDropdownRef} data-testid="sidebar-lang-selector">
-          <button
-            type="button"
-            onClick={() => setShowLangDropdown(!showLangDropdown)}
-            className={cn(
-              'flex items-center gap-3 w-full p-2 rounded-lg transition-all group',
-              collapsed ? 'justify-center' : 'justify-between',
-              isLight ? 'hover:bg-black/5' : 'hover:bg-white/5',
-            )}
-            title={collapsed ? `Language: ${currentLang?.name}` : undefined}
-          >
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Globe
-                  size={18}
-                  className={cn(theme.iconMuted, isLight ? 'group-hover:text-emerald-600' : 'group-hover:text-white', 'transition-colors')}
-                />
-              </div>
-              {!collapsed && (
-                <span
-                  className={cn('text-base font-mono', theme.textMuted, isLight ? 'group-hover:text-black' : 'group-hover:text-white', 'truncate')}
-                >
-                  <span className="mr-1.5">{currentLang?.flag}</span>
-                  <span className={cn('font-bold', theme.textAccent)}>{currentLang?.code.toUpperCase()}</span>
-                </span>
-              )}
-            </div>
-            {!collapsed && (
-              <ChevronDown
-                size={14}
-                className={cn(theme.iconMuted, 'transition-transform duration-200', showLangDropdown ? 'rotate-180' : '')}
-              />
-            )}
-          </button>
-
-          {/* Language Dropdown */}
-          <AnimatePresence>
-            {showLangDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: 0.15 }}
-                className={cn(
-                  'absolute bottom-full left-0 right-0 mb-1 rounded-xl backdrop-blur-xl border overflow-hidden z-50',
-                  isLight
-                    ? 'bg-white/95 border-emerald-500/20 shadow-lg'
-                    : 'bg-black/90 border-white/20 shadow-[0_0_32px_rgba(0,0,0,0.6)]',
-                )}
-              >
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    data-testid={`sidebar-lang-${lang.code}`}
-                    onClick={() => selectLanguage(lang.code)}
-                    className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-all',
-                      i18n.language === lang.code
-                        ? isLight ? 'bg-emerald-500/20 text-emerald-600' : 'bg-white/15 text-white'
-                        : cn(theme.textMuted, isLight ? 'hover:bg-black/5 hover:text-black' : 'hover:bg-white/5 hover:text-white'),
-                    )}
-                  >
-                    <span className="text-base">{lang.flag}</span>
-                    <span className="font-mono">{lang.name}</span>
-                    {i18n.language === lang.code && (
-                      <div
-                        className={cn(
-                          'ml-auto w-1.5 h-1.5 rounded-full',
-                          isLight
-                            ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
-                            : 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.4)]',
-                        )}
-                      />
-                    )}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Version */}
-      {!collapsed && (
-        <p
-          data-testid="sidebar-version"
-          className={cn('text-center text-xs py-2', theme.textMuted)}
-        >
-          <span className={theme.textAccent}>ClaudeHydra</span> v4.0.0 | {t('footer.tagline', 'AI Swarm')}
-        </p>
-      )}
+      {/* ---- Bottom: Theme & Language + Version ---- */}
+      <FooterControls
+        collapsed={collapsed}
+        version="ClaudeHydra v4.0.0"
+        tagline={t('footer.tagline', 'AI Swarm')}
+      />
 
       {/* ---- Mobile close button ---- */}
       {isMobile && (

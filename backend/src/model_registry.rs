@@ -1,5 +1,6 @@
-// ClaudeHydra v4 — Dynamic Model Registry
+// Jaskier Shared Pattern — model_registry
 //
+// ClaudeHydra v4 — Dynamic Model Registry
 // Fetches available models from Anthropic (and optionally Google) APIs,
 // caches them with a TTL, and selects the latest model for each tier.
 
@@ -208,6 +209,9 @@ pub async fn refresh_cache(state: &AppState) -> HashMap<String, Vec<ModelInfo>> 
 
 // ── Model selection ──────────────────────────────────────────────────────────
 
+/// Extract a sortable version key from a model ID.
+/// Handles patterns like "gemini-2.5-flash", "gemini-3.1-pro", "claude-sonnet-4-6".
+/// Returns (major * 1000 + minor, date_suffix) for proper ordering.
 fn version_key(id: &str) -> (u64, String) {
     let mut version: u64 = 0;
     let mut date_suffix = String::new();
@@ -235,6 +239,8 @@ fn version_key(id: &str) -> (u64, String) {
     (version, date_suffix)
 }
 
+/// Select the best model from a list using include/exclude filters.
+/// Sorts by extracted version key (highest = newest).
 fn select_best(
     models: &[ModelInfo],
     must_contain: &[&str],
@@ -255,6 +261,7 @@ fn select_best(
     candidates.first().map(|m| (*m).clone())
 }
 
+/// Resolve the best model for each use case from the cached models.
 pub async fn resolve_models(state: &AppState) -> ResolvedModels {
     {
         let cache = state.model_cache.read().await;
@@ -333,6 +340,7 @@ pub async fn model_for_tier(state: &AppState, tier: &str) -> String {
 
 // ── HTTP handlers ────────────────────────────────────────────────────────────
 
+/// Read all pins from DB as a HashMap.
 async fn get_pins_map(state: &AppState) -> HashMap<String, String> {
     let rows: Vec<(String, String)> = sqlx::query_as(
         "SELECT use_case, model_id FROM ch_model_pins",

@@ -1,3 +1,6 @@
+// Jaskier Shared Pattern — state
+// ClaudeHydra v4 - Application state
+
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -10,6 +13,7 @@ use crate::model_registry::ModelCache;
 use crate::models::WitcherAgent;
 use crate::tools::ToolExecutor;
 
+// ── Shared: RuntimeState ────────────────────────────────────────────────────
 /// Mutable runtime state (not persisted — lost on restart).
 pub struct RuntimeState {
     pub api_keys: HashMap<String, String>,
@@ -21,7 +25,8 @@ pub struct OAuthPkceState {
     pub state: String,
 }
 
-/// Cached system statistics snapshot, refreshed by background task.
+// ── Shared: SystemSnapshot ───────────────────────────────────────────────────
+/// Cached system statistics snapshot, refreshed every 5s by background task.
 #[derive(Clone)]
 pub struct SystemSnapshot {
     pub cpu_usage_percent: f32,
@@ -41,6 +46,7 @@ impl Default for SystemSnapshot {
     }
 }
 
+// ── Shared: AppState (project-specific fields vary) ─────────────────────────
 /// Central application state. Clone-friendly — PgPool and Arc are both Clone.
 #[derive(Clone)]
 pub struct AppState {
@@ -54,10 +60,11 @@ pub struct AppState {
     pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
     /// `true` once startup_sync completes (or times out).
     pub ready: Arc<AtomicBool>,
-    /// Cached system stats, refreshed every 5s by background task.
+    /// Cached system stats (CPU, memory) refreshed every 5s by background task.
     pub system_monitor: Arc<RwLock<SystemSnapshot>>,
 }
 
+// ── Shared: readiness helpers ───────────────────────────────────────────────
 impl AppState {
     pub fn is_ready(&self) -> bool {
         self.ready.load(Ordering::Relaxed)

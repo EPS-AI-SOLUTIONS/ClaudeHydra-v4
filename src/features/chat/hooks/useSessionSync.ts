@@ -24,9 +24,9 @@ export function useSessionSync() {
     activeSessionId,
     createSessionWithId,
     deleteSession: deleteSessionLocal,
-    renameSession: renameSessionLocal,
+    updateSessionTitle: updateSessionTitleLocal,
     hydrateSessions,
-    setActiveSessionId,
+    selectSession,
     openTab,
     setView,
   } = useViewStore();
@@ -93,10 +93,10 @@ export function useSessionSync() {
 
   const renameSessionWithSync = useCallback(
     (id: string, newTitle: string) => {
-      renameSessionLocal(id, newTitle);
+      updateSessionTitleLocal(id, newTitle);
       updateMutation.mutate({ id, title: newTitle });
     },
-    [renameSessionLocal, updateMutation],
+    [updateSessionTitleLocal, updateMutation],
   );
 
   const addMessageWithSync = useCallback(
@@ -113,7 +113,7 @@ export function useSessionSync() {
     addMessageWithSync,
     activeSessionId,
     chatSessions,
-    setActiveSessionId,
+    selectSession,
     openTab,
     setView,
     isLoading: createMutation.isPending,

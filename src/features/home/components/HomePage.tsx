@@ -126,7 +126,7 @@ const SessionRow = memo<SessionRowProps>(({ session, onOpen, theme }) => {
       </div>
       <div className="flex flex-col items-end flex-shrink-0">
         <span className={cn('text-[10px] font-mono', theme.textMuted)}>{timeAgo(session.createdAt, t)}</span>
-        {session.messageCount > 0 && (
+        {(session.messageCount ?? 0) > 0 && (
           <span className={cn('text-[10px] font-mono', theme.textMuted)}>{session.messageCount} {t('home.msg', 'msg')}</span>
         )}
       </div>
@@ -147,7 +147,7 @@ export const HomePage = memo(() => {
   const chatSessions = useViewStore((s) => s.chatSessions);
   const setView = useViewStore((s) => s.setView);
   const createSession = useViewStore((s) => s.createSession);
-  const setActiveSessionId = useViewStore((s) => s.setActiveSessionId);
+  const selectSession = useViewStore((s) => s.selectSession);
   const openTab = useViewStore((s) => s.openTab);
 
   const recentSessions = useMemo(
@@ -161,11 +161,11 @@ export const HomePage = memo(() => {
 
   const handleOpenSession = useCallback(
     (sessionId: string) => {
-      setActiveSessionId(sessionId);
+      selectSession(sessionId);
       openTab(sessionId);
       setView('chat');
     },
-    [setActiveSessionId, openTab, setView],
+    [selectSession, openTab, setView],
   );
 
   const handleViewAgents = useCallback(() => {

@@ -229,13 +229,13 @@ describe('viewStore — deleteSession', () => {
 });
 
 // ---------------------------------------------------------------------------
-// renameSession
+// updateSessionTitle
 // ---------------------------------------------------------------------------
 
-describe('viewStore — renameSession', () => {
+describe('viewStore — updateSessionTitle', () => {
   it('changes the title of the targeted session', () => {
     const id = act('createSession', 'Old Title') as string;
-    act('renameSession', id, 'New Title');
+    act('updateSessionTitle', id, 'New Title');
     const session = getState().chatSessions.find((s) => s.id === id);
     expect(session?.title).toBe('New Title');
   });
@@ -245,7 +245,7 @@ describe('viewStore — renameSession', () => {
     const before = getState().chatSessions.find((s) => s.id === id)?.updatedAt;
 
     // small delay so timestamp differs
-    act('renameSession', id, 'Title v2');
+    act('updateSessionTitle', id, 'Title v2');
     const after = getState().chatSessions.find((s) => s.id === id)?.updatedAt;
 
     expect(after).toBeGreaterThanOrEqual(before as number);
@@ -255,7 +255,7 @@ describe('viewStore — renameSession', () => {
     const id1 = act('createSession', 'Keep') as string;
     const id2 = act('createSession', 'Change') as string;
 
-    act('renameSession', id2, 'Changed');
+    act('updateSessionTitle', id2, 'Changed');
 
     expect(getState().chatSessions.find((s) => s.id === id1)?.title).toBe('Keep');
     expect(getState().chatSessions.find((s) => s.id === id2)?.title).toBe('Changed');

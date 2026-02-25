@@ -1,3 +1,4 @@
+// Jaskier Shared Pattern — watchdog
 // ClaudeHydra v4 — Background watchdog
 //
 // Periodically checks backend health and performs auto-recovery:

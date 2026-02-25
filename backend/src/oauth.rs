@@ -1,3 +1,7 @@
+// Jaskier Shared Pattern — Anthropic OAuth PKCE
+// Identical logic in ClaudeHydra & GeminiHydra (only DB table name differs:
+// ch_oauth_tokens vs gh_oauth_tokens). Keep in sync when editing.
+
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::Json;
