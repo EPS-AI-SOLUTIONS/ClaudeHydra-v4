@@ -8,6 +8,7 @@
  * and a matrix-green shimmer effect.
  */
 
+import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/atoms/Skeleton';
 
 // ---------------------------------------------------------------------------
@@ -15,11 +16,12 @@ import { Skeleton } from '@/components/atoms/Skeleton';
 // ---------------------------------------------------------------------------
 
 export function ViewSkeleton() {
+  const { t } = useTranslation();
   return (
     <output
       className="h-full flex flex-col p-4 sm:p-6 gap-6 animate-in fade-in duration-300 block"
       aria-busy="true"
-      aria-label="Loading view"
+      aria-label={t('common.loadingView', 'Loading view')}
     >
       {/* ---- Header skeleton ---- */}
       <div className="flex items-center gap-3">

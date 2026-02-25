@@ -12,6 +12,7 @@
 
 import { Cloud, Cpu, Zap } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatusIndicator } from '@/components/molecules/StatusIndicator';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/shared/utils/cn';
@@ -46,9 +47,11 @@ function StatusFooterComponent({
   selectedModel = 'Claude Sonnet 4',
   cpuUsage = 12,
   ramUsage = 45,
-  tagline = 'AI Swarm Control Center',
+  tagline,
   statsLoaded = true,
 }: StatusFooterProps) {
+  const { t } = useTranslation();
+  const resolvedTagline = tagline ?? t('footer.statusTagline', 'AI Swarm Control Center');
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === 'light';
 
@@ -164,7 +167,7 @@ function StatusFooterComponent({
         <span className={dividerCls}>|</span>
 
         {/* Tagline */}
-        <span title="AI Swarm Control Center">{tagline}</span>
+        <span title={t('footer.statusTagline', 'AI Swarm Control Center')}>{resolvedTagline}</span>
 
         <span className={dividerCls}>|</span>
 

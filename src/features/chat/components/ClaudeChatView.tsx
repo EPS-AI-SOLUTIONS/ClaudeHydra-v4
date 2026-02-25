@@ -9,6 +9,7 @@
 import { Bot, Check, ClipboardList, Trash2, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
@@ -179,6 +180,7 @@ function toModelOption(m: ClaudeModel): ModelOption {
 // ---------------------------------------------------------------------------
 
 function EmptyChatState() {
+  const { t } = useTranslation();
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -189,9 +191,9 @@ function EmptyChatState() {
     >
       <div className="text-center">
         <Bot size={64} className="mx-auto mb-4 opacity-30 text-[var(--matrix-accent)]" />
-        <p className="text-lg mb-2 text-[var(--matrix-text-primary)]">Start a conversation</p>
-        <p className="text-sm">Select a model and type a message</p>
-        <p className="text-xs mt-4 opacity-70">Drag and drop files to add context</p>
+        <p className="text-lg mb-2 text-[var(--matrix-text-primary)]">{t('chat.startConversation', 'Start a conversation')}</p>
+        <p className="text-sm">{t('chat.selectModelAndType', 'Select a model and type a message')}</p>
+        <p className="text-xs mt-4 opacity-70">{t('chat.dragAndDrop', 'Drag and drop files to add context')}</p>
       </div>
     </motion.div>
   );
@@ -202,6 +204,8 @@ function EmptyChatState() {
 // ---------------------------------------------------------------------------
 
 export function ClaudeChatView() {
+  const { t } = useTranslation();
+
   // Model state
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
   const [claudeConnected, setClaudeConnected] = useState(false);
@@ -561,7 +565,7 @@ export function ClaudeChatView() {
         <div className="flex items-center gap-3">
           <Bot className="text-[var(--matrix-accent)]" size={24} />
           <div>
-            <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">Claude Chat</h2>
+            <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">{t('chat.title', 'Claude Chat')}</h2>
             <p data-testid="chat-status-text" className="text-xs text-[var(--matrix-text-secondary)]">
               {claudeConnected ? `${CLAUDE_MODELS.length} models available` : 'Offline — configure API key in Settings'}
             </p>
@@ -575,7 +579,7 @@ export function ClaudeChatView() {
             size="sm"
             onClick={() => setToolsEnabled((v) => !v)}
             title={toolsEnabled ? 'File tools enabled' : 'File tools disabled'}
-            aria-label="Toggle file tools"
+            aria-label={t('chat.toggleFileTools', 'Toggle file tools')}
             leftIcon={<Wrench size={14} />}
           >
             Tools
@@ -587,7 +591,7 @@ export function ClaudeChatView() {
             selectedId={selectedModel || null}
             onSelect={handleModelSelect}
             disabled={!claudeConnected}
-            placeholder="Select model"
+            placeholder={t('chat.selectModel', 'Select model')}
             className="w-56"
           />
 
@@ -597,8 +601,8 @@ export function ClaudeChatView() {
             size="sm"
             onClick={handleCopySession}
             disabled={messages.length === 0}
-            title="Copy entire session"
-            aria-label="Copy entire session"
+            title={t('chat.copySession', 'Copy entire session')}
+            aria-label={t('chat.copySession', 'Copy entire session')}
             leftIcon={sessionCopied ? <Check size={14} className="text-emerald-400" /> : <ClipboardList size={14} />}
           >
             {sessionCopied ? 'Copied' : 'Copy'}
@@ -610,8 +614,8 @@ export function ClaudeChatView() {
             variant="ghost"
             size="sm"
             onClick={clearChat}
-            title="Clear chat"
-            aria-label="Clear chat"
+            title={t('chat.clearChat', 'Clear chat')}
+            aria-label={t('chat.clearChat', 'Clear chat')}
             leftIcon={<Trash2 size={14} />}
           >
             Clear

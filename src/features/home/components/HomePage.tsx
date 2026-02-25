@@ -182,14 +182,16 @@ export const HomePage = memo(() => {
           />
           <img
             src={theme.isLight ? '/logolight.webp' : '/logodark.webp'}
-            alt="ClaudeHydra Logo"
+            alt={t('home.logoAlt', 'ClaudeHydra Logo')}
+            width={512}
+            height={453}
             className="relative w-56 h-56 object-contain drop-shadow-lg"
           />
         </div>
 
         {/* Title */}
         <div className="text-center">
-          <h1 className={cn('text-3xl font-bold font-mono tracking-tight', theme.title)}>ClaudeHydra</h1>
+          <h1 className={cn('text-3xl font-bold font-mono tracking-tight', theme.title)}>{t('home.appName', 'ClaudeHydra')}</h1>
           <p className={cn('text-sm mt-1.5 max-w-xs', theme.textMuted)}>
             {t('home.subtitle', 'AI Swarm Control Center — start a new chat or continue a previous conversation.')}
           </p>

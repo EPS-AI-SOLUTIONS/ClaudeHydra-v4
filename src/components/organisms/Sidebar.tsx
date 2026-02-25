@@ -541,7 +541,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             )}>
               GH
             </div>
-            {!collapsed && <span className="text-sm font-bold tracking-[0.12em] uppercase">GeminiHydra</span>}
+            {!collapsed && <span className="text-sm font-bold tracking-[0.12em] uppercase">{t('sidebar.partnerApp', 'GeminiHydra')}</span>}
             {!collapsed && (
               <ChevronDown
                 size={14}
@@ -571,7 +571,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                 <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">Offline</p>
               )}
               {!partnerError && sortedPartnerSessions.length === 0 && !partnerLoading && (
-                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">No sessions</p>
+                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">{t('sidebar.noSessions', 'No sessions')}</p>
               )}
               {sortedPartnerSessions.map((ps) => (
                 <button

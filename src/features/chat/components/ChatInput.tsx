@@ -18,6 +18,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/utils/cn';
 
 // ---------------------------------------------------------------------------
@@ -74,6 +75,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     const [input, setInput] = useState('');
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -266,7 +268,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       <section
         data-testid="chat-input-area"
         className={cn('flex flex-col gap-2', className)}
-        aria-label="Chat input area"
+        aria-label={t('chat.inputArea', 'Chat input area')}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -275,7 +277,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         {isDragging && (
           <div className="flex items-center justify-center py-3 px-4 glass-panel border-dashed border-2 border-[var(--matrix-accent)] bg-[var(--matrix-accent)]/5 rounded-lg">
             <Paperclip size={18} className="text-[var(--matrix-accent)] mr-2" />
-            <span className="text-sm text-[var(--matrix-accent)]">Drop files here</span>
+            <span className="text-sm text-[var(--matrix-accent)]">{t('chat.dropFilesHere', 'Drop files here')}</span>
           </div>
         )}
 
@@ -334,8 +336,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               'hover:text-[var(--matrix-accent)]',
               disabled && 'opacity-50 cursor-not-allowed',
             )}
-            title="Attach file"
-            aria-label="Attach file"
+            title={t('chat.attachFile', 'Attach file')}
+            aria-label={t('chat.attachFile', 'Attach file')}
           >
             <Paperclip size={18} />
           </button>
@@ -375,8 +377,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 ? 'text-[var(--matrix-accent)] hover:shadow-[0_0_15px_var(--matrix-accent)]'
                 : 'opacity-50 cursor-not-allowed',
             )}
-            title="Send message"
-            aria-label="Send message"
+            title={t('chat.sendMessage', 'Send message')}
+            aria-label={t('chat.sendMessage', 'Send message')}
           >
             {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
           </motion.button>

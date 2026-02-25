@@ -13,6 +13,7 @@
 import { Bot, Brain, Crown, Filter, GitBranch, Shield, Swords, Users, Wand2, Zap } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card } from '@/components/atoms';
 import { StatusIndicator, type StatusState } from '@/components/molecules';
 import { cn } from '@/shared/utils/cn';
@@ -286,6 +287,7 @@ function AgentCard({ agent }: AgentCardProps) {
 // ---------------------------------------------------------------------------
 
 export function AgentsView() {
+  const { t } = useTranslation();
   const [activeTier, setActiveTier] = useState<TierFilter>('All');
 
   const filteredAgents = useMemo(() => {
@@ -381,7 +383,7 @@ export function AgentsView() {
         >
           <div className="text-center py-12">
             <Users size={40} className="mx-auto text-[var(--matrix-text-secondary)] opacity-30 mb-3" />
-            <p className="text-sm text-[var(--matrix-text-secondary)]">No agents match the selected tier filter.</p>
+            <p className="text-sm text-[var(--matrix-text-secondary)]">{t('agents.noMatch', 'No agents match the selected tier filter.')}</p>
           </div>
         </motion.div>
       )}

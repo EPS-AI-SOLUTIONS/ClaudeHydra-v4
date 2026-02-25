@@ -9,6 +9,7 @@
 import { Pin, Plus, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatTab, useViewStore } from '@/stores/viewStore';
@@ -28,6 +29,7 @@ interface TabItemProps {
 }
 
 const TabItem = memo<TabItemProps>(({ tab, isActive, onSwitch, onClose, onTogglePin, onContextMenu, messageCount }) => {
+  const { t } = useTranslation();
   const theme = useViewTheme();
   const [isHovering, setIsHovering] = useState(false);
 
@@ -125,7 +127,7 @@ const TabItem = memo<TabItemProps>(({ tab, isActive, onSwitch, onClose, onToggle
               ? 'text-gray-400 hover:bg-red-500/25 hover:text-red-600'
               : 'text-white/40 hover:bg-red-500/30 hover:text-red-400',
           )}
-          title="Close tab"
+          title={t('tabs.closeTab', 'Close tab')}
         >
           <X size={14} />
         </button>
@@ -141,6 +143,7 @@ TabItem.displayName = 'TabItem';
 // ============================================================================
 
 export const TabBar = memo(() => {
+  const { t } = useTranslation();
   const theme = useViewTheme();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -222,7 +225,7 @@ export const TabBar = memo(() => {
             ? 'text-gray-500 hover:bg-emerald-500/15 hover:text-emerald-700 active:bg-emerald-500/25'
             : 'text-white/50 hover:bg-white/15 hover:text-white active:bg-white/25',
         )}
-        title="New tab (Ctrl+T)"
+        title={t('tabs.newTab', 'New tab') + ' (Ctrl+T)'}
       >
         <Plus size={18} strokeWidth={2.5} />
       </button>
@@ -264,7 +267,7 @@ export const TabBar = memo(() => {
                   )}
                 >
                   <Pin size={14} />
-                  {targetTab.isPinned ? 'Unpin tab' : 'Pin tab'}
+                  {targetTab.isPinned ? t('tabs.unpinTab', 'Unpin tab') : t('tabs.pinTab', 'Pin tab')}
                 </button>
 
                 {!targetTab.isPinned && (
@@ -282,7 +285,7 @@ export const TabBar = memo(() => {
                     )}
                   >
                     <X size={14} />
-                    Close tab
+                    {t('tabs.closeTab', 'Close tab')}
                   </button>
                 )}
 
@@ -300,7 +303,7 @@ export const TabBar = memo(() => {
                       )}
                     >
                       <X size={14} />
-                      Close other tabs
+                      {t('tabs.closeOtherTabs', 'Close other tabs')}
                     </button>
                   </>
                 )}

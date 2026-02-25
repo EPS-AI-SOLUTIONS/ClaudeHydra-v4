@@ -10,8 +10,8 @@
     "chats": "CHATS",
     "newChat": "New chat",
     "noChats": "No chats yet",
-    "darkMode": "DARK MODE",
-    "lightMode": "LIGHT MODE",
+    "noSessions": "No sessions",
+    "partnerApp": "GeminiHydra",
     "rename": "Rename",
     "confirmDelete": "Click again to delete",
     "message": "message",
@@ -20,19 +20,41 @@
     "collapseSidebar": "Collapse sidebar"
   },
   "footer": {
-    "tagline": "AI Swarm"
+    "tagline": "AI Swarm",
+    "statusTagline": "AI Swarm Control Center"
   },
   "common": {
-    "save": "Save",
-    "cancel": "Cancel",
     "delete": "Delete",
-    "send": "Send",
-    "retry": "Retry",
-    "loading": "Loading...",
-    "error": "Error",
-    "confirm": "Confirm",
     "close": "Close",
-    "menu": "Menu"
+    "menu": "Menu",
+    "loadingView": "Loading view"
+  },
+  "chat": {
+    "title": "Claude Chat",
+    "startConversation": "Start a conversation",
+    "selectModelAndType": "Select a model and type a message",
+    "dragAndDrop": "Drag and drop files to add context",
+    "toggleFileTools": "Toggle file tools",
+    "selectModel": "Select model",
+    "copySession": "Copy entire session",
+    "clearChat": "Clear chat",
+    "inputArea": "Chat input area",
+    "dropFilesHere": "Drop files here",
+    "attachFile": "Attach file",
+    "sendMessage": "Send message"
+  },
+  "agents": {
+    "noMatch": "No agents match the selected tier filter."
+  },
+  "models": {
+    "searchModels": "Search models..."
+  },
+  "tabs": {
+    "closeTab": "Close tab",
+    "newTab": "New tab",
+    "pinTab": "Pin tab",
+    "unpinTab": "Unpin tab",
+    "closeOtherTabs": "Close other tabs"
   },
   "home": {
     "subtitle": "AI Swarm Control Center — start a new chat or continue a previous conversation.",
@@ -40,6 +62,8 @@
     "recentChats": "Recent Chats",
     "noChats": "No chats yet. Start a new conversation!",
     "msg": "msg",
+    "logoAlt": "ClaudeHydra Logo",
+    "appName": "ClaudeHydra",
     "badges": {
       "agents": "12 Agents",
       "claudeApi": "Claude API",
@@ -53,13 +77,5 @@
     "hoursAgo": "{{h}}h ago",
     "yesterday": "yesterday",
     "daysAgo": "{{d}}d ago"
-  },
-  "chat": {
-    "modelSelector": "Select model",
-    "temperature": "Temperature",
-    "systemPrompt": "System prompt",
-    "placeholder": "Type a message...",
-    "emptyState": "Start a conversation",
-    "clearChat": "Clear chat"
   }
 }

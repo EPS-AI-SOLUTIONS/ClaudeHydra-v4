@@ -10,29 +10,51 @@
     "chats": "CZATY",
     "newChat": "Nowy czat",
     "noChats": "Brak czatów",
-    "darkMode": "TRYB CIEMNY",
-    "lightMode": "TRYB JASNY",
+    "noSessions": "Brak sesji",
+    "partnerApp": "GeminiHydra",
     "rename": "Zmień nazwę",
-    "confirmDelete": "Kliknij ponownie aby usunąć",
+    "confirmDelete": "Kliknij ponownie, aby usunąć",
     "message": "wiadomość",
     "messages": "wiadomości",
     "expandSidebar": "Rozwiń pasek boczny",
     "collapseSidebar": "Zwiń pasek boczny"
   },
   "footer": {
-    "tagline": "Rój AI"
+    "tagline": "Rój AI",
+    "statusTagline": "Centrum Sterowania Rojem AI"
   },
   "common": {
-    "save": "Zapisz",
-    "cancel": "Anuluj",
     "delete": "Usuń",
-    "send": "Wyślij",
-    "retry": "Ponów",
-    "loading": "Ładowanie...",
-    "error": "Błąd",
-    "confirm": "Potwierdź",
     "close": "Zamknij",
-    "menu": "Menu"
+    "menu": "Menu",
+    "loadingView": "Ładowanie widoku"
+  },
+  "chat": {
+    "title": "Czat Claude",
+    "startConversation": "Rozpocznij rozmowę",
+    "selectModelAndType": "Wybierz model i wpisz wiadomość",
+    "dragAndDrop": "Przeciągnij pliki, aby dodać kontekst",
+    "toggleFileTools": "Przełącz narzędzia plików",
+    "selectModel": "Wybierz model",
+    "copySession": "Kopiuj całą sesję",
+    "clearChat": "Wyczyść czat",
+    "inputArea": "Pole czatu",
+    "dropFilesHere": "Upuść pliki tutaj",
+    "attachFile": "Dołącz plik",
+    "sendMessage": "Wyślij wiadomość"
+  },
+  "agents": {
+    "noMatch": "Brak agentów pasujących do wybranego filtra."
+  },
+  "models": {
+    "searchModels": "Szukaj modeli..."
+  },
+  "tabs": {
+    "closeTab": "Zamknij kartę",
+    "newTab": "Nowa karta",
+    "pinTab": "Przypnij kartę",
+    "unpinTab": "Odepnij kartę",
+    "closeOtherTabs": "Zamknij inne karty"
   },
   "home": {
     "subtitle": "Centrum Sterowania Rojem AI — rozpocznij nowy czat lub kontynuuj rozmowę.",
@@ -40,6 +62,8 @@
     "recentChats": "Ostatnie Czaty",
     "noChats": "Brak czatów. Rozpocznij nową rozmowę!",
     "msg": "wiad.",
+    "logoAlt": "Logo ClaudeHydra",
+    "appName": "ClaudeHydra",
     "badges": {
       "agents": "12 Agentów",
       "claudeApi": "Claude API",
@@ -53,13 +77,5 @@
     "hoursAgo": "{{h}} godz. temu",
     "yesterday": "wczoraj",
     "daysAgo": "{{d}} dn. temu"
-  },
-  "chat": {
-    "modelSelector": "Wybierz model",
-    "temperature": "Temperatura",
-    "systemPrompt": "Prompt systemowy",
-    "placeholder": "Wpisz wiadomość...",
-    "emptyState": "Rozpocznij rozmowę",
-    "clearChat": "Wyczyść czat"
   }
 }

@@ -1,5 +1,8 @@
+use http::{header, Method};
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::model_registry;
@@ -23,11 +26,38 @@ fn build_app(state: AppState) -> axum::Router {
                 .parse()
                 .unwrap(),
         ])
-        .allow_methods(tower_http::cors::Any)
-        .allow_headers(tower_http::cors::Any);
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]);
+
+    // Rate limiting: 30 req burst, replenish 1 per 2 seconds, per IP
+    // Jaskier Shared Pattern -- rate_limit
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(2)
+        .burst_size(30)
+        .finish()
+        .unwrap();
 
     claudehydra_backend::create_router(state)
+        .layer(GovernorLayer::new(governor_conf))
         .layer(cors)
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            header::HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_FRAME_OPTIONS,
+            header::HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::REFERRER_POLICY,
+            header::HeaderValue::from_static("strict-origin-when-cross-origin"),
+        ))
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024))
         .layer(TraceLayer::new_for_http())
 }
@@ -115,7 +145,11 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("ClaudeHydra v4 backend listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }
