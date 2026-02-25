@@ -3,15 +3,15 @@ import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/shared/utils/cn';
 
 // ============================================
-// CARD VARIANTS (ClaudeHydra — Matrix Green Glass)
+// CARD VARIANTS (Jaskier Design System — CSS Variable Glass)
 // ============================================
 
 const cardVariants = cva('rounded-xl transition-all duration-200', {
   variants: {
     variant: {
-      default: ['bg-[var(--glass-bg)]', 'border border-matrix-border'].join(' '),
+      default: ['bg-matrix-glass', 'border border-matrix-border'].join(' '),
       glass: 'glass-panel',
-      elevated: ['bg-[var(--glass-bg)]', 'border border-matrix-border', 'shadow-lg'].join(' '),
+      elevated: ['bg-matrix-glass', 'border border-matrix-border', 'shadow-lg'].join(' '),
       hover: ['glass-panel', 'hover:border-matrix-accent-dim', 'hover:shadow-[0_0_20px_rgba(255,255,255,0.08)]'].join(
         ' ',
       ),
@@ -50,11 +50,15 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
     return (
       <div ref={ref} className={cn(cardVariants({ variant, padding, interactive }), className)} {...props}>
         {header && (
-          <div className="flex items-center justify-between pb-4 border-b border-matrix-border mb-4">{header}</div>
+          <div className="flex items-center justify-between pb-4 border-b border-[var(--matrix-divider)] mb-4">
+            {header}
+          </div>
         )}
         {children}
         {footer && (
-          <div className="flex items-center justify-between pt-4 border-t border-matrix-border mt-4">{footer}</div>
+          <div className="flex items-center justify-between pt-4 border-t border-[var(--matrix-divider)] mt-4">
+            {footer}
+          </div>
         )}
       </div>
     );

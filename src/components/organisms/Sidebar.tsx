@@ -312,7 +312,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
     renameSessionWithSync,
   } = useSessionSync();
 
-  const { resolvedTheme, toggleTheme, isDark } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const theme = useViewTheme();
   const isLight = theme.isLight;
 
@@ -839,7 +840,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 export function Sidebar() {
   const { t } = useTranslation();
   const { sidebarCollapsed, toggleSidebar, mobileDrawerOpen, setMobileDrawerOpen, currentView } = useViewStore();
-  const { isDark } = useTheme();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
 
   const isMobile = useIsMobile();
 

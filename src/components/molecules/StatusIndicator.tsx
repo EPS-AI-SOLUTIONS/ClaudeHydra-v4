@@ -6,7 +6,7 @@
  * States: online (green), offline (red/gray), pending (yellow), error (red).
  * Size variants: sm, md.
  *
- * ClaudeHydra-v4: Uses .status-dot CSS classes from globals.css (green Matrix theme).
+ * ClaudeHydra-v4: Uses CSS variable-based colors (matching GeminiHydra-v15 pattern).
  */
 
 import { motion } from 'motion/react';
@@ -32,21 +32,26 @@ export interface StatusIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement
 }
 
 // ---------------------------------------------------------------------------
-// Status color mapping
-// Uses globals.css .status-dot-* classes for online/offline/pending.
-// Falls back to Tailwind for error (no .status-dot-error in globals).
+// Status color mapping (CSS variable-based)
 // ---------------------------------------------------------------------------
 
-const dotCssClassMap: Record<StatusState, string> = {
-  online: 'status-dot-online',
-  offline: 'status-dot-offline',
-  pending: 'status-dot-pending',
-  error: 'bg-[var(--matrix-error)] shadow-[0_0_10px_var(--matrix-error)]',
+const dotColorMap: Record<StatusState, string> = {
+  online: 'bg-[var(--matrix-success)]',
+  offline: 'bg-gray-500',
+  pending: 'bg-[var(--matrix-warning)]',
+  error: 'bg-[var(--matrix-error)]',
+};
+
+const glowMap: Record<StatusState, string> = {
+  online: 'shadow-[0_0_6px_var(--matrix-success)]',
+  offline: '',
+  pending: 'shadow-[0_0_6px_var(--matrix-warning)]',
+  error: 'shadow-[0_0_6px_var(--matrix-error)]',
 };
 
 const textColorMap: Record<StatusState, string> = {
   online: 'text-[var(--matrix-success)]',
-  offline: 'text-[var(--matrix-error)]',
+  offline: 'text-matrix-text-dim',
   pending: 'text-[var(--matrix-warning)]',
   error: 'text-[var(--matrix-error)]',
 };
@@ -82,13 +87,13 @@ export function StatusIndicator({
     >
       {/* Dot wrapper */}
       <span className="relative flex items-center justify-center">
-        {/* Solid dot — uses globals.css .status-dot-* */}
-        <span className={cn('rounded-full flex-shrink-0', dotSize, dotCssClassMap[status])} />
+        {/* Solid dot with glow */}
+        <span className={cn('rounded-full flex-shrink-0', dotSize, dotColorMap[status], glowMap[status])} />
 
         {/* Pulse ring */}
         {shouldPulse && (
           <motion.span
-            className={cn('absolute rounded-full opacity-75', dotSize, dotCssClassMap[status])}
+            className={cn('absolute rounded-full opacity-75', dotSize, dotColorMap[status])}
             animate={{
               scale: [1, 2.5],
               opacity: [0.75, 0],

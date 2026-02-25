@@ -1,10 +1,12 @@
 /**
- * API client — typed fetch wrapper for ClaudeHydra v4 backend.
- * Base URL points to the Rust/Axum server on port 8082.
- * Includes automatic retry with exponential backoff for network failures.
+ * ClaudeHydra v4 - Typed API Client
+ * ===================================
+ * Fetch wrapper for the Rust/Axum backend on port 8082.
+ * Provides typed GET/POST/PATCH/DELETE with ApiError handling
+ * and automatic retry with exponential backoff for network failures.
  */
 
-const BASE_URL = import.meta.env.PROD ? 'https://claudehydra-v4-backend.fly.dev' : 'http://localhost:8082';
+const BASE_URL = import.meta.env.VITE_BACKEND_URL ?? (import.meta.env.PROD ? 'https://claudehydra-v4-backend.fly.dev' : '');
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -14,12 +16,16 @@ const RETRY_BASE_MS = 1000;
 // ---------------------------------------------------------------------------
 
 export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    message: string,
-  ) {
-    super(message);
+  readonly status: number;
+  readonly statusText: string;
+  readonly body: unknown;
+
+  constructor(status: number, statusText: string, body: unknown) {
+    super(`API Error ${status}: ${statusText}`);
     this.name = 'ApiError';
+    this.status = status;
+    this.statusText = statusText;
+    this.body = body;
   }
 }
 
@@ -67,8 +73,13 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!res.ok) {
-    const body = await res.text().catch(() => 'Unknown error');
-    throw new ApiError(res.status, body);
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      body = await res.text().catch(() => null);
+    }
+    throw new ApiError(res.status, res.statusText, body);
   }
 
   // Handle 204 No Content

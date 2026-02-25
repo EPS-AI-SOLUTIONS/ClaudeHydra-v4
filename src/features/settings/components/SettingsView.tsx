@@ -423,7 +423,7 @@ function ThemeSelector({ currentMode, onModeChange }: ThemeSelectorProps) {
 // ---------------------------------------------------------------------------
 
 export function SettingsView() {
-  const { mode, setMode } = useTheme();
+  const { theme: currentThemeMode, setTheme } = useTheme();
 
   const [settings, setSettings] = useState<SettingsState>({
     providers: createInitialProviderState(),
@@ -571,7 +571,7 @@ export function SettingsView() {
         {/* THEME SECTION                                */}
         {/* ============================================ */}
         <CollapsibleSection title="Appearance" icon={<Palette size={18} className="text-pink-400" />} defaultOpen>
-          <ThemeSelector currentMode={mode as ThemeMode} onModeChange={setMode} />
+          <ThemeSelector currentMode={currentThemeMode as ThemeMode} onModeChange={setTheme} />
         </CollapsibleSection>
 
         {/* ============================================ */}

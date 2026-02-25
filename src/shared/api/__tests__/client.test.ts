@@ -2,19 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from '../client';
 
 // ---------------------------------------------------------------------------
-// In test env (jsdom, non-PROD) BASE_URL resolves to 'http://localhost:8082'
+// In test env (jsdom, non-PROD) BASE_URL resolves to '' (empty — Vite proxy)
 // ---------------------------------------------------------------------------
-const BASE = 'http://localhost:8082';
+const BASE = '';
 
 /** Helper — create a minimal Response-like object for the fetch mock. */
-function mockResponse(body: unknown, init: { status?: number; ok?: boolean; headers?: Record<string, string> } = {}) {
+function mockResponse(body: unknown, init: { status?: number; statusText?: string; ok?: boolean; headers?: Record<string, string> } = {}) {
   const { status = 200, ok = status >= 200 && status < 300 } = init;
+  const statusText = init.statusText ?? (status === 404 ? 'Not Found' : status === 500 ? 'Internal Server Error' : status === 422 ? 'Unprocessable Entity' : status === 401 ? 'Unauthorized' : 'OK');
   const isJson = typeof body === 'object' && body !== null;
   const text = isJson ? JSON.stringify(body) : String(body ?? '');
 
   return {
     ok,
     status,
+    statusText,
     json: () => Promise.resolve(body),
     text: () => Promise.resolve(text),
   } as unknown as Response;
@@ -37,19 +39,21 @@ afterEach(() => {
 // ApiError
 // ===========================================================================
 describe('ApiError', () => {
-  it('sets status and message from constructor args', () => {
-    const err = new ApiError(404, 'Not Found');
+  it('sets status, statusText and body from constructor args', () => {
+    const err = new ApiError(404, 'Not Found', { detail: 'missing' });
     expect(err.status).toBe(404);
-    expect(err.message).toBe('Not Found');
+    expect(err.statusText).toBe('Not Found');
+    expect(err.body).toEqual({ detail: 'missing' });
+    expect(err.message).toBe('API Error 404: Not Found');
   });
 
   it('has name "ApiError"', () => {
-    const err = new ApiError(500, 'Server Error');
+    const err = new ApiError(500, 'Server Error', null);
     expect(err.name).toBe('ApiError');
   });
 
   it('is an instance of Error', () => {
-    const err = new ApiError(400, 'Bad Request');
+    const err = new ApiError(400, 'Bad Request', null);
     expect(err).toBeInstanceOf(Error);
   });
 });
@@ -85,7 +89,9 @@ describe('apiGet', () => {
     } catch (e) {
       const err = e as ApiError;
       expect(err.status).toBe(404);
-      expect(err.message).toContain('Item not found');
+      expect(err.statusText).toBe('Not Found');
+      expect(err.body).toEqual(errorBody);
+      expect(err.message).toBe('API Error 404: Not Found');
     }
   });
 
@@ -97,7 +103,8 @@ describe('apiGet', () => {
     } catch (e) {
       const err = e as ApiError;
       expect(err.status).toBe(500);
-      expect(err.message).toBe('Internal Server Error');
+      expect(err.statusText).toBe('Internal Server Error');
+      expect(err.message).toBe('API Error 500: Internal Server Error');
     }
   });
 });
@@ -148,7 +155,8 @@ describe('apiPost', () => {
     } catch (e) {
       const err = e as ApiError;
       expect(err.status).toBe(422);
-      expect(err.message).toContain('title');
+      expect(err.statusText).toBe('Unprocessable Entity');
+      expect(err.body).toEqual(validationErr);
     }
   });
 });

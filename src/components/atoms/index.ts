@@ -12,6 +12,8 @@ export { GridBackground } from './GridBackground';
 
 export { Input } from './Input';
 
+export { ProgressBar } from './ProgressBar';
+
 export { RuneRain } from './RuneRain';
 
 export { Skeleton } from './Skeleton';

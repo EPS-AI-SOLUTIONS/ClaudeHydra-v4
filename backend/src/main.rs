@@ -58,10 +58,13 @@ async fn main() -> shuttle_axum::ShuttleAxum {
             use claudehydra_backend::state::SystemSnapshot;
 
             let mut sys = sysinfo::System::new_all();
-            sys.refresh_all();
+            sys.refresh_cpu_all();
+            tokio::time::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
+            sys.refresh_cpu_all();
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                sys.refresh_all();
+                sys.refresh_cpu_all();
+                sys.refresh_memory();
 
                 let cpu = if sys.cpus().is_empty() {
                     0.0
@@ -119,10 +122,13 @@ async fn main() -> anyhow::Result<()> {
             use claudehydra_backend::state::SystemSnapshot;
 
             let mut sys = sysinfo::System::new_all();
-            sys.refresh_all();
+            sys.refresh_cpu_all();
+            tokio::time::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
+            sys.refresh_cpu_all();
             loop {
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                sys.refresh_all();
+                sys.refresh_cpu_all();
+                sys.refresh_memory();
 
                 let cpu = if sys.cpus().is_empty() {
                     0.0

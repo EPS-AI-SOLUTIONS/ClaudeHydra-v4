@@ -8,19 +8,36 @@
  *  - Sidebar (collapsible navigation)
  *  - TabBar (browser-style chat tabs, shown only in chat view)
  *  - Content area (children slot)
- *  - StatusFooter
+ *  - StatusFooter (with live system stats)
  *
- * Matches Tissaia v4 style with p-4 gap-4 spacing.
+ * Unified with GeminiHydra-v15 AppShell pattern for StatusFooter props.
  */
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useMemo } from 'react';
 
 import { RuneRain } from '@/components/atoms';
 import { Sidebar } from '@/components/organisms/Sidebar';
+import type { StatusFooterProps } from '@/components/organisms/StatusFooter';
 import { StatusFooter } from '@/components/organisms/StatusFooter';
 import { TabBar } from '@/components/organisms/TabBar';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { useHealthStatus, useSystemStatsQuery } from '@/features/health/hooks/useHealth';
+import { useSettingsQuery } from '@/features/settings/hooks/useSettings';
 import { useViewStore } from '@/stores/viewStore';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Format raw model ID (e.g. "claude-sonnet-4-6") into a display name ("Claude Sonnet 4"). */
+function formatModelName(id: string): string {
+  // Strip common suffixes like date stamps (e.g. -20251001)
+  let name = id.replace(/-\d{8}$/, '').replace(/-preview$/, '').replace(/-latest$/, '');
+  const parts = name.split('-');
+  return parts
+    .map((p) => (/^\d/.test(p) ? p : p.charAt(0).toUpperCase() + p.slice(1)))
+    .join(' ');
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,8 +53,41 @@ interface AppShellProps {
 // ---------------------------------------------------------------------------
 
 function AppShellInner({ children }: AppShellProps) {
-  const { isDark } = useTheme();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const currentView = useViewStore((s) => s.currentView);
+
+  // Health & system stats
+  const healthStatus = useHealthStatus();
+  const { data: stats } = useSystemStatsQuery();
+  const { data: settings } = useSettingsQuery();
+
+  // Map health status to ConnectionHealth
+  const connectionHealth = healthStatus === 'healthy' ? 'connected' as const
+    : healthStatus === 'degraded' ? 'degraded' as const
+    : 'disconnected' as const;
+
+  // Resolve display model from settings
+  const displayModel = useMemo(() => {
+    const raw = settings?.default_model;
+    return raw ? formatModelName(raw) : undefined;
+  }, [settings?.default_model]);
+
+  // Build live footer props from system stats
+  const raw = stats as Record<string, number> | undefined;
+  const footerProps = useMemo<StatusFooterProps>(() => ({
+    connectionHealth,
+    ...(displayModel && { selectedModel: displayModel }),
+    ...(raw && {
+      cpuUsage: Math.round(raw.cpu_usage_percent ?? raw.cpu_usage ?? 0),
+      ramUsage: Math.round(
+        ((raw.memory_used_mb ?? raw.memory_used ?? 0) /
+          (raw.memory_total_mb ?? raw.memory_total ?? 1)) *
+          100,
+      ),
+      statsLoaded: true,
+    }),
+  }), [connectionHealth, displayModel, raw]);
 
   const glassPanel = isDark
     ? 'bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl'
@@ -102,7 +152,7 @@ function AppShellInner({ children }: AppShellProps) {
         <main className={`flex-1 flex flex-col min-w-0 overflow-hidden relative ${glassPanel}`}>
           {currentView === 'chat' && <TabBar />}
           <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
-          <StatusFooter />
+          <StatusFooter {...footerProps} />
         </main>
       </div>
     </div>
