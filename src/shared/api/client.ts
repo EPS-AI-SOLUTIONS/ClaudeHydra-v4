@@ -11,8 +11,11 @@
 import { toast } from 'sonner';
 import { env } from '../config/env';
 
-const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const BASE_URL = env.VITE_BACKEND_URL ?? (import.meta.env.PROD && !isLocalhost ? 'https://claudehydra-v4-backend.fly.dev' : '');
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const BASE_URL =
+  env.VITE_BACKEND_URL ?? (import.meta.env.PROD && !isLocalhost ? 'https://claudehydra-v4-backend.fly.dev' : '');
 const AUTH_SECRET = env.VITE_AUTH_SECRET;
 
 const MAX_RETRIES = 3;
@@ -48,11 +51,7 @@ export class ApiError extends Error {
  * - Retryable HTTP statuses (408, 429, 500, 502, 503, 504): retried only
  *   for idempotent methods (GET, HEAD) to avoid duplicating side-effects.
  */
-async function fetchWithRetry(
-  url: string,
-  init: RequestInit,
-  retries = MAX_RETRIES,
-): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, retries = MAX_RETRIES): Promise<Response> {
   const method = init.method?.toUpperCase() ?? 'GET';
   const isIdempotent = method === 'GET' || method === 'HEAD';
   let lastError: Error | undefined;
@@ -63,9 +62,7 @@ async function fetchWithRetry(
     const timeoutId = setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT_MS);
 
     // Combine with caller-provided signal (if any) so both can abort
-    const signal = init.signal
-      ? AbortSignal.any([init.signal, timeoutController.signal])
-      : timeoutController.signal;
+    const signal = init.signal ? AbortSignal.any([init.signal, timeoutController.signal]) : timeoutController.signal;
 
     try {
       const response = await fetch(url, { ...init, signal });
@@ -125,14 +122,18 @@ async function fetchWithRetry(
 async function apiFetch<T>(path: string, options: RequestInit = {}, retries?: number): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
-  const response = await fetchWithRetry(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(AUTH_SECRET ? { Authorization: `Bearer ${AUTH_SECRET}` } : {}),
-      ...options.headers,
+  const response = await fetchWithRetry(
+    url,
+    {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(AUTH_SECRET ? { Authorization: `Bearer ${AUTH_SECRET}` } : {}),
+        ...options.headers,
+      },
     },
-  }, retries);
+    retries,
+  );
 
   if (!response.ok) {
     let body: unknown;
@@ -164,11 +165,28 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, retries?: nu
 }
 
 // -------------------------------------------------------------------
+// In-flight GET request deduplication (#32)
+// -------------------------------------------------------------------
+
+const inflightGets = new Map<string, Promise<unknown>>();
+
+async function deduplicatedGet<T>(path: string): Promise<T> {
+  const existing = inflightGets.get(path);
+  if (existing) return existing as Promise<T>;
+
+  const promise = apiFetch<T>(path, { method: 'GET' }).finally(() => {
+    inflightGets.delete(path);
+  });
+  inflightGets.set(path, promise);
+  return promise;
+}
+
+// -------------------------------------------------------------------
 // Public API
 // -------------------------------------------------------------------
 
 export async function apiGet<T>(path: string): Promise<T> {
-  return apiFetch<T>(path, { method: 'GET' });
+  return deduplicatedGet<T>(path);
 }
 
 /** Polling-safe GET — no fetch-level retries, no console warnings on failure. */

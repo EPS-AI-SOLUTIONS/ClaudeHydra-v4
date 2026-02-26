@@ -20,9 +20,12 @@ RUN cargo build --release
 
 # ── Stage 3: Minimal runtime ──
 FROM debian:trixie-slim AS runtime
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/claudehydra-backend /usr/local/bin/app
 COPY migrations ./migrations
 ENV PORT=8082
 EXPOSE 8082
+# #15 Docker HEALTHCHECK for port 8082
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8082/api/health || exit 1
 CMD ["app"]

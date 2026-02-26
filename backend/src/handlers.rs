@@ -10,11 +10,46 @@ use crate::models::*;
 use crate::state::AppState;
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Per-tool timeout — Jaskier Shared Pattern
+// ═══════════════════════════════════════════════════════════════════════
+
+const TOOL_TIMEOUT_SECS: u64 = 15;
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Input length limits — Jaskier Shared Pattern
 // ═══════════════════════════════════════════════════════════════════════
 
 const MAX_TITLE_LENGTH: usize = 200;
 const MAX_MESSAGE_LENGTH: usize = 50_000; // 50KB
+
+// ═══════════════════════════════════════════════════════════════════════
+//  #13 Graceful truncation — context window protection
+// ═══════════════════════════════════════════════════════════════════════
+
+const MAX_TOOL_OUTPUT_CHARS: usize = 6000;
+
+/// Truncate tool output to `MAX_TOOL_OUTPUT_CHARS` with a clear note.
+/// Uses safe UTF-8 boundary via `char_indices()`.
+fn truncate_for_context(output: &str) -> String {
+    if output.len() <= MAX_TOOL_OUTPUT_CHARS {
+        return output.to_string();
+    }
+
+    let original_len = output.len();
+    let boundary = output
+        .char_indices()
+        .take_while(|(i, _)| *i < MAX_TOOL_OUTPUT_CHARS)
+        .last()
+        .map(|(i, c)| i + c.len_utf8())
+        .unwrap_or(MAX_TOOL_OUTPUT_CHARS.min(output.len()));
+
+    format!(
+        "{}\n\n[Truncated from {} to {} chars]",
+        &output[..boundary],
+        original_len,
+        boundary
+    )
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Jaskier Shared Pattern -- error
@@ -43,6 +78,20 @@ pub enum ApiError {
     Unavailable(String),
 }
 
+impl ApiError {
+    /// Structured error code string for programmatic consumption.
+    fn error_code(&self) -> &'static str {
+        match self {
+            ApiError::BadRequest(_) => "BAD_REQUEST",
+            ApiError::NotFound(_) => "NOT_FOUND",
+            ApiError::Upstream(_) => "UPSTREAM_ERROR",
+            ApiError::Internal(_) => "INTERNAL_ERROR",
+            ApiError::Unauthorized(_) => "UNAUTHORIZED",
+            ApiError::Unavailable(_) => "SERVICE_UNAVAILABLE",
+        }
+    }
+}
+
 impl axum::response::IntoResponse for ApiError {
     fn into_response(self) -> axum::response::Response {
         let status = match &self {
@@ -54,8 +103,11 @@ impl axum::response::IntoResponse for ApiError {
             ApiError::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
         };
 
-        // Log full detail server-side
-        tracing::error!("API error ({}): {}", status.as_u16(), self);
+        // Generate a request_id for correlation
+        let request_id = uuid::Uuid::new_v4().to_string();
+
+        // Log full detail server-side with request_id
+        tracing::error!("API error ({}): {} [request_id={}]", status.as_u16(), self, request_id);
 
         // Return sanitised message to client — never leak internal details
         let message = match &self {
@@ -67,7 +119,14 @@ impl axum::response::IntoResponse for ApiError {
             ApiError::Unavailable(m) => m.clone(),
         };
 
-        let body = json!({ "error": message });
+        // #9 Structured API error response
+        let body = json!({
+            "error": {
+                "code": self.error_code(),
+                "message": message,
+                "request_id": request_id,
+            }
+        });
         (status, Json(body)).into_response()
     }
 }
@@ -128,8 +187,29 @@ fn build_anthropic_request(
         .timeout(std::time::Duration::from_secs(timeout_secs))
 }
 
-/// Send a request to Anthropic, preferring OAuth (direct) over API key (proxy).
-async fn send_to_anthropic(
+// ═══════════════════════════════════════════════════════════════════════
+//  Retry with exponential backoff — Jaskier Shared Pattern
+// ═══════════════════════════════════════════════════════════════════════
+
+const MAX_RETRIES: u32 = 3;
+const BASE_BACKOFF_MS: u64 = 1000;
+const MAX_JITTER_MS: u64 = 500;
+
+/// HTTP status codes that should trigger a retry.
+fn is_retryable_status(status: u16) -> bool {
+    matches!(status, 429 | 503 | 529)
+}
+
+/// Compute backoff duration for a given attempt (0-indexed).
+/// Formula: base * 2^attempt + random jitter (0..MAX_JITTER_MS)
+fn backoff_duration(attempt: u32) -> std::time::Duration {
+    let base_ms = BASE_BACKOFF_MS * 2u64.pow(attempt);
+    let jitter_ms = rand::random::<u64>() % (MAX_JITTER_MS + 1);
+    std::time::Duration::from_millis(base_ms + jitter_ms)
+}
+
+/// Send a single request to Anthropic (no retry), preferring OAuth over API key.
+async fn send_to_anthropic_once(
     state: &AppState,
     body: &Value,
     timeout_secs: u64,
@@ -139,7 +219,7 @@ async fn send_to_anthropic(
         let mut body = body.clone();
         crate::oauth::ensure_system_prompt(&mut body);
         return state
-            .client
+            .http_client
             .post("https://api.anthropic.com/v1/messages")
             .header("Authorization", format!("Bearer {}", access_token))
             .header("anthropic-version", "2023-06-01")
@@ -166,7 +246,7 @@ async fn send_to_anthropic(
     let api_url = std::env::var("ANTHROPIC_API_URL")
         .unwrap_or_else(|_| "http://localhost:3001".to_string());
 
-    build_anthropic_request(&state.client, &api_url, &api_key, body, timeout_secs)
+    build_anthropic_request(&state.http_client, &api_url, &api_key, body, timeout_secs)
         .send()
         .await
         .map_err(|e| {
@@ -175,6 +255,98 @@ async fn send_to_anthropic(
                 Json(json!({ "error": format!("Failed to reach Anthropic API: {}", e) })),
             )
         })
+}
+
+/// Send a request to Anthropic with circuit breaker check and retry logic.
+///
+/// Retries up to `MAX_RETRIES` times on retryable errors (429, 503, 529, timeout).
+/// Uses exponential backoff with jitter between retries.
+/// Checks the circuit breaker before each attempt.
+async fn send_to_anthropic(
+    state: &AppState,
+    body: &Value,
+    timeout_secs: u64,
+) -> Result<reqwest::Response, (StatusCode, Json<Value>)> {
+    // Circuit breaker check
+    if !state.circuit_breaker.allow_request().await {
+        tracing::warn!("send_to_anthropic: circuit breaker is OPEN — failing fast");
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "error": "Anthropic API circuit breaker is open — too many recent failures. Retrying in 60s." })),
+        ));
+    }
+
+    let mut last_err = None;
+
+    for attempt in 0..=MAX_RETRIES {
+        if attempt > 0 {
+            let delay = backoff_duration(attempt - 1);
+            tracing::info!(
+                "send_to_anthropic: retry {}/{} after {}ms backoff",
+                attempt, MAX_RETRIES, delay.as_millis()
+            );
+            tokio::time::sleep(delay).await;
+
+            // Re-check circuit breaker before retry
+            if !state.circuit_breaker.allow_request().await {
+                tracing::warn!("send_to_anthropic: circuit breaker tripped during retries — aborting");
+                return Err((
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    Json(json!({ "error": "Anthropic API circuit breaker tripped during retries" })),
+                ));
+            }
+        }
+
+        match send_to_anthropic_once(state, body, timeout_secs).await {
+            Ok(resp) => {
+                let status = resp.status().as_u16();
+                if resp.status().is_success() || resp.status().is_redirection() {
+                    // Success — record it and return
+                    state.circuit_breaker.record_success().await;
+                    return Ok(resp);
+                }
+
+                if is_retryable_status(status) && attempt < MAX_RETRIES {
+                    tracing::warn!(
+                        "send_to_anthropic: retryable HTTP {} on attempt {}/{}",
+                        status, attempt + 1, MAX_RETRIES + 1
+                    );
+                    state.circuit_breaker.record_failure().await;
+                    // Consume the body so it doesn't leak, store error for fallback
+                    let err_body: Value = resp.json().await.unwrap_or_default();
+                    last_err = Some((
+                        StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY),
+                        Json(json!({ "error": err_body })),
+                    ));
+                    continue;
+                }
+
+                // Non-retryable error status — record failure and return as-is
+                state.circuit_breaker.record_failure().await;
+                return Ok(resp);
+            }
+            Err(e) => {
+                // Network/timeout error — retryable
+                tracing::warn!(
+                    "send_to_anthropic: network error on attempt {}/{}: {:?}",
+                    attempt + 1, MAX_RETRIES + 1, e.1
+                );
+                state.circuit_breaker.record_failure().await;
+                last_err = Some(e);
+                if attempt < MAX_RETRIES {
+                    continue;
+                }
+            }
+        }
+    }
+
+    // All retries exhausted — return last error
+    Err(last_err.unwrap_or_else(|| {
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "Anthropic API request failed after all retries" })),
+        )
+    }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -256,14 +428,66 @@ pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Admin — API key hot-reload
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Hot-reload an API key for a provider without restarting the backend.
+/// Protected — requires auth when AUTH_SECRET is set.
+pub async fn rotate_key(
+    State(state): State<AppState>,
+    Json(body): Json<Value>,
+) -> Result<Json<Value>, ApiError> {
+    let provider = body
+        .get("provider")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| ApiError::BadRequest("missing 'provider' field".into()))?;
+    let key = body
+        .get("key")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| ApiError::BadRequest("missing 'key' field".into()))?;
+
+    match provider {
+        "google" | "anthropic" => {}
+        _ => {
+            return Err(ApiError::BadRequest(format!(
+                "unknown provider '{}' — expected google or anthropic",
+                provider
+            )));
+        }
+    }
+
+    // Update the key in runtime state
+    let env_key = match provider {
+        "google" => "GOOGLE_API_KEY",
+        "anthropic" => "ANTHROPIC_API_KEY",
+        _ => unreachable!(),
+    };
+    let mut rt = state.runtime.write().await;
+    rt.api_keys.insert(env_key.to_string(), key.to_string());
+    drop(rt);
+
+    tracing::info!("API key rotated for provider '{}'", provider);
+
+    Ok(Json(json!({
+        "ok": true,
+        "provider": provider,
+        "message": format!("API key for '{}' updated successfully", provider),
+    })))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Agents
 // ═══════════════════════════════════════════════════════════════════════
 
 #[utoipa::path(get, path = "/api/agents", tag = "agents",
     responses((status = 200, description = "List of configured agents", body = Vec<WitcherAgent>))
 )]
-pub async fn list_agents(State(state): State<AppState>) -> Json<Value> {
-    Json(serde_json::to_value(&state.agents).unwrap_or_else(|_| json!({"error": "serialization failed"})))
+pub async fn list_agents(State(state): State<AppState>) -> impl axum::response::IntoResponse {
+    // #6 — Cache agent list for 60 seconds
+    (
+        [(axum::http::header::CACHE_CONTROL, "public, max-age=60")],
+        Json(serde_json::to_value(&state.agents).unwrap_or_else(|_| json!({"error": "serialization failed"}))),
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -877,6 +1101,7 @@ async fn claude_chat_stream_with_tools(
                 }));
 
                 // Execute each tool and build tool_result blocks
+                // Per-tool timeout — Jaskier Shared Pattern
                 let mut tool_results: Vec<Value> = Vec::new();
                 for tu in &tool_uses {
                     let tool_name =
@@ -886,10 +1111,33 @@ async fn claude_chat_stream_with_tools(
                     let empty_input = json!({});
                     let tool_input = tu.get("input").unwrap_or(&empty_input);
 
-                    let (result, is_error) =
-                        state_clone.tool_executor.execute(tool_name, tool_input).await;
+                    let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
+                    let (result, is_error) = match tokio::time::timeout(
+                        timeout,
+                        state_clone.tool_executor.execute(tool_name, tool_input),
+                    )
+                    .await
+                    {
+                        Ok(res) => res,
+                        Err(_) => {
+                            tracing::warn!(
+                                "Tool '{}' timed out after {}s",
+                                tool_name, TOOL_TIMEOUT_SECS
+                            );
+                            (
+                                format!(
+                                    "Tool '{}' timed out after {}s",
+                                    tool_name, TOOL_TIMEOUT_SECS
+                                ),
+                                true,
+                            )
+                        }
+                    };
 
-                    // Emit tool_result event to frontend
+                    // #13 Graceful truncation — limit tool output for context window
+                    let truncated_result = truncate_for_context(&result);
+
+                    // Emit tool_result event to frontend (full result for display)
                     let _ = tx
                         .send(
                             serde_json::to_string(&json!({
@@ -902,10 +1150,11 @@ async fn claude_chat_stream_with_tools(
                         )
                         .await;
 
+                    // Send truncated result to Anthropic (context window protection)
                     tool_results.push(json!({
                         "type": "tool_result",
                         "tool_use_id": tool_id,
-                        "content": &result,
+                        "content": &truncated_result,
                         "is_error": is_error,
                     }));
                 }
@@ -939,13 +1188,29 @@ async fn claude_chat_stream_with_tools(
         }
     });
 
-    // Convert channel receiver into a byte stream
+    // Convert channel receiver into a byte stream with SSE heartbeat (#14)
     let ndjson_stream = async_stream::stream! {
         let mut rx = rx;
-        while let Some(line) = rx.recv().await {
-            yield Ok::<_, std::io::Error>(
-                axum::body::Bytes::from(format!("{}\n", line))
-            );
+        let heartbeat_interval = std::time::Duration::from_secs(15);
+        loop {
+            tokio::select! {
+                msg = rx.recv() => {
+                    match msg {
+                        Some(line) => {
+                            yield Ok::<_, std::io::Error>(
+                                axum::body::Bytes::from(format!("{}\n", line))
+                            );
+                        }
+                        None => break, // channel closed
+                    }
+                }
+                _ = tokio::time::sleep(heartbeat_interval) => {
+                    // #14 Keep-alive: SSE comment to prevent proxy timeouts
+                    yield Ok::<_, std::io::Error>(
+                        axum::body::Bytes::from_static(b": heartbeat\n\n")
+                    );
+                }
+            }
         }
     };
 
@@ -1015,6 +1280,15 @@ pub async fn update_settings(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
+    // #40 Audit log
+    crate::audit::log_audit(
+        &state.db,
+        "update_settings",
+        serde_json::to_value(&new_settings).unwrap_or_default(),
+        None,
+    )
+    .await;
+
     Ok(Json(serde_json::to_value(&new_settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
@@ -1037,46 +1311,81 @@ pub async fn set_api_key(
 
 /// Pagination query params for session/message listing.
 /// Backwards-compatible: all fields optional with sensible defaults.
+/// Supports cursor-based pagination via `after` (session ID) for stable scrolling.
 #[derive(Debug, serde::Deserialize)]
 pub struct PaginationParams {
     /// Max items to return (clamped to 500).
     #[serde(default)]
     pub limit: Option<i64>,
-    /// Number of items to skip.
+    /// Number of items to skip (offset-based, ignored when `after` is set).
     #[serde(default)]
     pub offset: Option<i64>,
+    /// Cursor: session ID to start after (cursor-based pagination).
+    #[serde(default)]
+    pub after: Option<String>,
 }
 
 #[utoipa::path(get, path = "/api/sessions", tag = "sessions",
     params(
         ("limit" = Option<i64>, Query, description = "Max sessions to return (default 100, max 500)"),
         ("offset" = Option<i64>, Query, description = "Number of sessions to skip (default 0)"),
+        ("after" = Option<String>, Query, description = "Cursor: session ID to start after (cursor-based pagination)"),
     ),
-    responses((status = 200, description = "List of session summaries", body = Vec<SessionSummary>))
+    responses((status = 200, description = "List of session summaries with pagination metadata"))
 )]
 pub async fn list_sessions(
     State(state): State<AppState>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<Value>, StatusCode> {
     let limit = params.limit.unwrap_or(100).clamp(1, 500);
-    let offset = params.offset.unwrap_or(0).max(0);
 
-    let rows = sqlx::query_as::<_, SessionSummaryRow>(
-        "SELECT s.id, s.title, s.created_at, \
-         (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
-         FROM ch_sessions s ORDER BY s.updated_at DESC \
-         LIMIT $1 OFFSET $2",
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&state.db)
-    .await
+    // Cursor-based pagination: when `after` is provided, fetch sessions older than the cursor.
+    // Falls back to offset-based pagination when `after` is absent.
+    let rows = if let Some(ref cursor_id) = params.after {
+        let cursor_uuid = uuid::Uuid::parse_str(cursor_id).map_err(|_| {
+            tracing::warn!("list_sessions: invalid cursor UUID: {}", cursor_id);
+            StatusCode::BAD_REQUEST
+        })?;
+        sqlx::query_as::<_, SessionSummaryRow>(
+            "SELECT s.id, s.title, s.created_at, \
+             (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
+             FROM ch_sessions s \
+             WHERE s.updated_at < (SELECT updated_at FROM ch_sessions WHERE id = $1) \
+             ORDER BY s.updated_at DESC \
+             LIMIT $2",
+        )
+        .bind(cursor_uuid)
+        .bind(limit + 1) // fetch one extra to determine has_more
+        .fetch_all(&state.db)
+        .await
+    } else {
+        let offset = params.offset.unwrap_or(0).max(0);
+        sqlx::query_as::<_, SessionSummaryRow>(
+            "SELECT s.id, s.title, s.created_at, \
+             (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
+             FROM ch_sessions s ORDER BY s.updated_at DESC \
+             LIMIT $1 OFFSET $2",
+        )
+        .bind(limit + 1) // fetch one extra to determine has_more
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+    }
     .map_err(|e| {
         tracing::error!("Failed to list sessions: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let summaries: Vec<SessionSummary> = rows
+    let has_more = rows.len() as i64 > limit;
+    let rows_trimmed: Vec<_> = rows.into_iter().take(limit as usize).collect();
+
+    let next_cursor = if has_more {
+        rows_trimmed.last().map(|r| r.id.to_string())
+    } else {
+        None
+    };
+
+    let summaries: Vec<SessionSummary> = rows_trimmed
         .into_iter()
         .map(|r| SessionSummary {
             id: r.id.to_string(),
@@ -1086,7 +1395,11 @@ pub async fn list_sessions(
         })
         .collect();
 
-    Ok(Json(serde_json::to_value(summaries).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+    Ok(Json(json!({
+        "sessions": summaries,
+        "has_more": has_more,
+        "next_cursor": next_cursor,
+    })))
 }
 
 #[utoipa::path(post, path = "/api/sessions", tag = "sessions",
@@ -1159,6 +1472,18 @@ pub async fn get_session(
     })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
+    // #7 Message history pagination — get total count for pagination metadata
+    let total_messages: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM ch_messages WHERE session_id = $1",
+    )
+    .bind(session_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to count session messages: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     // Fetch the most recent N messages (subquery DESC, then re-sort ASC)
     let message_rows = sqlx::query_as::<_, MessageRow>(
         "SELECT * FROM (\
@@ -1227,14 +1552,20 @@ pub async fn get_session(
         })
         .collect();
 
-    let session = Session {
-        id: session_row.id.to_string(),
-        title: session_row.title,
-        created_at: session_row.created_at.to_rfc3339(),
-        messages,
-    };
+    // #7 Return session with pagination metadata (total_messages, limit, offset)
+    let resp = json!({
+        "id": session_row.id.to_string(),
+        "title": session_row.title,
+        "created_at": session_row.created_at.to_rfc3339(),
+        "messages": serde_json::to_value(&messages).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+        "pagination": {
+            "total": total_messages,
+            "limit": msg_limit,
+            "offset": msg_offset,
+        }
+    });
 
-    Ok(Json(serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+    Ok(Json(resp))
 }
 
 #[utoipa::path(patch, path = "/api/sessions/{id}", tag = "sessions",
@@ -1306,6 +1637,15 @@ pub async fn delete_session(
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
     }
+
+    // #40 Audit log
+    crate::audit::log_audit(
+        &state.db,
+        "delete_session",
+        json!({ "session_id": id }),
+        None,
+    )
+    .await;
 
     Ok(Json(json!({ "status": "deleted", "id": id })))
 }

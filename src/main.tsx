@@ -5,6 +5,7 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import { FeatureErrorFallback } from '@/components/molecules/FeatureErrorFallback';
+import { OfflineBanner } from '@/components/molecules/OfflineBanner';
 import { ViewSkeleton } from '@/components/molecules/ViewSkeleton';
 import { AppShell } from '@/components/organisms/AppShell';
 import { ErrorBoundary } from '@/components/organisms/ErrorBoundary';
@@ -85,6 +86,7 @@ function App() {
           </ErrorBoundary>
         )}
       </QueryErrorResetBoundary>
+      <OfflineBanner />
       <Toaster position="bottom-right" theme="dark" richColors />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

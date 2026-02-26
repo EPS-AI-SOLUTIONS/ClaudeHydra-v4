@@ -9,11 +9,12 @@ export type {
   ModelSelectorProps,
 } from './ModelSelector';
 export { ModelSelector } from './ModelSelector';
+export { QueryError } from './QueryError';
+export { SessionSearch } from './SessionSearch';
 export type {
   StatusIndicatorProps,
   StatusSize,
   StatusState,
 } from './StatusIndicator';
 export { StatusIndicator } from './StatusIndicator';
-export { QueryError } from './QueryError';
 export { ViewSkeleton } from './ViewSkeleton';

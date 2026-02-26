@@ -2,7 +2,7 @@
 // ClaudeHydra v4 - Application state
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -12,6 +12,83 @@ use tokio::sync::RwLock;
 use crate::model_registry::ModelCache;
 use crate::models::WitcherAgent;
 use crate::tools::ToolExecutor;
+
+// ── Circuit Breaker — Jaskier Shared Pattern ────────────────────────────────
+/// Simple circuit breaker for upstream API providers.
+///
+/// After `FAILURE_THRESHOLD` consecutive failures the circuit **trips** for
+/// `COOLDOWN_SECS` seconds. While tripped, `allow_request()` returns `false`
+/// so callers can fail fast without hitting the upstream.
+///
+/// Thread-safe — uses atomics only, no mutex/rwlock.
+pub struct CircuitBreaker {
+    consecutive_failures: AtomicU32,
+    /// `None` = circuit is closed (healthy).
+    /// `Some(instant)` = tripped at this wall-clock instant.
+    tripped_at: RwLock<Option<Instant>>,
+}
+
+const FAILURE_THRESHOLD: u32 = 3;
+const COOLDOWN_SECS: u64 = 60;
+
+impl CircuitBreaker {
+    pub fn new() -> Self {
+        Self {
+            consecutive_failures: AtomicU32::new(0),
+            tripped_at: RwLock::new(None),
+        }
+    }
+
+    /// Returns `true` if the circuit is closed (allow the request).
+    /// Returns `false` if tripped and the cooldown has NOT elapsed yet.
+    /// If the cooldown HAS elapsed, resets the circuit to half-open (allows one request).
+    pub async fn allow_request(&self) -> bool {
+        let guard = self.tripped_at.read().await;
+        if let Some(tripped) = *guard {
+            if tripped.elapsed().as_secs() < COOLDOWN_SECS {
+                return false;
+            }
+            // Cooldown elapsed — drop read lock, acquire write, reset to half-open
+            drop(guard);
+            let mut wg = self.tripped_at.write().await;
+            // Double-check under write lock (another task may have reset it)
+            if let Some(t) = *wg {
+                if t.elapsed().as_secs() >= COOLDOWN_SECS {
+                    *wg = None;
+                    self.consecutive_failures.store(0, Ordering::Relaxed);
+                    tracing::info!("circuit_breaker: cooldown elapsed, resetting to half-open");
+                }
+            }
+        }
+        true
+    }
+
+    /// Record a successful request — resets the failure counter and closes the circuit.
+    pub async fn record_success(&self) {
+        let prev = self.consecutive_failures.swap(0, Ordering::Relaxed);
+        if prev > 0 {
+            let mut wg = self.tripped_at.write().await;
+            *wg = None;
+            tracing::info!("circuit_breaker: success recorded, circuit closed (was {} failures)", prev);
+        }
+    }
+
+    /// Record a failed request. Trips the circuit after `FAILURE_THRESHOLD` consecutive failures.
+    pub async fn record_failure(&self) {
+        let count = self.consecutive_failures.fetch_add(1, Ordering::Relaxed) + 1;
+        tracing::warn!("circuit_breaker: failure #{}", count);
+        if count >= FAILURE_THRESHOLD {
+            let mut wg = self.tripped_at.write().await;
+            if wg.is_none() {
+                *wg = Some(Instant::now());
+                tracing::error!(
+                    "circuit_breaker: TRIPPED after {} consecutive failures — blocking requests for {}s",
+                    count, COOLDOWN_SECS
+                );
+            }
+        }
+    }
+}
 
 // ── Shared: RuntimeState ────────────────────────────────────────────────────
 /// Mutable runtime state (not persisted — lost on restart).
@@ -55,7 +132,7 @@ pub struct AppState {
     pub runtime: Arc<RwLock<RuntimeState>>,
     pub model_cache: Arc<RwLock<ModelCache>>,
     pub start_time: Instant,
-    pub client: reqwest::Client,
+    pub http_client: reqwest::Client,
     pub tool_executor: Arc<ToolExecutor>,
     pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
     /// `true` once startup_sync completes (or times out).
@@ -64,6 +141,8 @@ pub struct AppState {
     pub system_monitor: Arc<RwLock<SystemSnapshot>>,
     /// Optional auth secret from AUTH_SECRET env. None = dev mode (no auth).
     pub auth_secret: Option<String>,
+    /// Circuit breaker for upstream Anthropic API — Jaskier Shared Pattern
+    pub circuit_breaker: Arc<CircuitBreaker>,
 }
 
 // ── Shared: readiness helpers ───────────────────────────────────────────────
@@ -109,7 +188,8 @@ impl AppState {
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys })),
             model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
-            client: reqwest::Client::builder()
+            http_client: reqwest::Client::builder()
+                .pool_max_idle_per_host(10)
                 .timeout(std::time::Duration::from_secs(120))
                 .connect_timeout(std::time::Duration::from_secs(5))
                 .build()
@@ -119,6 +199,7 @@ impl AppState {
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret,
+            circuit_breaker: Arc::new(CircuitBreaker::new()),
         }
     }
 
@@ -135,7 +216,7 @@ impl AppState {
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys: HashMap::new() })),
             model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
-            client: reqwest::Client::builder()
+            http_client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(5))
                 .build()
                 .expect("Failed to build HTTP client"),
@@ -144,6 +225,7 @@ impl AppState {
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret: None,
+            circuit_breaker: Arc::new(CircuitBreaker::new()),
         }
     }
 }

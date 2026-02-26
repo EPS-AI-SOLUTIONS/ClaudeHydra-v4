@@ -21,6 +21,7 @@ export function ViewSkeleton() {
     <output
       className="h-full flex flex-col p-4 sm:p-6 gap-6 animate-in fade-in duration-300 block"
       aria-busy="true"
+      aria-live="polite"
       aria-label={t('common.loadingView', 'Loading view')}
     >
       {/* ---- Header skeleton ---- */}

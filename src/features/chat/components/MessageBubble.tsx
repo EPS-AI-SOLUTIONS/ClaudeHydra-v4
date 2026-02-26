@@ -8,13 +8,15 @@
 
 import { Bot, Cpu, FileText, Image as ImageIcon, Loader2, User } from 'lucide-react';
 import { motion } from 'motion/react';
-import { isValidElement, memo, type ReactNode, useMemo } from 'react';
+import { isValidElement, memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
+import { Skeleton } from '@/components/atoms/Skeleton';
 import { CodeBlock } from '@/components/molecules/CodeBlock';
-import { chatLanguages } from '@/shared/utils/highlightLanguages';
 import { cn } from '@/shared/utils/cn';
+import { chatLanguages } from '@/shared/utils/highlightLanguages';
+import { getLocale } from '@/shared/utils/locale';
 import { ToolCallBlock, type ToolInteraction } from './ToolCallBlock';
 
 // ---------------------------------------------------------------------------
@@ -89,6 +91,47 @@ function InlineCode({ children }: { children: ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
+// #4 — LazyImage with skeleton placeholder
+// ---------------------------------------------------------------------------
+
+function LazyImage({ src, alt }: { src?: string; alt?: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  const handleLoad = useCallback(() => setLoaded(true), []);
+  const handleError = useCallback(() => {
+    setLoaded(true);
+    setError(true);
+  }, []);
+
+  return (
+    <span className="relative block my-2">
+      {!loaded && <Skeleton shape="rectangle" width="100%" height="200px" className="rounded-lg" />}
+      {!error && (
+        <img
+          src={src}
+          alt={alt ?? ''}
+          loading="lazy"
+          decoding="async"
+          onLoad={handleLoad}
+          onError={handleError}
+          className={cn(
+            'max-w-full h-auto rounded-lg transition-opacity duration-300',
+            loaded ? 'opacity-100' : 'opacity-0 absolute inset-0',
+          )}
+        />
+      )}
+      {error && (
+        <span className="flex items-center gap-2 text-sm text-[var(--matrix-text-secondary)] italic">
+          <ImageIcon size={16} />
+          Failed to load image
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Markdown components config
 // ---------------------------------------------------------------------------
 
@@ -110,7 +153,13 @@ const markdownComponents = {
       return <InlineCode>{children}</InlineCode>;
     }
 
-    return <CodeBlock code={codeContent} {...(match?.[1] != null && { language: match[1] })} {...(className != null && { className })} />;
+    return (
+      <CodeBlock
+        code={codeContent}
+        {...(match?.[1] != null && { language: match[1] })}
+        {...(className != null && { className })}
+      />
+    );
   },
   pre({ children }: { children?: ReactNode | undefined }) {
     return <>{children}</>;
@@ -143,6 +192,10 @@ const markdownComponents = {
       </blockquote>
     );
   },
+  /* #4 - Image lazy loading with skeleton placeholder */
+  img({ src, alt }: React.ImgHTMLAttributes<HTMLImageElement>) {
+    return <LazyImage src={src} alt={alt} />;
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -154,7 +207,7 @@ export const MessageBubble = memo(function MessageBubble({ message, className }:
 
   const formattedTime = useMemo(
     () =>
-      message.timestamp.toLocaleTimeString(undefined, {
+      message.timestamp.toLocaleTimeString(getLocale(), {
         hour: '2-digit',
         minute: '2-digit',
       }),
@@ -241,7 +294,11 @@ export const MessageBubble = memo(function MessageBubble({ message, className }:
 
         {/* Content — Markdown rendered */}
         <div className="prose prose-invert prose-sm max-w-none text-[var(--matrix-text-primary)]">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeHighlight, { languages: chatLanguages }]]} components={markdownComponents}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[[rehypeHighlight, { languages: chatLanguages }]]}
+            components={markdownComponents}
+          >
             {displayContent}
           </ReactMarkdown>
         </div>

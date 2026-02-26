@@ -1,3 +1,4 @@
+pub mod audit;
 pub mod auth;
 pub mod handlers;
 pub mod model_registry;
@@ -8,14 +9,50 @@ pub mod system_monitor;
 pub mod tools;
 pub mod watchdog;
 
-use axum::extract::DefaultBodyLimit;
+use axum::extract::{DefaultBodyLimit, State};
 use axum::middleware;
 use axum::routing::{delete, get, post};
 use axum::Router;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use state::AppState;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Request correlation ID middleware — Jaskier Shared Pattern
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Middleware that generates a UUID v4 correlation ID for each request.
+///
+/// - Adds it to the current tracing span as `request_id`
+/// - Returns it in the `X-Request-Id` response header
+/// - Accepts an incoming `X-Request-Id` header to propagate from upstream
+async fn request_id_middleware(
+    req: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    // Use the incoming X-Request-Id if present, otherwise generate one
+    let request_id = req
+        .headers()
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+    // Add to current tracing span
+    tracing::Span::current().record("request_id", &request_id.as_str());
+    tracing::debug!(request_id = %request_id, "request correlation ID assigned");
+
+    let mut response = next.run(req).await;
+
+    // Add X-Request-Id to response headers
+    if let Ok(header_value) = axum::http::HeaderValue::from_str(&request_id) {
+        response.headers_mut().insert("x-request-id", header_value);
+    }
+
+    response
+}
 
 // ── OpenAPI documentation ────────────────────────────────────────────────────
 
@@ -104,6 +141,26 @@ pub struct ApiDoc;
 /// Extracted from `main()` so integration tests can construct the app
 /// without binding to a network port.
 pub fn create_router(state: AppState) -> Router {
+    // ── #21 Per-endpoint rate limiting — Jaskier Shared Pattern ──────
+    // Streaming chat: 20 req/min (1 per 3s burst 20)
+    let rl_chat_stream = GovernorConfigBuilder::default()
+        .per_second(3)
+        .burst_size(20)
+        .finish()
+        .expect("rate limiter config: chat_stream");
+    // Non-streaming chat: 30 req/min (1 per 2s burst 30)
+    let rl_chat = GovernorConfigBuilder::default()
+        .per_second(2)
+        .burst_size(30)
+        .finish()
+        .expect("rate limiter config: chat");
+    // Other protected routes: 120 req/min (1 per 0.5s burst 120)
+    let rl_default = GovernorConfigBuilder::default()
+        .per_millisecond(500)
+        .burst_size(120)
+        .finish()
+        .expect("rate limiter config: default");
+
     // ── Public routes (no auth) ──────────────────────────────────────
     let public = Router::new()
         .route("/api/health", get(handlers::health_check))
@@ -114,9 +171,24 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/auth/logout", post(oauth::auth_logout))
         .route("/api/auth/mode", get(handlers::auth_mode));
 
-    // ── Protected routes (require auth when AUTH_SECRET is set) ──────
-    let protected = Router::new()
+    // ── Protected: streaming chat — 20 req/min ──────────────────────
+    let chat_stream_routes = Router::new()
+        .route(
+            "/api/claude/chat/stream",
+            post(handlers::claude_chat_stream),
+        )
+        .layer(GovernorLayer::new(rl_chat_stream));
+
+    // ── Protected: non-streaming chat — 30 req/min ──────────────────
+    let chat_routes = Router::new()
+        .route("/api/claude/chat", post(handlers::claude_chat))
+        .layer(GovernorLayer::new(rl_chat));
+
+    // ── Protected: other routes — 120 req/min ───────────────────────
+    let other_routes = Router::new()
         .route("/api/system/stats", get(handlers::system_stats))
+        // Admin — hot-reload API keys
+        .route("/api/admin/rotate-key", post(handlers::rotate_key))
         .route("/api/agents", get(handlers::list_agents))
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
@@ -127,11 +199,6 @@ pub fn create_router(state: AppState) -> Router {
             delete(model_registry::unpin_model),
         )
         .route("/api/models/pins", get(model_registry::list_pins))
-        .route("/api/claude/chat", post(handlers::claude_chat))
-        .route(
-            "/api/claude/chat/stream",
-            post(handlers::claude_chat_stream),
-        )
         .route(
             "/api/settings",
             get(handlers::get_settings).post(handlers::update_settings),
@@ -155,16 +222,60 @@ pub fn create_router(state: AppState) -> Router {
             "/api/sessions/{id}/generate-title",
             post(handlers::generate_session_title),
         )
+        .layer(GovernorLayer::new(rl_default));
+
+    // ── Merge all protected routes with auth layer ──────────────────
+    let protected = chat_stream_routes
+        .merge(chat_routes)
+        .merge(other_routes)
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_auth,
         ));
 
+    // ── Metrics endpoint (public, no auth) ─────────────────────────
+    let metrics = Router::new().route("/api/metrics", get(metrics_handler));
+
+    // ── API v1 prefix alias (mirrors /api routes for forward compat) ─
+    let v1_public = Router::new()
+        .route("/api/v1/health", get(handlers::health_check))
+        .route("/api/v1/health/ready", get(handlers::readiness))
+        .route("/api/v1/auth/mode", get(handlers::auth_mode));
+
     public
         .merge(protected)
+        .merge(metrics)
+        .merge(v1_public)
         // Swagger UI — no auth required
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         // 60 MB body limit — must be before .with_state() for Json extractor
         .layer(DefaultBodyLimit::max(60 * 1024 * 1024))
+        // Request correlation ID — adds X-Request-Id header to every response
+        .layer(axum::middleware::from_fn(request_id_middleware))
         .with_state(state)
+}
+
+// ── Prometheus-compatible metrics endpoint ───────────────────────────────────
+
+async fn metrics_handler(State(state): State<AppState>) -> String {
+    let snapshot = state.system_monitor.read().await;
+    let uptime = state.start_time.elapsed().as_secs();
+    format!(
+        "# HELP cpu_usage_percent CPU usage percentage\n\
+         # TYPE cpu_usage_percent gauge\n\
+         cpu_usage_percent {:.1}\n\
+         # HELP memory_used_bytes Memory used in bytes\n\
+         # TYPE memory_used_bytes gauge\n\
+         memory_used_bytes {}\n\
+         # HELP memory_total_bytes Total memory in bytes\n\
+         # TYPE memory_total_bytes gauge\n\
+         memory_total_bytes {}\n\
+         # HELP uptime_seconds Backend uptime in seconds\n\
+         # TYPE uptime_seconds counter\n\
+         uptime_seconds {}\n",
+        snapshot.cpu_usage_percent,
+        (snapshot.memory_used_mb * 1024.0 * 1024.0) as u64,
+        (snapshot.memory_total_mb * 1024.0 * 1024.0) as u64,
+        uptime,
+    )
 }

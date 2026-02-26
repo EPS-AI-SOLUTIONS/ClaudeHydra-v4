@@ -1,5 +1,4 @@
 use http::{header, Method};
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::CorsLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::compression::CompressionLayer;
@@ -34,17 +33,10 @@ fn build_app(state: AppState) -> axum::Router {
         .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
         .max_age(std::time::Duration::from_secs(86_400));
 
-    // Rate limiting: 30 req burst, replenish 1 per 2 seconds, per IP
-    // Jaskier Shared Pattern -- rate_limit
-    let governor_conf = GovernorConfigBuilder::default()
-        .per_second(2)
-        .burst_size(30)
-        .finish()
-        .unwrap();
-
+    // Rate limiting: per-endpoint governors configured in lib.rs (#21)
     claudehydra_backend::create_router(state)
-        .layer(GovernorLayer::new(governor_conf))
         .layer(cors)
+        // ── #11 Security headers ────────────────────────────────────────
         .layer(SetResponseHeaderLayer::overriding(
             header::X_CONTENT_TYPE_OPTIONS,
             header::HeaderValue::from_static("nosniff"),
@@ -67,6 +59,21 @@ fn build_app(state: AppState) -> axum::Router {
             header::STRICT_TRANSPORT_SECURITY,
             header::HeaderValue::from_static("max-age=63072000; includeSubDomains"),
         ))
+        // #11 X-XSS-Protection (legacy but still used by older browsers)
+        .layer(SetResponseHeaderLayer::overriding(
+            http::HeaderName::from_static("x-xss-protection"),
+            header::HeaderValue::from_static("1; mode=block"),
+        ))
+        // #11 Permissions-Policy — disable sensitive browser APIs
+        .layer(SetResponseHeaderLayer::overriding(
+            http::HeaderName::from_static("permissions-policy"),
+            header::HeaderValue::from_static(
+                "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+            ),
+        ))
+        // #12 tower_governor already injects X-RateLimit-Limit, X-RateLimit-Remaining,
+        // X-RateLimit-After, and Retry-After headers automatically via GovernorLayer.
+        // No additional middleware needed — the headers are set by the governor layer above.
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
 }
@@ -143,18 +150,62 @@ async fn main() -> anyhow::Result<()> {
     // ── Spawn system monitor (CPU/memory stats, refreshed every 5s) ──
     claudehydra_backend::system_monitor::spawn(state.system_monitor.clone());
 
-    // ── Non-blocking startup: model sync in background ──
+    // ── Non-blocking startup: model sync in background with retry (#8) ──
     let startup_state = state.clone();
     tokio::spawn(async move {
+        let retry_delays = [
+            std::time::Duration::from_secs(5),
+            std::time::Duration::from_secs(15),
+            std::time::Duration::from_secs(30),
+        ];
         let sync_timeout = std::time::Duration::from_secs(90);
-        match tokio::time::timeout(sync_timeout, model_registry::startup_sync(&startup_state)).await
+        let mut synced = false;
+
+        for (attempt, delay) in std::iter::once(&std::time::Duration::ZERO)
+            .chain(retry_delays.iter())
+            .enumerate()
         {
-            Ok(()) => tracing::info!("startup: model registry sync complete"),
-            Err(_) => tracing::error!(
-                "startup: model registry sync timed out after {}s — using fallback models",
-                sync_timeout.as_secs()
-            ),
+            if attempt > 0 {
+                tracing::warn!(
+                    "startup: model registry sync retry {}/{} after {}s",
+                    attempt,
+                    retry_delays.len(),
+                    delay.as_secs()
+                );
+                tokio::time::sleep(*delay).await;
+            }
+
+            match tokio::time::timeout(
+                sync_timeout,
+                model_registry::startup_sync(&startup_state),
+            )
+            .await
+            {
+                Ok(()) => {
+                    tracing::info!(
+                        "startup: model registry sync complete (attempt {})",
+                        attempt + 1
+                    );
+                    synced = true;
+                    break;
+                }
+                Err(_) => {
+                    tracing::error!(
+                        "startup: model registry sync timed out after {}s (attempt {})",
+                        sync_timeout.as_secs(),
+                        attempt + 1
+                    );
+                }
+            }
         }
+
+        if !synced {
+            tracing::error!(
+                "startup: model registry sync failed after {} attempts — using fallback models",
+                retry_delays.len() + 1
+            );
+        }
+
         startup_state.mark_ready();
     });
 

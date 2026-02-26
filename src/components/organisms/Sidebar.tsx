@@ -16,8 +16,8 @@ import {
   ChevronRight,
   Edit2,
   ExternalLink,
-  type LucideIcon,
   Loader2,
+  type LucideIcon,
   Menu,
   MessageSquare,
   MessagesSquare,
@@ -29,14 +29,26 @@ import {
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { lazy, type KeyboardEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type KeyboardEvent,
+  lazy,
+  type PointerEvent as ReactPointerEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/contexts/ThemeContext';
-import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { usePartnerSessions } from '@/features/chat/hooks/usePartnerSessions';
+import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 
 const PartnerChatModal = lazy(() => import('@/features/chat/components/PartnerChatModal'));
+
+import { SessionSearch } from '@/components/molecules/SessionSearch';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatSession, useViewStore, type ViewId } from '@/stores/viewStore';
@@ -98,6 +110,7 @@ function useIsMobile(): boolean {
 interface SessionItemProps {
   session: ChatSession;
   isActive: boolean;
+  isFocused?: boolean;
   collapsed: boolean;
   isDark: boolean;
   onSelect: () => void;
@@ -105,7 +118,16 @@ interface SessionItemProps {
   onRename: (newTitle: string) => void;
 }
 
-function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete, onRename }: SessionItemProps) {
+function SessionItem({
+  session,
+  isActive,
+  isFocused = false,
+  collapsed,
+  isDark,
+  onSelect,
+  onDelete,
+  onRename,
+}: SessionItemProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(session.title);
@@ -155,8 +177,12 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
         className={cn(
           'w-full p-2 rounded flex items-center justify-center transition-colors',
           isActive
-            ? isDark ? 'bg-white/15 text-[var(--matrix-accent)]' : 'bg-emerald-500/15 text-[var(--matrix-accent)]'
-            : isDark ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]' : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
+            ? isDark
+              ? 'bg-white/15 text-[var(--matrix-accent)]'
+              : 'bg-emerald-500/15 text-[var(--matrix-accent)]'
+            : isDark
+              ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]'
+              : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
         )}
         title={session.title}
       >
@@ -187,7 +213,10 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
         <button
           type="button"
           onClick={handleCancel}
-          className={cn('p-1 rounded', isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/15 text-red-600')}
+          className={cn(
+            'p-1 rounded',
+            isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/15 text-red-600',
+          )}
         >
           <X size={14} />
         </button>
@@ -197,16 +226,21 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
 
   // Default: session row
   return (
-    // biome-ignore lint/a11y/useSemanticElements: SessionItem uses div with role="button" for complex layout with nested interactive elements
     <div
-      role="button"
+      role="option"
+      aria-selected={isActive}
       tabIndex={0}
       data-testid="sidebar-session-item"
       className={cn(
         'group relative flex items-center gap-2 p-2 rounded cursor-pointer transition-colors w-full text-left',
         isActive
-          ? isDark ? 'bg-white/15 text-[var(--matrix-accent)]' : 'bg-emerald-500/15 text-[var(--matrix-accent)]'
-          : isDark ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]' : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
+          ? isDark
+            ? 'bg-white/15 text-[var(--matrix-accent)]'
+            : 'bg-emerald-500/15 text-[var(--matrix-accent)]'
+          : isDark
+            ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]'
+            : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
+        isFocused && 'ring-2 ring-[var(--matrix-accent)]/50',
       )}
       onClick={onSelect}
       onKeyDown={(e) => {
@@ -219,11 +253,18 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <MessageSquare size={14} className="flex-shrink-0" />
+      {/* #16 - Show spinner for pending sessions */}
+      {session._pending ? (
+        <Loader2 size={14} className="flex-shrink-0 animate-spin text-[var(--matrix-accent)]/60" />
+      ) : (
+        <MessageSquare size={14} className="flex-shrink-0" />
+      )}
       <div className="flex-1 min-w-0">
-        <p className="text-sm truncate">{session.title}</p>
+        <p className={cn('text-sm truncate', session._pending && 'opacity-60 italic')}>{session.title}</p>
         <p className="text-xs text-[var(--matrix-text-secondary)] truncate">
-          {session.messageCount} {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
+          {session._pending
+            ? t('sidebar.creating', 'Creating...')
+            : `${session.messageCount} ${session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}`}
         </p>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -244,8 +285,12 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
           className={cn(
             'p-1 rounded transition-colors',
             confirmDelete
-              ? isDark ? 'bg-red-500/30 text-red-300' : 'bg-red-500/20 text-red-600'
-              : isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/15 text-red-600',
+              ? isDark
+                ? 'bg-red-500/30 text-red-300'
+                : 'bg-red-500/20 text-red-600'
+              : isDark
+                ? 'hover:bg-red-500/20 text-red-400'
+                : 'hover:bg-red-500/15 text-red-600',
           )}
           title={confirmDelete ? t('sidebar.confirmDelete', 'Click again to delete') : t('common.delete', 'Delete')}
         >
@@ -258,7 +303,9 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
         <div
           className={cn(
             'absolute left-full top-0 ml-2 z-50 w-56 p-2.5 rounded-lg',
-            isDark ? 'bg-[var(--matrix-bg-primary)]/95 border border-white/20' : 'bg-[var(--matrix-bg-primary)]/95 border border-black/10',
+            isDark
+              ? 'bg-[var(--matrix-bg-primary)]/95 border border-white/20'
+              : 'bg-[var(--matrix-bg-primary)]/95 border border-black/10',
             'shadow-lg shadow-black/40 backdrop-blur-sm pointer-events-none',
             'animate-fade-in',
           )}
@@ -269,9 +316,12 @@ function SessionItem({ session, isActive, collapsed, isDark, onSelect, onDelete,
           </p>
           <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-[var(--matrix-border)]">
             <span className="text-[9px] text-[var(--matrix-text-secondary)]">
-              {session.messageCount} {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
+              {session.messageCount}{' '}
+              {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
             </span>
-            <span className="text-[9px] text-[var(--matrix-accent)]">{timeAgo(session.updatedAt ?? session.createdAt)}</span>
+            <span className="text-[9px] text-[var(--matrix-accent)]">
+              {timeAgo(session.updatedAt ?? session.createdAt)}
+            </span>
           </div>
         </div>
       )}
@@ -311,11 +361,18 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   const [showPartnerSessions, setShowPartnerSessions] = useState(true);
   const [partnerModalSessionId, setPartnerModalSessionId] = useState<string | null>(null);
   const sortedPartnerSessions = useMemo(
-    () => [...(partnerSessions ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    () =>
+      [...(partnerSessions ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
     [partnerSessions],
   );
 
   const [showSessions, setShowSessions] = useState(true);
+
+  // #19 - Session search/filter
+  const [sessionSearchQuery, setSessionSearchQuery] = useState('');
+  const handleSessionSearch = useCallback((query: string) => {
+    setSessionSearchQuery(query);
+  }, []);
 
   // Navigation groups (Tissaia style — uses i18n)
   const navGroups: NavGroup[] = [
@@ -344,15 +401,21 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   useEffect(() => {
     try {
       localStorage.setItem('claudehydra_expanded_groups', JSON.stringify(expandedGroups));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [expandedGroups]);
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  // Sort sessions by updatedAt descending
-  const sortedSessions = useMemo(() => [...chatSessions].sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt)), [chatSessions]);
+  // Sort sessions by updatedAt descending, then filter by search query (#19)
+  const sortedSessions = useMemo(() => {
+    const sorted = [...chatSessions].sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt));
+    if (!sessionSearchQuery) return sorted;
+    return sorted.filter((s) => s.title.toLowerCase().includes(sessionSearchQuery));
+  }, [chatSessions, sessionSearchQuery]);
 
   const navigateTo = useCallback(
     (view: ViewId) => {
@@ -362,12 +425,34 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
     [setView, isMobile, onClose],
   );
 
-  const handleSelectSession = (sessionId: string) => {
-    selectSession(sessionId);
-    openTab(sessionId);
-    setView('chat');
-    if (isMobile && onClose) onClose();
-  };
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      selectSession(sessionId);
+      openTab(sessionId);
+      setView('chat');
+      if (isMobile && onClose) onClose();
+    },
+    [selectSession, openTab, setView, isMobile, onClose],
+  );
+
+  // #42 — Keyboard navigation for session list
+  const [focusedSessionIndex, setFocusedSessionIndex] = useState(-1);
+
+  const handleSessionListKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedSessionIndex((i) => (i + 1) % sortedSessions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedSessionIndex((i) => (i - 1 + sortedSessions.length) % sortedSessions.length);
+      } else if (e.key === 'Enter' && focusedSessionIndex >= 0 && sortedSessions[focusedSessionIndex]) {
+        e.preventDefault();
+        handleSelectSession(sortedSessions[focusedSessionIndex].id);
+      }
+    },
+    [sortedSessions, focusedSessionIndex, handleSelectSession],
+  );
 
   return (
     <>
@@ -393,8 +478,13 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                   className={cn(
                     'w-full flex items-center justify-between px-3 py-2.5 transition-all group',
                     hasActiveItem
-                      ? isLight ? 'text-emerald-600 bg-emerald-500/5' : 'text-white bg-white/5'
-                      : cn(theme.textMuted, isLight ? 'hover:text-black hover:bg-black/5' : 'hover:text-white hover:bg-white/5'),
+                      ? isLight
+                        ? 'text-emerald-600 bg-emerald-500/5'
+                        : 'text-white bg-white/5'
+                      : cn(
+                          theme.textMuted,
+                          isLight ? 'hover:text-black hover:bg-black/5' : 'hover:text-white hover:bg-white/5',
+                        ),
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -429,8 +519,13 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                         'relative w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group',
                         collapsed ? 'justify-center' : '',
                         isActive
-                          ? isLight ? 'bg-emerald-500/15 text-emerald-600' : 'bg-white/10 text-white'
-                          : cn(theme.textMuted, isLight ? 'hover:bg-black/5 hover:text-black' : 'hover:bg-white/5 hover:text-white'),
+                          ? isLight
+                            ? 'bg-emerald-500/15 text-emerald-600'
+                            : 'bg-white/10 text-white'
+                          : cn(
+                              theme.textMuted,
+                              isLight ? 'hover:bg-black/5 hover:text-black' : 'hover:bg-white/5 hover:text-white',
+                            ),
                       )}
                       title={collapsed ? item.label : undefined}
                       aria-label={`Navigate to ${item.label}`}
@@ -440,7 +535,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                         className={cn(
                           'transition-colors flex-shrink-0',
                           isActive
-                            ? isLight ? 'text-emerald-600' : 'text-white'
+                            ? isLight
+                              ? 'text-emerald-600'
+                              : 'text-white'
                             : cn(theme.iconMuted, isLight ? 'group-hover:text-black' : 'group-hover:text-white'),
                         )}
                       />
@@ -465,7 +562,12 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
       </nav>
 
       {/* ---- Session Manager (Tissaia style) ---- */}
-      <div className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'flex-1 flex flex-col min-h-0 p-2 mx-2 overflow-hidden')}>
+      <div
+        className={cn(
+          isLight ? 'glass-panel-light' : 'glass-panel-dark',
+          'flex-1 flex flex-col min-h-0 p-2 mx-2 overflow-hidden',
+        )}
+      >
         <div className="flex items-center justify-between px-1 py-1.5">
           <button
             type="button"
@@ -475,11 +577,13 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             aria-label={`${showSessions ? 'Collapse' : 'Expand'} chat sessions`}
             className={cn(
               'flex items-center gap-2 transition-colors',
-              isLight ? theme.textMuted + ' hover:text-black' : theme.textMuted + ' hover:text-white',
+              isLight ? `${theme.textMuted} hover:text-black` : `${theme.textMuted} hover:text-white`,
             )}
           >
             <MessagesSquare size={14} />
-            {!collapsed && <span className="text-sm font-bold tracking-[0.12em] uppercase">{t('sidebar.chats', 'CHATS')}</span>}
+            {!collapsed && (
+              <span className="text-sm font-bold tracking-[0.12em] uppercase">{t('sidebar.chats', 'CHATS')}</span>
+            )}
             {!collapsed && (
               <ChevronDown
                 size={14}
@@ -491,13 +595,21 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             type="button"
             data-testid="sidebar-new-chat-btn"
             onClick={() => createSessionWithSync()}
-            className={cn('p-1.5 rounded text-[var(--matrix-accent)] transition-colors', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
+            className={cn(
+              'p-1.5 rounded text-[var(--matrix-accent)] transition-colors',
+              isDark ? 'hover:bg-white/15' : 'hover:bg-black/5',
+            )}
             title={t('sidebar.newChat', 'New chat')}
             aria-label={t('sidebar.newChat', 'New chat')}
           >
             <Plus size={14} />
           </button>
         </div>
+
+        {/* #19 - Session search input (only when expanded and sessions visible) */}
+        {!collapsed && showSessions && chatSessions.length > 0 && (
+          <SessionSearch onSearch={handleSessionSearch} className="px-1 pb-1.5" />
+        )}
 
         <AnimatePresence>
           {showSessions && (
@@ -506,19 +618,27 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
+              role="listbox"
+              aria-label={t('sidebar.chats', 'Chat sessions')}
+              onKeyDown={handleSessionListKeyDown}
               data-testid="sidebar-session-list"
               className="flex-1 space-y-1 overflow-y-auto min-h-0"
             >
               {sortedSessions.length === 0 ? (
                 <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">
-                  {collapsed ? '' : t('sidebar.noChats', 'No chats yet')}
+                  {collapsed
+                    ? ''
+                    : sessionSearchQuery
+                      ? t('sidebar.noSearchResults', 'No matching chats')
+                      : t('sidebar.noChats', 'No chats yet')}
                 </p>
               ) : (
-                sortedSessions.map((session) => (
+                sortedSessions.map((session, idx) => (
                   <SessionItem
                     key={session.id}
                     session={session}
                     isActive={session.id === activeSessionId}
+                    isFocused={focusedSessionIndex === idx}
                     collapsed={collapsed}
                     isDark={isDark}
                     onSelect={() => handleSelectSession(session.id)}
@@ -533,7 +653,12 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
       </div>
 
       {/* ---- Partner Sessions — GeminiHydra ---- */}
-      <div className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'flex flex-col min-h-0 p-2 mx-2 overflow-hidden')}>
+      <div
+        className={cn(
+          isLight ? 'glass-panel-light' : 'glass-panel-dark',
+          'flex flex-col min-h-0 p-2 mx-2 overflow-hidden',
+        )}
+      >
         <div className="flex items-center justify-between px-1 py-1.5">
           <button
             type="button"
@@ -542,16 +667,22 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             aria-label={`${showPartnerSessions ? 'Collapse' : 'Expand'} GeminiHydra partner sessions`}
             className={cn(
               'flex items-center gap-2 transition-colors',
-              isLight ? theme.textMuted + ' hover:text-black' : theme.textMuted + ' hover:text-white',
+              isLight ? `${theme.textMuted} hover:text-black` : `${theme.textMuted} hover:text-white`,
             )}
           >
-            <div className={cn(
-              'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold flex-shrink-0',
-              isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400',
-            )}>
+            <div
+              className={cn(
+                'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold flex-shrink-0',
+                isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400',
+              )}
+            >
               GH
             </div>
-            {!collapsed && <span className="text-sm font-bold tracking-[0.12em] uppercase">{t('sidebar.partnerApp', 'GeminiHydra')}</span>}
+            {!collapsed && (
+              <span className="text-sm font-bold tracking-[0.12em] uppercase">
+                {t('sidebar.partnerApp', 'GeminiHydra')}
+              </span>
+            )}
             {!collapsed && (
               <ChevronDown
                 size={14}
@@ -581,7 +712,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                 <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">Offline</p>
               )}
               {!partnerError && sortedPartnerSessions.length === 0 && !partnerLoading && (
-                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">{t('sidebar.noSessions', 'No sessions')}</p>
+                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">
+                  {t('sidebar.noSessions', 'No sessions')}
+                </p>
               )}
               {sortedPartnerSessions.map((ps) => (
                 <button
@@ -590,18 +723,26 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                   onClick={() => setPartnerModalSessionId(ps.id)}
                   className={cn(
                     'group relative flex items-center gap-2 p-2 rounded cursor-pointer transition-colors w-full text-left',
-                    isDark ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]' : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
+                    isDark
+                      ? 'hover:bg-white/[0.08] text-[var(--matrix-text-secondary)]'
+                      : 'hover:bg-black/5 text-[var(--matrix-text-secondary)]',
                   )}
                   title={ps.title}
                 >
-                  <MessageSquare size={14} className={cn('flex-shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')} />
+                  <MessageSquare
+                    size={14}
+                    className={cn('flex-shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{ps.title}</p>
                     <p className="text-xs text-[var(--matrix-text-secondary)] truncate">
                       {ps.message_count} {ps.message_count === 1 ? 'message' : 'messages'}
                     </p>
                   </div>
-                  <ExternalLink size={10} className="opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0 text-[var(--matrix-text-secondary)]" />
+                  <ExternalLink
+                    size={10}
+                    className="opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0 text-[var(--matrix-text-secondary)]"
+                  />
                 </button>
               ))}
             </motion.div>
@@ -611,18 +752,11 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
       {/* Partner session modal (lazy-loaded) */}
       <Suspense fallback={null}>
-        <PartnerChatModal
-          sessionId={partnerModalSessionId}
-          onClose={() => setPartnerModalSessionId(null)}
-        />
+        <PartnerChatModal sessionId={partnerModalSessionId} onClose={() => setPartnerModalSessionId(null)} />
       </Suspense>
 
       {/* ---- Bottom: Theme & Language + Version ---- */}
-      <FooterControls
-        collapsed={collapsed}
-        version="ClaudeHydra v4.0.0"
-        tagline={t('footer.tagline', 'AI Swarm')}
-      />
+      <FooterControls collapsed={collapsed} version="ClaudeHydra v4.0.0" tagline={t('footer.tagline', 'AI Swarm')} />
 
       {/* ---- Mobile close button ---- */}
       {isMobile && (
@@ -648,11 +782,19 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { sidebarCollapsed, toggleSidebar, mobileDrawerOpen, setMobileDrawerOpen, currentView } = useViewStore();
+  const { sidebarCollapsed, setSidebarCollapsed, toggleSidebar, mobileDrawerOpen, setMobileDrawerOpen, currentView } =
+    useViewStore();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
   const isMobile = useIsMobile();
+
+  // #29 — Auto-collapse sidebar on mobile (<768px)
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarCollapsed(true);
+    }
+  }, [isMobile, setSidebarCollapsed]);
 
   // Auto-close mobile drawer on view change (currentView is intentional trigger)
   // biome-ignore lint/correctness/useExhaustiveDependencies: currentView triggers close on navigation
@@ -660,7 +802,65 @@ export function Sidebar() {
     if (isMobile) setMobileDrawerOpen(false);
   }, [currentView, isMobile, setMobileDrawerOpen]);
 
-  // Mobile: hamburger + overlay drawer
+  // #29 — Swipe gesture for mobile drawer
+  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handlePointerDown = useCallback((e: ReactPointerEvent) => {
+    swipeStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+  }, []);
+
+  const handlePointerUp = useCallback(
+    (e: ReactPointerEvent) => {
+      if (!swipeStartRef.current) return;
+      const dx = e.clientX - swipeStartRef.current.x;
+      const dy = Math.abs(e.clientY - swipeStartRef.current.y);
+      const dt = Date.now() - swipeStartRef.current.time;
+      swipeStartRef.current = null;
+
+      // Swipe must be mostly horizontal, fast enough, and long enough
+      if (dt < 500 && dy < 80) {
+        if (dx < -60 && mobileDrawerOpen) {
+          // Swipe left: close drawer
+          setMobileDrawerOpen(false);
+        } else if (dx > 60 && !mobileDrawerOpen && e.clientX - dx < 40) {
+          // Swipe right from left edge: open drawer
+          setMobileDrawerOpen(true);
+        }
+      }
+    },
+    [mobileDrawerOpen, setMobileDrawerOpen],
+  );
+
+  // Global swipe-from-left-edge to open
+  useEffect(() => {
+    if (!isMobile) return;
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (touch && touch.clientX < 30) {
+        swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+      }
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!swipeStartRef.current) return;
+      const touch = e.changedTouches[0];
+      if (!touch) return;
+      const dx = touch.clientX - swipeStartRef.current.x;
+      const dy = Math.abs(touch.clientY - swipeStartRef.current.y);
+      const dt = Date.now() - swipeStartRef.current.time;
+      swipeStartRef.current = null;
+      if (dt < 500 && dy < 80 && dx > 60 && !mobileDrawerOpen) {
+        setMobileDrawerOpen(true);
+      }
+    };
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, mobileDrawerOpen, setMobileDrawerOpen]);
+
+  // Mobile: hamburger + overlay drawer with swipe + backdrop
   if (isMobile) {
     return (
       <>
@@ -671,7 +871,8 @@ export function Sidebar() {
           onClick={() => setMobileDrawerOpen(true)}
           className={cn(
             'fixed top-3 left-3 z-50 p-2 rounded-lg',
-            'glass-panel transition-colors', isDark ? 'hover:bg-white/[0.08]' : 'hover:bg-black/5',
+            'glass-panel transition-colors',
+            isDark ? 'hover:bg-white/[0.08]' : 'hover:bg-black/5',
           )}
           title={t('common.menu', 'Menu')}
           aria-label={t('sidebar.openSidebar', 'Open sidebar')}
@@ -679,7 +880,7 @@ export function Sidebar() {
           <Menu size={20} className="text-[var(--matrix-accent)]" />
         </button>
 
-        {/* Backdrop */}
+        {/* Backdrop (#29 overlay) */}
         <AnimatePresence>
           {mobileDrawerOpen && (
             <motion.div
@@ -696,13 +897,18 @@ export function Sidebar() {
           )}
         </AnimatePresence>
 
-        {/* Drawer */}
+        {/* Drawer with swipe gesture support */}
         <motion.aside
           initial={{ x: '-100%' }}
           animate={{ x: mobileDrawerOpen ? 0 : '-100%' }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           data-testid="mobile-drawer"
-          className={cn('fixed top-0 left-0 h-full w-72 z-50 flex flex-col', isDark ? 'glass-panel-dark' : 'glass-panel-light')}
+          className={cn(
+            'fixed top-0 left-0 h-full w-72 z-50 flex flex-col touch-pan-y',
+            isDark ? 'glass-panel-dark' : 'glass-panel-light',
+          )}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
         >
           <SidebarContent collapsed={false} onClose={() => setMobileDrawerOpen(false)} isMobile />
         </motion.aside>
@@ -731,12 +937,22 @@ export function Sidebar() {
           'w-9 h-9 rounded-full flex items-center justify-center',
           'bg-[var(--matrix-bg-secondary)] border border-[var(--matrix-border)]',
           'text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)]',
-          isDark ? 'hover:border-[var(--matrix-accent)] hover:shadow-[0_0_12px_rgba(255,255,255,0.15)]' : 'hover:border-[var(--matrix-accent)] hover:shadow-[0_0_12px_rgba(5,150,105,0.3)]',
+          isDark
+            ? 'hover:border-[var(--matrix-accent)] hover:shadow-[0_0_12px_rgba(255,255,255,0.15)]'
+            : 'hover:border-[var(--matrix-accent)] hover:shadow-[0_0_12px_rgba(5,150,105,0.3)]',
           'backdrop-blur-sm transition-all duration-200 hover:scale-110 active:scale-95',
           'shadow-lg',
         )}
-        title={sidebarCollapsed ? t('sidebar.expandSidebar', 'Expand sidebar') : t('sidebar.collapseSidebar', 'Collapse sidebar')}
-        aria-label={sidebarCollapsed ? t('sidebar.expandSidebar', 'Expand sidebar') : t('sidebar.collapseSidebar', 'Collapse sidebar')}
+        title={
+          sidebarCollapsed
+            ? t('sidebar.expandSidebar', 'Expand sidebar')
+            : t('sidebar.collapseSidebar', 'Collapse sidebar')
+        }
+        aria-label={
+          sidebarCollapsed
+            ? t('sidebar.expandSidebar', 'Expand sidebar')
+            : t('sidebar.collapseSidebar', 'Collapse sidebar')
+        }
       >
         {sidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
       </button>

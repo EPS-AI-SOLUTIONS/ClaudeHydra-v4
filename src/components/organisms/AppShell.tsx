@@ -14,8 +14,8 @@
  */
 
 import { type ReactNode, useEffect, useMemo } from 'react';
-
 import { RuneRain, ThemedBackground } from '@/components/atoms';
+import { CommandPalette } from '@/components/molecules/CommandPalette';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import type { StatusFooterProps } from '@/components/organisms/StatusFooter';
 import { StatusFooter } from '@/components/organisms/StatusFooter';
@@ -35,11 +35,12 @@ const HEALTH_TO_CONNECTION = { healthy: 'connected', degraded: 'degraded', offli
 /** Format raw model ID (e.g. "claude-sonnet-4-6") into a display name ("Claude Sonnet 4"). */
 function formatModelName(id: string): string {
   // Strip common suffixes like date stamps (e.g. -20251001)
-  let name = id.replace(/-\d{8}$/, '').replace(/-preview$/, '').replace(/-latest$/, '');
+  const name = id
+    .replace(/-\d{8}$/, '')
+    .replace(/-preview$/, '')
+    .replace(/-latest$/, '');
   const parts = name.split('-');
-  return parts
-    .map((p) => (/^\d/.test(p) ? p : p.charAt(0).toUpperCase() + p.slice(1)))
-    .join(' ');
+  return parts.map((p) => (/^\d/.test(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))).join(' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -76,19 +77,20 @@ function AppShellInner({ children }: AppShellProps) {
 
   // Build live footer props from system stats
   const raw = stats as Record<string, number> | undefined;
-  const footerProps = useMemo<StatusFooterProps>(() => ({
-    connectionHealth,
-    ...(displayModel && { selectedModel: displayModel }),
-    ...(raw && {
-      cpuUsage: Math.round(raw.cpu_usage_percent ?? raw.cpu_usage ?? 0),
-      ramUsage: Math.round(
-        ((raw.memory_used_mb ?? raw.memory_used ?? 0) /
-          (raw.memory_total_mb ?? raw.memory_total ?? 1)) *
-          100,
-      ),
-      statsLoaded: true,
+  const footerProps = useMemo<StatusFooterProps>(
+    () => ({
+      connectionHealth,
+      ...(displayModel && { selectedModel: displayModel }),
+      ...(raw && {
+        cpuUsage: Math.round(raw.cpu_usage_percent ?? raw.cpu_usage ?? 0),
+        ramUsage: Math.round(
+          ((raw.memory_used_mb ?? raw.memory_used ?? 0) / (raw.memory_total_mb ?? raw.memory_total ?? 1)) * 100,
+        ),
+        statsLoaded: true,
+      }),
     }),
-  }), [connectionHealth, displayModel, raw]);
+    [connectionHealth, displayModel, raw],
+  );
 
   const glassPanel = cn(
     'backdrop-blur-xl border rounded-2xl',
@@ -130,6 +132,9 @@ function AppShellInner({ children }: AppShellProps) {
 
       {/* Rune Rain Effect */}
       <RuneRain opacity={0.1} />
+
+      {/* Command Palette (Ctrl+K) */}
+      <CommandPalette />
 
       {/* Main content with padding and gap matching Tissaia */}
       <div className="relative z-10 flex h-full w-full backdrop-blur-[1px] gap-4 p-4">

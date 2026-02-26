@@ -1,7 +1,14 @@
 #!/bin/sh
 
-# Jaskier Shared Pattern -- pre-commit hook
-# Frontend TypeScript check + Backend Rust check
+# Jaskier Shared Pattern -- pre-commit hook (#44)
+# lint-staged + TypeScript check + Backend Rust check
+
+# Run lint-staged for formatting/linting on staged files
+npx lint-staged
+if [ $? -ne 0 ]; then
+  echo "lint-staged failed. Fix errors before committing."
+  exit 1
+fi
 
 # Frontend TypeScript check
 npx tsc --noEmit --skipLibCheck

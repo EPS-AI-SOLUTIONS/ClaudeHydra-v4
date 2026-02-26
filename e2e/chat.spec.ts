@@ -88,4 +88,33 @@ test.describe('Chat View', () => {
     const placeholder = await chat.textarea.getAttribute('placeholder');
     expect(placeholder).toContain('Configure API key in Settings');
   });
+
+  // ── ARIA accessibility (#46) ────────────────────────────────────────────
+
+  test('should have aria-live region on message area', async ({ page }) => {
+    const messageArea = page.locator(SEL.chatMessageArea);
+    await expect(messageArea).toHaveAttribute('role', 'log');
+    await expect(messageArea).toHaveAttribute('aria-live', 'polite');
+  });
+
+  test('should have aria-labels on action buttons', async () => {
+    const clearBtn = chat.clearBtn;
+    await expect(clearBtn).toHaveAttribute('aria-label');
+  });
+
+  // ── Search overlay (#19) ────────────────────────────────────────────────
+
+  test('should open search overlay with Ctrl+F', async ({ page }) => {
+    await page.keyboard.press('Control+f');
+    const searchInput = page.locator('input[aria-label="Search messages"]');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+  });
+
+  test('should close search overlay with Escape', async ({ page }) => {
+    await page.keyboard.press('Control+f');
+    const searchInput = page.locator('input[aria-label="Search messages"]');
+    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await expect(searchInput).not.toBeVisible({ timeout: 3000 });
+  });
 });

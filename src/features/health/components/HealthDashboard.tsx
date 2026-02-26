@@ -7,8 +7,8 @@
  * system resources, model cache size, and uptime.
  */
 
-import { Activity, Clock, Cpu, Database, Shield } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { Clock, Cpu, Database, RefreshCw, Shield, Wifi, WifiOff } from 'lucide-react';
+import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Card } from '@/components/atoms/Card';
@@ -67,6 +67,13 @@ export const HealthDashboard = memo(() => {
   const { t } = useTranslation();
   const theme = useViewTheme();
   const data = useHealthDashboard();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    data.refetch();
+    setTimeout(() => setIsRefreshing(false), 1000);
+  };
 
   if (data.loading) {
     return (
@@ -94,14 +101,25 @@ export const HealthDashboard = memo(() => {
 
   return (
     <div className="w-full">
-      <h3 className={cn('text-sm font-mono font-semibold uppercase tracking-wider mb-3', theme.textMuted)}>
-        {t('health.title', 'System Health')}
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className={cn('text-sm font-mono font-semibold uppercase tracking-wider', theme.textMuted)}>
+          {t('health.title', 'System Health')}
+        </h3>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          className={cn('p-1.5 rounded-lg transition-all', theme.btnGhost)}
+          aria-label={t('health.refresh', 'Refresh health data')}
+          title={t('health.refresh', 'Refresh')}
+        >
+          <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {/* Backend Status */}
         <StatCard
-          icon={<Activity size={16} />}
+          icon={data.backendOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
           label={t('health.backend', 'Backend')}
           value={data.backendOnline ? t('health.online', 'Online') : t('health.offline', 'Offline')}
           statusColor={data.backendOnline ? 'text-emerald-400' : 'text-red-400'}
@@ -125,6 +143,15 @@ export const HealthDashboard = memo(() => {
           icon={<Cpu size={16} />}
           label={t('health.cpu', 'CPU Usage')}
           value={data.cpuUsage !== null ? `${String(Math.round(data.cpuUsage))}%` : '--'}
+          statusColor={
+            data.cpuUsage !== null
+              ? data.cpuUsage > 90
+                ? 'text-red-400'
+                : data.cpuUsage > 70
+                  ? 'text-yellow-400'
+                  : undefined
+              : undefined
+          }
         />
 
         {/* Memory */}
@@ -135,6 +162,15 @@ export const HealthDashboard = memo(() => {
             data.memoryUsedMb !== null && data.memoryTotalMb !== null
               ? formatMemory(data.memoryUsedMb, data.memoryTotalMb)
               : '--'
+          }
+          statusColor={
+            data.memoryUsedMb !== null && data.memoryTotalMb !== null && data.memoryTotalMb > 0
+              ? data.memoryUsedMb / data.memoryTotalMb > 0.9
+                ? 'text-red-400'
+                : data.memoryUsedMb / data.memoryTotalMb > 0.75
+                  ? 'text-yellow-400'
+                  : undefined
+              : undefined
           }
         />
 

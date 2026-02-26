@@ -15,9 +15,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      ...(mode === 'analyze'
-        ? [visualizer({ open: true, filename: 'dist/stats.html', gzipSize: true })]
-        : []),
+      // #38 — Bundle size tracking: always generate stats.html on build, auto-open in analyze mode
+      ...(mode === 'production'
+        ? [visualizer({ open: false, filename: 'dist/stats.html', gzipSize: true, brotliSize: true })]
+        : mode === 'analyze'
+          ? [visualizer({ open: true, filename: 'dist/stats.html', gzipSize: true, brotliSize: true })]
+          : []),
     ],
     resolve: {
       alias: {

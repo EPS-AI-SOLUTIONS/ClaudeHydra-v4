@@ -6,7 +6,8 @@
  * inline as collapsible ToolCallBlock panels.
  */
 
-import { Bot, Check, ClipboardList, MessageSquare, Trash2, Wrench } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { ArrowDown, Bot, Check, ClipboardList, MessageSquare, Trash2, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,15 +15,19 @@ import { toast } from 'sonner';
 import { Button } from '@/components/atoms/Button';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
-import { type ClaudeModel, useClaudeModels, FALLBACK_CLAUDE_MODELS } from '@/features/chat/hooks/useClaudeModels';
+import { useAutoScroll } from '@/features/chat/hooks/useAutoScroll';
+import { type ClaudeModel, FALLBACK_CLAUDE_MODELS, useClaudeModels } from '@/features/chat/hooks/useClaudeModels';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
-import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { env } from '@/shared/config/env';
+import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
+import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { copyToClipboard } from '@/shared/utils/clipboard';
 import { cn } from '@/shared/utils/cn';
+import { formatDateTime, formatTime } from '@/shared/utils/locale';
 import { useViewStore } from '@/stores/viewStore';
 import { type Attachment, ChatInput } from './ChatInput';
 import { type ChatMessage, MessageBubble } from './MessageBubble';
+import { SearchOverlay } from './SearchOverlay';
 import type { ToolInteraction } from './ToolCallBlock';
 
 // ---------------------------------------------------------------------------
@@ -175,9 +180,193 @@ function EmptyChatState() {
       <EmptyState
         icon={MessageSquare}
         title={t('chat.startConversation', 'Start a new conversation')}
-        description={t('chat.selectModelAndType', 'Select a model and type a message. Drag and drop files to add context.')}
+        description={t(
+          'chat.selectModelAndType',
+          'Select a model and type a message. Drag and drop files to add context.',
+        )}
       />
     </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// #1 — Virtualized message area sub-component
+// Uses @tanstack/react-virtual for efficient rendering of long conversations.
+// ---------------------------------------------------------------------------
+
+interface VirtualizedMessageAreaProps {
+  messages: ChatMessage[];
+  welcomeMessage?: string;
+  setChatRef: (el: HTMLDivElement | null) => void;
+  bottomRef: React.RefObject<HTMLDivElement | null>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  searchOpen: boolean;
+  searchMatchId: string | null;
+  onSearchMatchChange: (messageId: string | null) => void;
+  onSearchClose: () => void;
+  showNewMessages: boolean;
+  scrollToBottom: () => void;
+}
+
+function VirtualizedMessageArea({
+  messages,
+  welcomeMessage,
+  setChatRef,
+  bottomRef,
+  messagesEndRef,
+  searchOpen,
+  searchMatchId,
+  onSearchMatchChange,
+  onSearchClose,
+  showNewMessages,
+  scrollToBottom,
+}: VirtualizedMessageAreaProps) {
+  const { t } = useTranslation();
+  const parentRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(messages.length);
+
+  // Merge parent ref with external setChatRef
+  const setParentRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      (parentRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      setChatRef(el);
+    },
+    [setChatRef],
+  );
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+    getItemKey: (index) => messages[index]?.id ?? index,
+  });
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length > prevCountRef.current && messages.length > 0) {
+      // Scroll to the last item
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' });
+    }
+    prevCountRef.current = messages.length;
+  }, [messages.length, virtualizer]);
+
+  // Also scroll when the last message is streaming (content changing)
+  const lastMessage = messages[messages.length - 1];
+  const isLastStreaming = lastMessage?.streaming;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lastMessage?.content.length is intentional — triggers scroll on each streaming token
+  useEffect(() => {
+    if (isLastStreaming && messages.length > 0) {
+      virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    }
+  }, [isLastStreaming, lastMessage?.content.length, messages.length, virtualizer]);
+
+  // Empty state / welcome message
+  if (messages.length === 0) {
+    return (
+      <div
+        ref={setParentRef}
+        data-testid="chat-message-area"
+        role="log"
+        aria-live="polite"
+        aria-label={t('chat.messageArea', 'Chat messages')}
+        className={cn('flex-1 p-4 overflow-y-auto relative transition-all rounded-lg', 'scrollbar-thin')}
+      >
+        <AnimatePresence>
+          {searchOpen && (
+            <SearchOverlay messages={messages} onMatchChange={onSearchMatchChange} onClose={onSearchClose} />
+          )}
+        </AnimatePresence>
+        {welcomeMessage ? (
+          <div className="space-y-4">
+            <MessageBubble
+              message={{
+                id: 'welcome',
+                role: 'assistant',
+                content: welcomeMessage,
+                timestamp: new Date(),
+              }}
+            />
+          </div>
+        ) : (
+          <EmptyChatState />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setParentRef}
+      data-testid="chat-message-area"
+      role="log"
+      aria-live="polite"
+      aria-label={t('chat.messageArea', 'Chat messages')}
+      className={cn('flex-1 p-4 overflow-y-auto relative transition-all rounded-lg', 'scrollbar-thin')}
+    >
+      {/* #19 — Search overlay */}
+      <AnimatePresence>
+        {searchOpen && (
+          <SearchOverlay messages={messages} onMatchChange={onSearchMatchChange} onClose={onSearchClose} />
+        )}
+      </AnimatePresence>
+
+      {/* Virtualized message list */}
+      <div
+        style={{
+          height: virtualizer.getTotalSize(),
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const msg = messages[virtualRow.index];
+          if (!msg) return null;
+          return (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              data-message-id={msg.id}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              <div className="pb-4">
+                <MessageBubble
+                  message={msg}
+                  className={searchMatchId === msg.id ? 'ring-2 ring-yellow-400/60 rounded-xl' : undefined}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div ref={bottomRef} />
+      <div ref={messagesEndRef} />
+
+      {/* #20 — New messages floating button */}
+      <AnimatePresence>
+        {showNewMessages && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            onClick={scrollToBottom}
+            className="sticky bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-4 py-2 rounded-full bg-[var(--matrix-accent)] text-[var(--matrix-bg-primary)] text-sm font-mono shadow-lg hover:shadow-xl transition-shadow"
+            aria-label={t('chat.newMessages', 'New messages, scroll to bottom')}
+          >
+            <ArrowDown size={14} />
+            {t('chat.newMessages', 'New messages')}
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -215,25 +404,41 @@ export function ClaudeChatView() {
   // Settings (for welcome message)
   const { data: settings } = useSettingsQuery();
 
+  // #25 — Offline detection
+  const isOnline = useOnlineStatus();
+
+  // #19 — Message search (Ctrl+F)
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchMatchId, setSearchMatchId] = useState<string | null>(null);
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // #20 — Auto-scroll indicator
+  const { containerRef: autoScrollRef, bottomRef, showNewMessages, scrollToBottom } = useAutoScroll(messages.length);
+
+  // Merge container refs
+  const setChatRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      (chatContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      (autoScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    },
+    [autoScrollRef],
+  );
+
   // ----- Per-session helpers -----------------------------------------------
 
   /** Update messages for a specific session. Only updates display if session is active. */
-  const updateSessionMessages = useCallback(
-    (sessionId: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => {
-      const prev = sessionMessagesRef.current[sessionId] ?? [];
-      const updated = updater(prev);
-      sessionMessagesRef.current[sessionId] = updated;
+  const updateSessionMessages = useCallback((sessionId: string, updater: (prev: ChatMessage[]) => ChatMessage[]) => {
+    const prev = sessionMessagesRef.current[sessionId] ?? [];
+    const updated = updater(prev);
+    sessionMessagesRef.current[sessionId] = updated;
 
-      if (sessionId === useViewStore.getState().activeSessionId) {
-        setMessages(updated);
-      }
-    },
-    [],
-  );
+    if (sessionId === useViewStore.getState().activeSessionId) {
+      setMessages(updated);
+    }
+  }, []);
 
   /** Set loading state for a specific session. Only updates display if session is active. */
   const setSessionLoading = useCallback((sessionId: string, loading: boolean) => {
@@ -267,11 +472,25 @@ export function ClaudeChatView() {
     void claudeHealthCheck().then(setClaudeConnected);
   }, []);
 
-  // ----- Auto-scroll -------------------------------------------------------
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll must fire on every message update
+  // ----- Ctrl+F search overlay (#19) ----------------------------------------
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleSearchMatchChange = useCallback((messageId: string | null) => {
+    setSearchMatchId(messageId);
+    if (messageId) {
+      const el = document.querySelector(`[data-message-id="${messageId}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
 
   // ----- Paste handler (global) --------------------------------------------
 
@@ -320,12 +539,12 @@ export function ClaudeChatView() {
 
     const session = useViewStore.getState().chatSessions.find((s) => s.id === activeSessionId);
     const title = session?.title ?? 'Untitled';
-    const date = session ? new Date(session.createdAt).toLocaleString() : '';
+    const date = session ? formatDateTime(session.createdAt) : '';
 
     const lines = [`=== ${title} ===`, date ? `Date: ${date}` : '', `Messages: ${messages.length}`, ''];
     for (const msg of messages) {
       const role = msg.role === 'user' ? 'User' : 'Assistant';
-      const time = msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString() : '';
+      const time = msg.timestamp instanceof Date ? formatTime(msg.timestamp) : '';
       const model = msg.model ? ` (${msg.model})` : '';
       lines.push(`[${role}] ${time}${model}:`);
       lines.push(msg.content);
@@ -351,6 +570,11 @@ export function ClaudeChatView() {
 
   const handleSend = useCallback(
     async (text: string, attachments: Attachment[]) => {
+      // #25 — Block submission when offline
+      if (!isOnline) {
+        toast.error('You are offline. Cannot send messages.');
+        return;
+      }
       // Capture sessionId at send time — all updates target this session
       const sessionId = activeSessionId;
       if (!selectedModel || !sessionId) return;
@@ -497,9 +721,18 @@ export function ClaudeChatView() {
               if (responseBuffer) {
                 addMessageWithSync(sessionId, 'assistant', responseBuffer, event.model ?? selectedModel);
               }
-              // Generate AI title after first exchange
+              // #8 — Background title generation: fire-and-forget with 2s delay
               if (previousMessages.length === 0) {
-                void generateTitleWithSync(sessionId);
+                setTimeout(() => {
+                  generateTitleWithSync(sessionId).then(
+                    () => {
+                      /* title updated in store by generateTitleWithSync */
+                    },
+                    () => {
+                      /* best-effort: substring title already set as placeholder */
+                    },
+                  );
+                }, 2000);
               }
             }
           }
@@ -531,7 +764,17 @@ export function ClaudeChatView() {
         delete abortControllersRef.current[sessionId];
       }
     },
-    [selectedModel, activeSessionId, toolsEnabled, addMessageWithSync, renameSessionWithSync, updateSessionMessages, setSessionLoading],
+    [
+      selectedModel,
+      activeSessionId,
+      toolsEnabled,
+      isOnline,
+      addMessageWithSync,
+      renameSessionWithSync,
+      generateTitleWithSync,
+      updateSessionMessages,
+      setSessionLoading,
+    ],
   );
 
   // ----- Render -------------------------------------------------------------
@@ -549,7 +792,9 @@ export function ClaudeChatView() {
         <div className="flex items-center gap-3">
           <Bot className="text-[var(--matrix-accent)]" size={24} />
           <div>
-            <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">{t('chat.title', 'Claude Chat')}</h2>
+            <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">
+              {t('chat.title', 'Claude Chat')}
+            </h2>
             <p data-testid="chat-status-text" className="text-xs text-[var(--matrix-text-secondary)]">
               {claudeConnected ? `${models.length} models available` : 'Offline — configure API key in Settings'}
             </p>
@@ -607,38 +852,23 @@ export function ClaudeChatView() {
         </div>
       </motion.div>
 
-      {/* Chat message area */}
-      <div
-        ref={chatContainerRef}
-        data-testid="chat-message-area"
-        className={cn('flex-1 p-4 overflow-y-auto relative transition-all rounded-lg', 'scrollbar-thin')}
-      >
-        {messages.length === 0 ? (
-          settings?.welcome_message ? (
-            <div className="space-y-4">
-              <MessageBubble
-                message={{
-                  id: 'welcome',
-                  role: 'assistant',
-                  content: settings.welcome_message,
-                  timestamp: new Date(),
-                }}
-              />
-            </div>
-          ) : (
-            <EmptyChatState />
-          )
-        ) : (
-          <div className="space-y-4">
-            <AnimatePresence initial={false}>
-              {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
-              ))}
-            </AnimatePresence>
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
+      {/* #1 Virtualized message area */}
+      <VirtualizedMessageArea
+        messages={messages}
+        welcomeMessage={settings?.welcome_message}
+        setChatRef={setChatRef}
+        bottomRef={bottomRef}
+        messagesEndRef={messagesEndRef}
+        searchOpen={searchOpen}
+        searchMatchId={searchMatchId}
+        onSearchMatchChange={handleSearchMatchChange}
+        onSearchClose={() => {
+          setSearchOpen(false);
+          setSearchMatchId(null);
+        }}
+        showNewMessages={showNewMessages}
+        scrollToBottom={scrollToBottom}
+      />
 
       {/* Streaming indicator bar */}
       {isLoading && (
@@ -650,13 +880,19 @@ export function ClaudeChatView() {
         />
       )}
 
-      {/* Chat input */}
+      {/* Chat input — #25 disabled when offline */}
       <div className="mt-3">
         <ChatInput
           onSend={handleSend}
-          disabled={!claudeConnected || !selectedModel}
+          disabled={!claudeConnected || !selectedModel || !isOnline}
           isLoading={isLoading}
-          placeholder={claudeConnected ? 'Type a message... (Shift+Enter = new line)' : 'Configure API key in Settings'}
+          placeholder={
+            !isOnline
+              ? t('chat.offlinePlaceholder', 'You are offline')
+              : claudeConnected
+                ? 'Type a message... (Shift+Enter = new line)'
+                : 'Configure API key in Settings'
+          }
           promptHistory={promptHistory}
         />
       </div>

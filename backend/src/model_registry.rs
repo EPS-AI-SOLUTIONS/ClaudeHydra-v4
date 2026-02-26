@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use axum::extract::{Path, State};
+use axum::http::header;
+use axum::response::IntoResponse;
 use axum::Json;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -190,7 +192,7 @@ pub async fn refresh_cache(state: &AppState) -> HashMap<String, Vec<ModelInfo>> 
 
     // Anthropic (primary for ClaudeHydra)
     if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY") {
-        match fetch_anthropic_models(&state.client, key).await {
+        match fetch_anthropic_models(&state.http_client, key).await {
             Ok(models) => {
                 tracing::info!("model_registry: fetched {} Anthropic models", models.len());
                 all_models.insert("anthropic".to_string(), models);
@@ -201,7 +203,7 @@ pub async fn refresh_cache(state: &AppState) -> HashMap<String, Vec<ModelInfo>> 
 
     // Google (optional)
     if let Some(key) = rt.api_keys.get("GOOGLE_API_KEY") {
-        match fetch_google_models(&state.client, key).await {
+        match fetch_google_models(&state.http_client, key).await {
             Ok(models) => {
                 tracing::info!("model_registry: fetched {} Google models", models.len());
                 all_models.insert("google".to_string(), models);
@@ -410,7 +412,7 @@ pub async fn startup_sync(state: &AppState) {
 #[utoipa::path(get, path = "/api/models", tag = "models",
     responses((status = 200, description = "Cached models, resolved selections, and pins", body = Value))
 )]
-pub async fn list_models(State(state): State<AppState>) -> Json<Value> {
+pub async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
     let resolved = resolve_models(&state).await;
     let pins = get_pins_map(&state).await;
     let cache = state.model_cache.read().await;
@@ -419,7 +421,7 @@ pub async fn list_models(State(state): State<AppState>) -> Json<Value> {
     let stale = cache.is_stale();
     let fetched_ago = cache.fetched_at.map(|t| t.elapsed().as_secs());
 
-    Json(json!({
+    let body = Json(json!({
         "total_models": total,
         "cache_stale": stale,
         "cache_age_seconds": fetched_ago,
@@ -433,7 +435,10 @@ pub async fn list_models(State(state): State<AppState>) -> Json<Value> {
             "anthropic": cache.models.get("anthropic").cloned().unwrap_or_default(),
             "google": cache.models.get("google").cloned().unwrap_or_default(),
         }
-    }))
+    }));
+
+    // #6 — Cache static model list for 60 seconds
+    ([(header::CACHE_CONTROL, "public, max-age=60")], body)
 }
 
 /// POST /api/models/refresh — Force refresh of model cache
@@ -487,6 +492,14 @@ pub async fn pin_model(
     match result {
         Ok(_) => {
             tracing::info!("model_registry: pinned use_case={} → model={}", body.use_case, body.model_id);
+            // #40 Audit log
+            crate::audit::log_audit(
+                &state.db,
+                "pin_model",
+                json!({ "use_case": body.use_case, "model_id": body.model_id }),
+                None,
+            )
+            .await;
             Json(json!({ "pinned": true, "use_case": body.use_case, "model_id": body.model_id }))
         }
         Err(e) => Json(json!({ "error": format!("Failed to pin: {}", e) })),

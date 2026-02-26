@@ -7,6 +7,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { type ChatSession, useViewStore } from '@/stores/viewStore';
 import {
   useAddMessageMutation,
@@ -70,19 +71,32 @@ export function useSessionSync() {
 
   // ── Synced CRUD operations ──────────────────────────────────────────
 
+  /** #16 - Optimistic UI: immediately show temp session, replace on API success, remove on failure */
   const createSessionWithSync = useCallback(
     (title?: string) => {
       const sessionTitle = title ?? `Chat ${chatSessions.length + 1}`;
+      // Create optimistic temp session in store immediately
+      const tempId = `_pending_${crypto.randomUUID()}`;
+      createSessionWithId(tempId, sessionTitle);
+      // Mark as pending in store
+      useViewStore.getState().markSessionPending(tempId, true);
+
       createMutation.mutate(
         { title: sessionTitle },
         {
           onSuccess: (created) => {
-            createSessionWithId(created.id, created.title);
+            // Replace temp session with real one from API
+            useViewStore.getState().replaceSession(tempId, created.id, created.title);
+          },
+          onError: () => {
+            // Remove temp session and notify user
+            deleteSessionLocal(tempId);
+            toast.error('Failed to create session');
           },
         },
       );
     },
-    [chatSessions.length, createMutation, createSessionWithId],
+    [chatSessions.length, createMutation, createSessionWithId, deleteSessionLocal],
   );
 
   const deleteSessionWithSync = useCallback(

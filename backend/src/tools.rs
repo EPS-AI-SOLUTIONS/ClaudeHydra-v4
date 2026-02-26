@@ -17,6 +17,20 @@ const BLOCKED_WRITE_EXTENSIONS: &[&str] = &[
     "env", "key", "pem", "exe", "dll", "so", "dylib", "bat", "cmd", "ps1",
 ];
 
+/// Backup / temporary extensions blocked for read and write (#6 path traversal hardening).
+const BLOCKED_BACKUP_EXTENSIONS: &[&str] = &["bak", "old", "orig", "swp"];
+
+/// System paths that must never be written to (prefix match on canonical path).
+#[cfg(windows)]
+const BLOCKED_WRITE_PREFIXES: &[&str] = &[
+    "C:\\Windows",
+    "C:\\Program Files",
+    "C:\\Program Files (x86)",
+    "C:\\ProgramData",
+];
+#[cfg(not(windows))]
+const BLOCKED_WRITE_PREFIXES: &[&str] = &["/etc", "/usr", "/bin", "/sbin", "/var", "/boot", "/proc", "/sys"];
+
 // ── ToolExecutor ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
@@ -168,6 +182,46 @@ impl ToolExecutor {
     // ── Path validation ─────────────────────────────────────────────────
 
     fn validate_path(&self, raw: &str) -> Result<PathBuf, String> {
+        // ── #6 Path traversal hardening ─────────────────────────────────
+        // Block null bytes (can truncate paths in C-backed syscalls)
+        if raw.contains('\0') {
+            return Err("Access denied: path contains null byte".to_string());
+        }
+
+        // Block Windows alternate data streams (filename:stream)
+        if raw.contains(':') && !raw.starts_with("\\\\?\\") {
+            // Allow drive letter like C:\... but block anything with a second colon
+            let after_drive = if raw.len() >= 2 && raw.as_bytes()[1] == b':' {
+                &raw[2..]
+            } else {
+                raw
+            };
+            if after_drive.contains(':') {
+                return Err("Access denied: NTFS alternate data streams are not allowed".to_string());
+            }
+        }
+
+        // Block UNC paths (\\server\share)
+        if raw.starts_with("\\\\") || raw.starts_with("//") {
+            return Err("Access denied: UNC network paths are not allowed".to_string());
+        }
+
+        // Block paths ending with ~ (vim swap indicator)
+        if raw.ends_with('~') {
+            return Err("Access denied: temporary/backup paths (ending with ~) are not allowed".to_string());
+        }
+
+        // Block backup extensions
+        if let Some(ext) = Path::new(raw).extension().and_then(|e| e.to_str()) {
+            let lower = ext.to_lowercase();
+            if BLOCKED_BACKUP_EXTENSIONS.contains(&lower.as_str()) {
+                return Err(format!(
+                    "Access denied: backup extension '.{}' is not allowed",
+                    lower
+                ));
+            }
+        }
+
         let path = PathBuf::from(raw);
 
         // Resolve to absolute — if relative, resolve against first allowed dir
@@ -231,6 +285,41 @@ impl ToolExecutor {
             && (name == ".env" || name.starts_with(".env.")) {
                 return true;
             }
+
+        // #5 Extended blocking: system paths
+        let path_str = path.to_string_lossy();
+        for prefix in BLOCKED_WRITE_PREFIXES {
+            if path_str.starts_with(prefix) {
+                return true;
+            }
+        }
+
+        // Block writing to .git directories
+        for component in path.components() {
+            if let std::path::Component::Normal(c) = component
+                && c.to_str() == Some(".git") {
+                    return true;
+                }
+        }
+
+        // Block config/credential filenames regardless of path
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            let lower = name.to_lowercase();
+            if lower == ".gitconfig"
+                || lower == ".npmrc"
+                || lower == ".netrc"
+                || lower == "credentials"
+                || lower == "credentials.json"
+                || lower == "id_rsa"
+                || lower == "id_ed25519"
+                || lower == "authorized_keys"
+                || lower == "known_hosts"
+                || lower == ".ssh"
+            {
+                return true;
+            }
+        }
+
         false
     }
 
