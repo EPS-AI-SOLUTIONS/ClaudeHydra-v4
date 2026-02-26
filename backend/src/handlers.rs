@@ -1481,14 +1481,19 @@ pub async fn generate_session_title(
     }
 
     let json_resp: Value = resp.json().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
-    let raw_title = json_resp["content"][0]["text"]
-        .as_str()
-        .unwrap_or("")
-        .trim()
-        .trim_matches('"')
-        .trim();
+    let raw_title = json_resp
+        .get("content")
+        .and_then(|c| c.get(0))
+        .and_then(|c0| c0.get("text"))
+        .and_then(|t| t.as_str())
+        .unwrap_or("");
+    let raw_title = raw_title.trim().trim_matches('"').trim();
 
     if raw_title.is_empty() {
+        tracing::warn!(
+            "generate_session_title: Anthropic response missing text, response keys: {:?}",
+            json_resp.as_object().map(|o| o.keys().collect::<Vec<_>>())
+        );
         return Err(StatusCode::BAD_GATEWAY);
     }
 
