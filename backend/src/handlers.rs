@@ -206,7 +206,7 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
         ],
     };
 
-    Json(serde_json::to_value(resp).unwrap())
+    Json(serde_json::to_value(resp).unwrap_or_else(|_| json!({"error": "serialization failed"})))
 }
 
 /// GET /api/health/ready — lightweight readiness probe (no locks, no DB).
@@ -252,7 +252,7 @@ pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
         memory_total_mb: snap.memory_total_mb,
         platform: snap.platform.clone(),
     };
-    Json(serde_json::to_value(stats).unwrap())
+    Json(serde_json::to_value(stats).unwrap_or_else(|_| json!({"error": "serialization failed"})))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -263,7 +263,7 @@ pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
     responses((status = 200, description = "List of configured agents", body = Vec<WitcherAgent>))
 )]
 pub async fn list_agents(State(state): State<AppState>) -> Json<Value> {
-    Json(serde_json::to_value(&state.agents).unwrap())
+    Json(serde_json::to_value(&state.agents).unwrap_or_else(|_| json!({"error": "serialization failed"})))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -301,7 +301,7 @@ pub async fn claude_models(State(state): State<AppState>) -> Json<Value> {
         },
     ];
 
-    Json(serde_json::to_value(models).unwrap())
+    Json(serde_json::to_value(models).unwrap_or_else(|_| json!({"error": "serialization failed"})))
 }
 
 /// POST /api/claude/chat — non-streaming Claude request
@@ -405,7 +405,9 @@ pub async fn claude_chat(
         usage,
     };
 
-    Ok(Json(serde_json::to_value(chat_resp).unwrap()))
+    Ok(Json(serde_json::to_value(chat_resp).map_err(|_| {
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "serialization failed"})))
+    })?))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -572,7 +574,7 @@ pub async fn claude_chat_stream(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(body)
-        .unwrap())
+        .expect("Response builder with valid status and headers"))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -955,7 +957,7 @@ async fn claude_chat_stream_with_tools(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(body)
-        .unwrap())
+        .expect("Response builder with valid status and headers"))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -986,7 +988,7 @@ pub async fn get_settings(
         welcome_message: row.welcome_message,
     };
 
-    Ok(Json(serde_json::to_value(settings).unwrap()))
+    Ok(Json(serde_json::to_value(settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
 #[utoipa::path(post, path = "/api/settings", tag = "settings",
@@ -1013,7 +1015,7 @@ pub async fn update_settings(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Json(serde_json::to_value(&new_settings).unwrap()))
+    Ok(Json(serde_json::to_value(&new_settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
 #[utoipa::path(post, path = "/api/settings/api-key", tag = "auth",
@@ -1084,7 +1086,7 @@ pub async fn list_sessions(
         })
         .collect();
 
-    Ok(Json(serde_json::to_value(summaries).unwrap()))
+    Ok(Json(serde_json::to_value(summaries).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
 #[utoipa::path(post, path = "/api/sessions", tag = "sessions",
@@ -1121,7 +1123,7 @@ pub async fn create_session(
 
     Ok((
         StatusCode::CREATED,
-        Json(serde_json::to_value(session).unwrap()),
+        Json(serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?),
     ))
 }
 
@@ -1232,7 +1234,7 @@ pub async fn get_session(
         messages,
     };
 
-    Ok(Json(serde_json::to_value(session).unwrap()))
+    Ok(Json(serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
 #[utoipa::path(patch, path = "/api/sessions/{id}", tag = "sessions",
@@ -1276,7 +1278,7 @@ pub async fn update_session(
         message_count: 0,
     };
 
-    Ok(Json(serde_json::to_value(session).unwrap()))
+    Ok(Json(serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
 }
 
 #[utoipa::path(delete, path = "/api/sessions/{id}", tag = "sessions",
@@ -1401,6 +1403,109 @@ pub async fn add_session_message(
 
     Ok((
         StatusCode::CREATED,
-        Json(serde_json::to_value(entry).unwrap()),
+        Json(serde_json::to_value(entry).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?),
     ))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AI title generation — Jaskier Shared Pattern
+// ═══════════════════════════════════════════════════════════════════════
+
+/// POST /api/sessions/:id/generate-title
+///
+/// Reads the first user message from the session and asks Claude Haiku
+/// to produce a concise 3-7 word title. Updates the DB and returns the title.
+#[utoipa::path(post, path = "/api/sessions/{id}/generate-title", tag = "sessions",
+    params(("id" = String, Path, description = "Session UUID")),
+    responses(
+        (status = 200, description = "AI-generated title", body = Value),
+        (status = 404, description = "Session not found or no user messages"),
+        (status = 503, description = "No API credentials configured")
+    )
+)]
+pub async fn generate_session_title(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Fetch first user message
+    let first_msg = sqlx::query_scalar::<_, String>(
+        "SELECT content FROM ch_messages \
+         WHERE session_id = $1 AND role = 'user' \
+         ORDER BY created_at ASC LIMIT 1",
+    )
+    .bind(session_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("generate_session_title: DB error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .ok_or(StatusCode::NOT_FOUND)?;
+
+    // Truncate message to ~500 chars for the prompt (safe UTF-8 boundary)
+    let snippet: &str = if first_msg.len() > 500 {
+        let end = first_msg
+            .char_indices()
+            .take_while(|(i, _)| *i < 500)
+            .last()
+            .map(|(i, c)| i + c.len_utf8())
+            .unwrap_or(500.min(first_msg.len()));
+        &first_msg[..end]
+    } else {
+        &first_msg
+    };
+
+    let body = json!({
+        "model": "claude-haiku-4-5-20251001",
+        "max_tokens": 64,
+        "messages": [{
+            "role": "user",
+            "content": format!(
+                "Generate a concise 3-7 word title for a chat that starts with this message. \
+                 Return ONLY the title text, no quotes, no explanation.\n\nMessage: {}",
+                snippet
+            )
+        }]
+    });
+
+    let resp = send_to_anthropic(&state, &body, 15).await.map_err(|e| {
+        tracing::error!("generate_session_title: API error: {:?}", e.1);
+        StatusCode::BAD_GATEWAY
+    })?;
+
+    if !resp.status().is_success() {
+        tracing::error!("generate_session_title: API returned {}", resp.status());
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+
+    let json_resp: Value = resp.json().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let raw_title = json_resp["content"][0]["text"]
+        .as_str()
+        .unwrap_or("")
+        .trim()
+        .trim_matches('"')
+        .trim();
+
+    if raw_title.is_empty() {
+        return Err(StatusCode::BAD_GATEWAY);
+    }
+
+    // Sanitize: cap at MAX_TITLE_LENGTH
+    let title: String = raw_title.chars().take(MAX_TITLE_LENGTH).collect();
+
+    // Update session title in DB
+    sqlx::query("UPDATE ch_sessions SET title = $1, updated_at = NOW() WHERE id = $2")
+        .bind(&title)
+        .bind(session_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("generate_session_title: DB update failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tracing::info!("generate_session_title: session {} → {:?}", session_id, title);
+    Ok(Json(json!({ "title": title })))
 }

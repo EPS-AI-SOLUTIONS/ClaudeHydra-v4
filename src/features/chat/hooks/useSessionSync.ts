@@ -12,6 +12,7 @@ import {
   useAddMessageMutation,
   useCreateSessionMutation,
   useDeleteSessionMutation,
+  useGenerateTitleMutation,
   useSessionsQuery,
   useUpdateSessionMutation,
 } from './useSessions';
@@ -36,6 +37,7 @@ export function useSessionSync() {
   const deleteMutation = useDeleteSessionMutation();
   const updateMutation = useUpdateSessionMutation();
   const addMessageMutation = useAddMessageMutation();
+  const generateTitleMutation = useGenerateTitleMutation();
 
   const hydratedRef = useRef(false);
 
@@ -99,6 +101,21 @@ export function useSessionSync() {
     [updateSessionTitleLocal, updateMutation],
   );
 
+  /** Ask AI to generate a session title from the first user message. */
+  const generateTitleWithSync = useCallback(
+    async (id: string) => {
+      try {
+        const result = await generateTitleMutation.mutateAsync(id);
+        if (result.title) {
+          updateSessionTitleLocal(id, result.title);
+        }
+      } catch {
+        // Best-effort: substring title already set as placeholder
+      }
+    },
+    [generateTitleMutation, updateSessionTitleLocal],
+  );
+
   const addMessageWithSync = useCallback(
     (sessionId: string, role: string, content: string, model?: string) => {
       addMessageMutation.mutate({ sessionId, role, content, ...(model !== undefined && { model }) });
@@ -110,6 +127,7 @@ export function useSessionSync() {
     createSessionWithSync,
     deleteSessionWithSync,
     renameSessionWithSync,
+    generateTitleWithSync,
     addMessageWithSync,
     activeSessionId,
     chatSessions,

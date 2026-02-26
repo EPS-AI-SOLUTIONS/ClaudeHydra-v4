@@ -50,6 +50,7 @@ use state::AppState;
         handlers::update_session,
         handlers::delete_session,
         handlers::add_session_message,
+        handlers::generate_session_title,
         // Model registry
         model_registry::list_models,
         model_registry::refresh_models,
@@ -149,6 +150,10 @@ pub fn create_router(state: AppState) -> Router {
         .route(
             "/api/sessions/{id}/messages",
             post(handlers::add_session_message),
+        )
+        .route(
+            "/api/sessions/{id}/generate-title",
+            post(handlers::generate_session_title),
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),

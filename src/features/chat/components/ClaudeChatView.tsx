@@ -209,7 +209,7 @@ export function ClaudeChatView() {
   const [toolsEnabled, setToolsEnabled] = useState(true);
 
   // DB sync
-  const { addMessageWithSync, renameSessionWithSync } = useSessionSync();
+  const { addMessageWithSync, renameSessionWithSync, generateTitleWithSync } = useSessionSync();
   const activeSessionId = useViewStore((s) => s.activeSessionId);
 
   // Settings (for welcome message)
@@ -496,6 +496,10 @@ export function ClaudeChatView() {
               addMessageWithSync(sessionId, 'user', content, selectedModel);
               if (responseBuffer) {
                 addMessageWithSync(sessionId, 'assistant', responseBuffer, event.model ?? selectedModel);
+              }
+              // Generate AI title after first exchange
+              if (previousMessages.length === 0) {
+                void generateTitleWithSync(sessionId);
               }
             }
           }
