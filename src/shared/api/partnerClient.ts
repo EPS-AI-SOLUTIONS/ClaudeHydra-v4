@@ -6,9 +6,7 @@
 
 import { env } from '../config/env';
 
-const PARTNER_BASE = import.meta.env.PROD
-  ? 'https://geminihydra-v15-backend.fly.dev/api'
-  : '/partner-api';
+const PARTNER_BASE = import.meta.env.PROD ? 'https://geminihydra-v15-backend.fly.dev/api' : '/partner-api';
 
 const PARTNER_AUTH_SECRET = env.VITE_PARTNER_AUTH_SECRET;
 
@@ -43,7 +41,9 @@ export async function fetchPartnerSessions(): Promise<PartnerSessionSummary[]> {
     ...(PARTNER_AUTH_SECRET ? { headers: { Authorization: `Bearer ${PARTNER_AUTH_SECRET}` } } : {}),
   });
   if (!res.ok) throw new Error(`Partner API error: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  // GH returns plain array, but handle wrapped format defensively
+  return Array.isArray(data) ? data : (data.sessions ?? []);
 }
 
 export async function fetchPartnerSession(id: string): Promise<PartnerSession> {
