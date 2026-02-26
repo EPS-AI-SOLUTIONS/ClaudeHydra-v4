@@ -23,7 +23,11 @@ set DATABASE_URL=postgres://claude:claude_local@localhost:5433/claudehydra
 start /B "" "%~dp0backend\target\release\claudehydra-backend.exe"
 timeout /t 2 /nobreak >nul
 
-:: ── 3. Build + Preview ──────────────────────────────────────────────
+:: ── 3. Kill old preview (port 4199) ─────────────────────────────────
+echo [RESTART] Stopping old preview on port 4199...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":4199 " ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
+
+:: ── 4. Build + Preview ──────────────────────────────────────────────
 echo [BUILD] Building frontend...
 call pnpm build
 echo [PREVIEW] Starting preview on port 5199...
