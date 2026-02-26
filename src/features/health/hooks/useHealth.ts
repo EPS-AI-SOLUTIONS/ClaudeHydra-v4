@@ -7,22 +7,25 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/shared/api/client';
+import { apiGetPolling } from '@/shared/api/client';
 import type { Health, SystemStats } from '@/shared/api/schemas';
 
 export function useHealthQuery() {
   return useQuery<Health>({
     queryKey: ['health'],
-    queryFn: () => apiGet<Health>('/api/health'),
+    queryFn: () => apiGetPolling<Health>('/api/health'),
     refetchInterval: 30_000,
+    retry: false, // refetchInterval handles recovery naturally — no retry stacking
   });
 }
 
-export function useSystemStatsQuery() {
+export function useSystemStatsQuery(enabled = true) {
   return useQuery<SystemStats>({
     queryKey: ['system', 'stats'],
-    queryFn: () => apiGet<SystemStats>('/api/system/stats'),
+    queryFn: () => apiGetPolling<SystemStats>('/api/system/stats'),
     refetchInterval: 10_000,
+    retry: false, // refetchInterval handles recovery
+    enabled, // consumers pass healthStatus !== 'offline'
   });
 }
 

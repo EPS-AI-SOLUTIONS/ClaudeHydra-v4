@@ -62,7 +62,7 @@ function AppShellInner({ children }: AppShellProps) {
 
   // Health & system stats
   const healthStatus = useHealthStatus();
-  const { data: stats } = useSystemStatsQuery();
+  const { data: stats } = useSystemStatsQuery(healthStatus !== 'offline');
   const { data: settings } = useSettingsQuery();
 
   // Map health status to ConnectionHealth

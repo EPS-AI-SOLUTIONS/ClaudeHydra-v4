@@ -121,7 +121,7 @@ async function fetchWithRetry(
 // Internal fetch helper
 // -------------------------------------------------------------------
 
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function apiFetch<T>(path: string, options: RequestInit = {}, retries?: number): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
   const response = await fetchWithRetry(url, {
@@ -131,7 +131,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       ...(AUTH_SECRET ? { Authorization: `Bearer ${AUTH_SECRET}` } : {}),
       ...options.headers,
     },
-  });
+  }, retries);
 
   if (!response.ok) {
     let body: unknown;
@@ -168,6 +168,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
 export async function apiGet<T>(path: string): Promise<T> {
   return apiFetch<T>(path, { method: 'GET' });
+}
+
+/** Polling-safe GET — no fetch-level retries, no console warnings on failure. */
+export async function apiGetPolling<T>(path: string): Promise<T> {
+  return apiFetch<T>(path, { method: 'GET' }, 0);
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
