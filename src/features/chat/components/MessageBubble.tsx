@@ -9,6 +9,7 @@
 import { Bot, Cpu, FileText, Image as ImageIcon, Loader2, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { isValidElement, memo, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
@@ -95,6 +96,7 @@ function InlineCode({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 
 function LazyImage({ src, alt }: { src?: string; alt?: string }) {
+  const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
@@ -124,7 +126,7 @@ function LazyImage({ src, alt }: { src?: string; alt?: string }) {
       {error && (
         <span className="flex items-center gap-2 text-sm text-[var(--matrix-text-secondary)] italic">
           <ImageIcon size={16} />
-          Failed to load image
+          {t('chat.imageLoadFailed')}
         </span>
       )}
     </span>
@@ -203,6 +205,7 @@ const markdownComponents = {
 // ---------------------------------------------------------------------------
 
 export const MessageBubble = memo(function MessageBubble({ message, className }: MessageBubbleProps) {
+  const { t } = useTranslation();
   const isUser = message.role === 'user';
 
   const formattedTime = useMemo(
@@ -246,7 +249,7 @@ export const MessageBubble = memo(function MessageBubble({ message, className }:
               isUser ? 'text-[var(--matrix-accent)]' : 'text-[var(--matrix-text-secondary)]',
             )}
           >
-            {isUser ? 'You' : 'Assistant'}
+            {isUser ? t('chat.userLabel') : t('chat.assistantLabel')}
           </span>
 
           {/* Model badge (assistant only) */}

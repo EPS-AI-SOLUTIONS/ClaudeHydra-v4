@@ -29,7 +29,18 @@
     "menu": "Menu",
     "loadingView": "Loading view",
     "loadError": "Failed to load data",
-    "retry": "Retry"
+    "retry": "Retry",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "copyCode": "Copy code",
+    "loading": "Loading...",
+    "somethingWentWrong": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred. You can try again or refresh the page.",
+    "tryAgain": "Try Again",
+    "featureError": "{{feature}} encountered an error",
+    "sectionLoadError": "Something went wrong loading this section. Try refreshing.",
+    "offlineMessage": "You are offline. Some features may be unavailable.",
+    "closeModal": "Close modal"
   },
   "chat": {
     "title": "Claude Chat",
@@ -43,7 +54,16 @@
     "inputArea": "Chat input area",
     "dropFilesHere": "Drop files here",
     "attachFile": "Attach file",
-    "sendMessage": "Send message"
+    "sendMessage": "Send message",
+    "imageLoadFailed": "Failed to load image",
+    "userLabel": "You",
+    "assistantLabel": "Assistant"
+  },
+  "tools": {
+    "input": "Input",
+    "result": "Result",
+    "error": "Error",
+    "executing": "Executing\u2026"
   },
   "agents": {
     "noMatch": "No agents match the selected tier filter."

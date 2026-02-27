@@ -6,6 +6,7 @@
 import { AlertCircle, Check, ChevronDown, FileSearch, FolderOpen, Loader2, Pencil, Wrench } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CodeBlock } from '@/components/molecules/CodeBlock';
 import { cn } from '@/shared/utils/cn';
 
@@ -69,6 +70,7 @@ function formatInput(input: Record<string, unknown>): string {
 // ---------------------------------------------------------------------------
 
 export function ToolCallBlock({ interaction }: { interaction: ToolInteraction }) {
+  const { t } = useTranslation();
   const isActive = interaction.status === 'pending' || interaction.status === 'running';
   const hasError = interaction.status === 'error' || interaction.isError;
 
@@ -122,7 +124,7 @@ export function ToolCallBlock({ interaction }: { interaction: ToolInteraction })
               {/* Input params */}
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-[var(--matrix-text-secondary)] font-mono">
-                  Input
+                  {t('tools.input')}
                 </span>
                 <pre className="mt-1 text-xs text-[var(--matrix-text-primary)] font-mono bg-[var(--matrix-bg-primary)]/50 rounded p-2 overflow-x-auto max-h-32">
                   {JSON.stringify(interaction.toolInput, null, 2)}
@@ -138,7 +140,7 @@ export function ToolCallBlock({ interaction }: { interaction: ToolInteraction })
                       hasError ? 'text-[var(--matrix-error,#ef4444)]' : 'text-[var(--matrix-text-secondary)]',
                     )}
                   >
-                    {hasError ? 'Error' : 'Result'}
+                    {hasError ? t('tools.error') : t('tools.result')}
                   </span>
                   {resultLooksLikeCode ? (
                     <CodeBlock code={interaction.result} language="text" maxHeight="16rem" className="mt-1" />
@@ -161,7 +163,7 @@ export function ToolCallBlock({ interaction }: { interaction: ToolInteraction })
               {isActive && interaction.result === undefined && (
                 <div className="flex items-center gap-2 py-2 text-xs text-[var(--matrix-text-secondary)]">
                   <Loader2 size={12} className="animate-spin" />
-                  <span>Executing…</span>
+                  <span>{t('tools.executing')}</span>
                 </div>
               )}
             </div>

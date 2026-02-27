@@ -14,6 +14,7 @@
 import { Check, Clipboard, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '@/shared/utils/clipboard';
 import { cn } from '@/shared/utils/cn';
 
@@ -83,7 +84,14 @@ const LANGUAGE_NAMES: Record<string, string> = {
 // Component
 // ---------------------------------------------------------------------------
 
-export const CodeBlock = memo(function CodeBlock({ code, language, showLineNumbers = false, maxHeight = '24rem', className }: CodeBlockProps) {
+export const CodeBlock = memo(function CodeBlock({
+  code,
+  language,
+  showLineNumbers = false,
+  maxHeight = '24rem',
+  className,
+}: CodeBlockProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const preRef = useRef<HTMLPreElement>(null);
 
@@ -125,7 +133,7 @@ export const CodeBlock = memo(function CodeBlock({ code, language, showLineNumbe
             'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono transition-colors',
             'text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)] hover:bg-[var(--matrix-accent)]/10',
           )}
-          aria-label={copied ? 'Copied' : 'Copy code'}
+          aria-label={copied ? t('common.copied') : t('common.copyCode')}
         >
           <AnimatePresence mode="wait" initial={false}>
             {copied ? (
@@ -138,7 +146,7 @@ export const CodeBlock = memo(function CodeBlock({ code, language, showLineNumbe
                 className="flex items-center gap-1 text-[var(--matrix-success)]"
               >
                 <Check size={14} />
-                Copied!
+                {t('common.copied')}
               </motion.span>
             ) : (
               <motion.span
@@ -150,7 +158,7 @@ export const CodeBlock = memo(function CodeBlock({ code, language, showLineNumbe
                 className="flex items-center gap-1"
               >
                 <Clipboard size={14} />
-                Copy
+                {t('common.copy')}
               </motion.span>
             )}
           </AnimatePresence>

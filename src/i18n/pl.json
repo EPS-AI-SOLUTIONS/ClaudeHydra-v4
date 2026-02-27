@@ -29,7 +29,18 @@
     "menu": "Menu",
     "loadingView": "Ładowanie widoku",
     "loadError": "Nie udało się załadować danych",
-    "retry": "Ponów"
+    "retry": "Ponów",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano!",
+    "copyCode": "Kopiuj kod",
+    "loading": "Ładowanie...",
+    "somethingWentWrong": "Coś poszło nie tak",
+    "unexpectedError": "Wystąpił nieoczekiwany błąd. Możesz spróbować ponownie lub odświeżyć stronę.",
+    "tryAgain": "Spróbuj ponownie",
+    "featureError": "{{feature}} napotkał błąd",
+    "sectionLoadError": "Coś poszło nie tak z ładowaniem tej sekcji. Spróbuj odświeżyć.",
+    "offlineMessage": "Jesteś offline. Niektóre funkcje mogą być niedostępne.",
+    "closeModal": "Zamknij okno"
   },
   "chat": {
     "title": "Czat Claude",
@@ -43,7 +54,16 @@
     "inputArea": "Pole czatu",
     "dropFilesHere": "Upuść pliki tutaj",
     "attachFile": "Dołącz plik",
-    "sendMessage": "Wyślij wiadomość"
+    "sendMessage": "Wyślij wiadomość",
+    "imageLoadFailed": "Nie udało się załadować obrazu",
+    "userLabel": "Ty",
+    "assistantLabel": "Asystent"
+  },
+  "tools": {
+    "input": "Wejście",
+    "result": "Wynik",
+    "error": "Błąd",
+    "executing": "Wykonywanie\u2026"
   },
   "agents": {
     "noMatch": "Brak agentów pasujących do wybranego filtra."

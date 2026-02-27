@@ -7,9 +7,11 @@
 
 import { WifiOff } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 
 export function OfflineBanner() {
+  const { t } = useTranslation();
   const isOnline = useOnlineStatus();
 
   return (
@@ -25,7 +27,7 @@ export function OfflineBanner() {
           className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600/95 text-white text-sm font-mono backdrop-blur-sm"
         >
           <WifiOff size={16} />
-          <span>You are offline. Some features may be unavailable.</span>
+          <span>{t('common.offlineMessage')}</span>
         </motion.div>
       )}
     </AnimatePresence>
