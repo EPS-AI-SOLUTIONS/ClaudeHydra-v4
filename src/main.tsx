@@ -31,17 +31,12 @@ const SettingsView = lazy(() => import('@/features/settings/components/SettingsV
 
 function ViewRouter() {
   const currentView = useViewStore((s) => s.currentView);
+  const isChatView = currentView === 'chat';
 
-  function renderView() {
+  function renderNonChatView() {
     switch (currentView) {
       case 'home':
         return <HomePage />;
-      case 'chat':
-        return (
-          <ErrorBoundary fallback={<FeatureErrorFallback feature="Chat" onRetry={() => window.location.reload()} />}>
-            <ClaudeChatView />
-          </ErrorBoundary>
-        );
       case 'agents':
         return (
           <ErrorBoundary fallback={<FeatureErrorFallback feature="Agents" onRetry={() => window.location.reload()} />}>
@@ -61,23 +56,35 @@ function ViewRouter() {
 
   return (
     <div className="h-full overflow-hidden relative">
+      {/* Chat always mounted — preserves WebSocket connection across view switches */}
+      <div className={isChatView ? 'h-full w-full' : 'hidden'}>
+        <ErrorBoundary fallback={<FeatureErrorFallback feature="Chat" onRetry={() => window.location.reload()} />}>
+          <Suspense fallback={<ViewSkeleton />}>
+            <ClaudeChatView />
+          </Suspense>
+        </ErrorBoundary>
+      </div>
+
+      {/* Non-chat views with enter/exit animations */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={currentView}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className="h-full w-full"
-        >
-          <QueryErrorResetBoundary>
-            {({ reset }) => (
-              <ErrorBoundary onReset={reset}>
-                <Suspense fallback={<ViewSkeleton />}>{renderView()}</Suspense>
-              </ErrorBoundary>
-            )}
-          </QueryErrorResetBoundary>
-        </motion.div>
+        {!isChatView && (
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="h-full w-full"
+          >
+            <QueryErrorResetBoundary>
+              {({ reset }) => (
+                <ErrorBoundary onReset={reset}>
+                  <Suspense fallback={<ViewSkeleton />}>{renderNonChatView()}</Suspense>
+                </ErrorBoundary>
+              )}
+            </QueryErrorResetBoundary>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

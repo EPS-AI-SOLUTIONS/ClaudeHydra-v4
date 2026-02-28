@@ -9,6 +9,7 @@ import { Card } from '@/components/atoms';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { OAuthSection } from './OAuthSection';
+import { WorkingFolderSection } from './WorkingFolderSection';
 
 export const SettingsView = memo(() => {
   const { t } = useTranslation();
@@ -34,6 +35,13 @@ export const SettingsView = memo(() => {
         <Card>
           <div className="p-6">
             <OAuthSection />
+          </div>
+        </Card>
+
+        {/* Working Folder Section */}
+        <Card>
+          <div className="p-6">
+            <WorkingFolderSection />
           </div>
         </Card>
       </motion.div>

@@ -31,6 +31,8 @@ base64 = "0.22"
 rand = "0.8"
 url = "2"
 http = "1"
+pdf-extract = "0.10"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 aes-gcm = "0.10"
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

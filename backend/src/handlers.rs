@@ -824,10 +824,11 @@ async fn claude_chat_stream_with_tools(
         .map(|m| json!({ "role": m.role, "content": m.content }))
         .collect();
 
-    // Build tool definitions
+    // Build tool definitions (includes MCP tools from connected servers)
     let tool_defs: Vec<Value> = state
         .tool_executor
-        .tool_definitions()
+        .tool_definitions_with_mcp(&state)
+        .await
         .into_iter()
         .map(|td| {
             json!({
@@ -842,6 +843,12 @@ async fn claude_chat_stream_with_tools(
     let (tx, rx) = tokio::sync::mpsc::channel::<String>(256);
 
     let state_clone = state.clone();
+
+    // Read working_directory from settings for tool path resolution
+    let wd: String = sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or_default();
 
     tokio::spawn(async move {
         let mut conversation: Vec<Value> = initial_messages;
@@ -1112,9 +1119,10 @@ async fn claude_chat_stream_with_tools(
                     let tool_input = tu.get("input").unwrap_or(&empty_input);
 
                     let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
+                    let executor = state_clone.tool_executor.with_working_directory(&wd);
                     let (result, is_error) = match tokio::time::timeout(
                         timeout,
-                        state_clone.tool_executor.execute(tool_name, tool_input),
+                        executor.execute_with_state(tool_name, tool_input, &state_clone),
                     )
                     .await
                     {
@@ -1236,7 +1244,7 @@ pub async fn get_settings(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
     let row = sqlx::query_as::<_, SettingsRow>(
-        "SELECT theme, language, default_model, auto_start, welcome_message FROM ch_settings WHERE id = 1",
+        "SELECT theme, language, default_model, auto_start, welcome_message, working_directory FROM ch_settings WHERE id = 1",
     )
     .fetch_one(&state.db)
     .await
@@ -1251,6 +1259,7 @@ pub async fn get_settings(
         default_model: row.default_model,
         auto_start: row.auto_start,
         welcome_message: row.welcome_message,
+        working_directory: row.working_directory,
     };
 
     Ok(Json(serde_json::to_value(settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
@@ -1264,15 +1273,21 @@ pub async fn update_settings(
     State(state): State<AppState>,
     Json(new_settings): Json<AppSettings>,
 ) -> Result<Json<Value>, StatusCode> {
+    // Validate working_directory if non-empty
+    if !new_settings.working_directory.is_empty() && !std::path::Path::new(&new_settings.working_directory).is_dir() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     sqlx::query(
         "UPDATE ch_settings SET theme = $1, language = $2, default_model = $3, \
-         auto_start = $4, welcome_message = $5, updated_at = NOW() WHERE id = 1",
+         auto_start = $4, welcome_message = $5, working_directory = $6, updated_at = NOW() WHERE id = 1",
     )
     .bind(&new_settings.theme)
     .bind(&new_settings.language)
     .bind(&new_settings.default_model)
     .bind(new_settings.auto_start)
     .bind(&new_settings.welcome_message)
+    .bind(&new_settings.working_directory)
     .execute(&state.db)
     .await
     .map_err(|e| {

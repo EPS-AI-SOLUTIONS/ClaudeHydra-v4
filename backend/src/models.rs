@@ -11,6 +11,9 @@ pub struct SettingsRow {
     pub default_model: String,
     pub auto_start: bool,
     pub welcome_message: String,
+    /// Working directory for filesystem tools (empty = uses ALLOWED_FILE_DIRS / Desktop fallback)
+    #[sqlx(default)]
+    pub working_directory: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -127,6 +130,9 @@ pub struct AppSettings {
     pub default_model: String,
     pub auto_start: bool,
     pub welcome_message: String,
+    /// Working directory for filesystem tools (empty = uses ALLOWED_FILE_DIRS / Desktop fallback)
+    #[serde(default)]
+    pub working_directory: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

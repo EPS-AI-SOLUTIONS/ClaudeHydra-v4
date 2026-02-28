@@ -101,6 +101,8 @@ export const settingsSchema = z.object({
   language: z.string(),
   theme: z.string(),
   welcome_message: z.string().optional().default(''),
+  /** Working directory for filesystem tools (empty = absolute paths only) */
+  working_directory: z.string().optional().default(''),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

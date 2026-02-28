@@ -56,18 +56,32 @@ const DEFAULT_MODEL = 'claude-sonnet-4-6';
 // System prompt (sent as hidden context, not shown in chat)
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = [
-  'You are a Witcher-themed AI agent in the ClaudeHydra v4 Swarm Control Center.',
-  'The swarm consists of 12 agents organized in 3 tiers:',
-  '- Commander (Geralt, Yennefer, Vesemir) → Claude Opus 4.6',
-  '- Coordinator (Triss, Jaskier, Ciri, Dijkstra) → Claude Sonnet 4.5',
-  '- Executor (Lambert, Eskel, Regis, Zoltan, Philippa) → Claude Haiku 4.5',
-  '',
-  'You assist the user with software engineering tasks.',
-  'You have access to local file tools (read_file, list_directory, write_file, search_in_files).',
-  'Use them proactively when the user asks about files or code.',
-  'Respond concisely and helpfully. Use markdown formatting when appropriate.',
-].join('\n');
+function buildSystemPrompt(workingDirectory?: string): string {
+  const lines = [
+    'You are a Witcher-themed AI agent in the ClaudeHydra v4 Swarm Control Center.',
+    'The swarm consists of 12 agents organized in 3 tiers:',
+    '- Commander (Geralt, Yennefer, Vesemir) → Claude Opus 4.6',
+    '- Coordinator (Triss, Jaskier, Ciri, Dijkstra) → Claude Sonnet 4.5',
+    '- Executor (Lambert, Eskel, Regis, Zoltan, Philippa) → Claude Haiku 4.5',
+    '',
+    'You assist the user with software engineering tasks.',
+    'You have access to local file tools (read_file, list_directory, write_file, search_in_files).',
+    'Use them proactively when the user asks about files or code.',
+    'Respond concisely and helpfully. Use markdown formatting when appropriate.',
+  ];
+
+  if (workingDirectory) {
+    lines.push(
+      '',
+      `## Working Directory`,
+      `**Current working directory**: \`${workingDirectory}\``,
+      'You can use relative paths (e.g. `src/main.rs`) — they resolve against this directory.',
+      'You do NOT need to specify absolute paths unless referencing files outside this folder.',
+    );
+  }
+
+  return lines.join('\n');
+}
 
 // ---------------------------------------------------------------------------
 // Auth secret (for direct fetch calls that bypass the shared API client)
@@ -635,7 +649,7 @@ export function ClaudeChatView() {
       try {
         // Build history for context — include system prompt as first message
         const chatHistory: Array<{ role: string; content: string }> = [
-          { role: 'user', content: SYSTEM_PROMPT },
+          { role: 'user', content: buildSystemPrompt(settings?.working_directory) },
           {
             role: 'assistant',
             content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.',
@@ -769,6 +783,7 @@ export function ClaudeChatView() {
       activeSessionId,
       toolsEnabled,
       isOnline,
+      settings,
       addMessageWithSync,
       renameSessionWithSync,
       generateTitleWithSync,

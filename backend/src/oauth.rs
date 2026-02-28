@@ -79,7 +79,7 @@ fn get_encryption_key() -> Option<[u8; 32]> {
 
 /// Encrypt a plaintext string with AES-256-GCM.
 /// Returns "enc:<base64(nonce || ciphertext)>" or the original string if no key.
-fn encrypt_token(plaintext: &str) -> String {
+pub(crate) fn encrypt_token(plaintext: &str) -> String {
     let Some(key_bytes) = get_encryption_key() else {
         return plaintext.to_string();
     };
@@ -106,7 +106,7 @@ fn encrypt_token(plaintext: &str) -> String {
 }
 
 /// Decrypt a token string. Handles both encrypted ("enc:...") and legacy plaintext.
-fn decrypt_token(stored: &str) -> Option<String> {
+pub(crate) fn decrypt_token(stored: &str) -> Option<String> {
     if !stored.starts_with(ENCRYPTED_PREFIX) {
         // Legacy plaintext — return as-is
         return Some(stored.to_string());

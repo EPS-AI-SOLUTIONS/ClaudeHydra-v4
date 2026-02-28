@@ -9,6 +9,7 @@ use std::time::Instant;
 use sqlx::PgPool;
 use tokio::sync::RwLock;
 
+use crate::mcp::client::McpClientManager;
 use crate::model_registry::ModelCache;
 use crate::models::WitcherAgent;
 use crate::tools::ToolExecutor;
@@ -135,6 +136,10 @@ pub struct AppState {
     pub http_client: reqwest::Client,
     pub tool_executor: Arc<ToolExecutor>,
     pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
+    /// GitHub OAuth state (CSRF protection for GitHub OAuth flow).
+    pub github_oauth_state: Arc<RwLock<Option<String>>>,
+    /// Vercel OAuth state (CSRF protection for Vercel OAuth flow).
+    pub vercel_oauth_state: Arc<RwLock<Option<String>>>,
     /// `true` once startup_sync completes (or times out).
     pub ready: Arc<AtomicBool>,
     /// Cached system stats (CPU, memory) refreshed every 5s by background task.
@@ -143,6 +148,8 @@ pub struct AppState {
     pub auth_secret: Option<String>,
     /// Circuit breaker for upstream Anthropic API — Jaskier Shared Pattern
     pub circuit_breaker: Arc<CircuitBreaker>,
+    /// MCP client manager — connects to external MCP servers
+    pub mcp_client: Arc<McpClientManager>,
 }
 
 // ── Shared: readiness helpers ───────────────────────────────────────────────
@@ -182,24 +189,39 @@ impl AppState {
             api_keys.keys().collect::<Vec<_>>()
         );
 
+        let http_client = reqwest::Client::builder()
+            .pool_max_idle_per_host(10)
+            .timeout(std::time::Duration::from_secs(120))
+            .connect_timeout(std::time::Duration::from_secs(5))
+            .build()
+            .expect("Failed to build HTTP client");
+
+        let tool_executor = Arc::new(ToolExecutor::new(
+            http_client.clone(),
+            api_keys.clone(),
+        ));
+
+        let mcp_client = Arc::new(McpClientManager::new(
+            db.clone(),
+            http_client.clone(),
+        ));
+
         Self {
             db,
             agents,
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys })),
             model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
-            http_client: reqwest::Client::builder()
-                .pool_max_idle_per_host(10)
-                .timeout(std::time::Duration::from_secs(120))
-                .connect_timeout(std::time::Duration::from_secs(5))
-                .build()
-                .expect("Failed to build HTTP client"),
-            tool_executor: Arc::new(ToolExecutor::new()),
+            http_client,
+            tool_executor,
             oauth_pkce: Arc::new(RwLock::new(None)),
+            github_oauth_state: Arc::new(RwLock::new(None)),
+            vercel_oauth_state: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret,
             circuit_breaker: Arc::new(CircuitBreaker::new()),
+            mcp_client,
         }
     }
 
@@ -210,18 +232,25 @@ impl AppState {
     pub fn new_test() -> Self {
         let agents = init_witcher_agents();
 
+        let http_client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .expect("Failed to build HTTP client");
+
+        let db = PgPool::connect_lazy("postgres://test@localhost:19999/test").expect("lazy pool");
+
         Self {
-            db: PgPool::connect_lazy("postgres://test@localhost:19999/test").expect("lazy pool"),
+            mcp_client: Arc::new(McpClientManager::new(db.clone(), http_client.clone())),
+            db,
             agents,
             runtime: Arc::new(RwLock::new(RuntimeState { api_keys: HashMap::new() })),
             model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
-            http_client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(5))
-                .build()
-                .expect("Failed to build HTTP client"),
-            tool_executor: Arc::new(ToolExecutor::new()),
+            http_client: http_client.clone(),
+            tool_executor: Arc::new(ToolExecutor::new(http_client, HashMap::new())),
             oauth_pkce: Arc::new(RwLock::new(None)),
+            github_oauth_state: Arc::new(RwLock::new(None)),
+            vercel_oauth_state: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret: None,

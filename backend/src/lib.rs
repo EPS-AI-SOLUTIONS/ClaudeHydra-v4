@@ -1,9 +1,13 @@
 pub mod audit;
 pub mod auth;
 pub mod handlers;
+pub mod mcp;
 pub mod model_registry;
 pub mod models;
 pub mod oauth;
+pub mod oauth_github;
+pub mod oauth_vercel;
+pub mod service_tokens;
 pub mod state;
 pub mod system_monitor;
 pub mod tools;
@@ -11,7 +15,7 @@ pub mod watchdog;
 
 use axum::extract::{DefaultBodyLimit, State};
 use axum::middleware;
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use utoipa::OpenApi;
@@ -165,11 +169,22 @@ pub fn create_router(state: AppState) -> Router {
     let public = Router::new()
         .route("/api/health", get(handlers::health_check))
         .route("/api/health/ready", get(handlers::readiness))
+        // Anthropic OAuth (PKCE)
         .route("/api/auth/status", get(oauth::auth_status))
         .route("/api/auth/login", post(oauth::auth_login))
         .route("/api/auth/callback", post(oauth::auth_callback))
         .route("/api/auth/logout", post(oauth::auth_logout))
-        .route("/api/auth/mode", get(handlers::auth_mode));
+        .route("/api/auth/mode", get(handlers::auth_mode))
+        // GitHub OAuth (public — must be accessible to complete auth flow)
+        .route("/api/auth/github/status", get(oauth_github::github_auth_status))
+        .route("/api/auth/github/login", post(oauth_github::github_auth_login))
+        .route("/api/auth/github/callback", post(oauth_github::github_auth_callback))
+        .route("/api/auth/github/logout", post(oauth_github::github_auth_logout))
+        // Vercel OAuth (public — must be accessible to complete auth flow)
+        .route("/api/auth/vercel/status", get(oauth_vercel::vercel_auth_status))
+        .route("/api/auth/vercel/login", post(oauth_vercel::vercel_auth_login))
+        .route("/api/auth/vercel/callback", post(oauth_vercel::vercel_auth_callback))
+        .route("/api/auth/vercel/logout", post(oauth_vercel::vercel_auth_logout));
 
     // ── Protected: streaming chat — 20 req/min ──────────────────────
     let chat_stream_routes = Router::new()
@@ -189,6 +204,15 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/system/stats", get(handlers::system_stats))
         // Admin — hot-reload API keys
         .route("/api/admin/rotate-key", post(handlers::rotate_key))
+        // Service tokens (Fly.io PAT, etc.) — protected
+        .route(
+            "/api/tokens",
+            get(service_tokens::list_tokens).post(service_tokens::store_token),
+        )
+        .route(
+            "/api/tokens/{service}",
+            delete(service_tokens::delete_token),
+        )
         .route("/api/agents", get(handlers::list_agents))
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
@@ -222,6 +246,29 @@ pub fn create_router(state: AppState) -> Router {
             "/api/sessions/{id}/generate-title",
             post(handlers::generate_session_title),
         )
+        // ── MCP routes (Phase 9 + 10) ────────────────────────────────
+        .route(
+            "/api/mcp/servers",
+            get(mcp::config::list_servers_handler).post(mcp::config::create_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}",
+            patch(mcp::config::update_server_handler).delete(mcp::config::delete_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}/connect",
+            post(mcp::config::connect_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}/disconnect",
+            post(mcp::config::disconnect_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}/tools",
+            get(mcp::config::list_server_tools_handler),
+        )
+        .route("/api/mcp/tools", get(mcp::config::list_all_tools_handler))
+        .route("/mcp", post(mcp::server::mcp_handler))
         .layer(GovernorLayer::new(rl_default));
 
     // ── Merge all protected routes with auth layer ──────────────────
