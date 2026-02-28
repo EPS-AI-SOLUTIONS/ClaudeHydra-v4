@@ -56,7 +56,9 @@ const DEFAULT_MODEL = 'claude-sonnet-4-6';
 // System prompt (sent as hidden context, not shown in chat)
 // ---------------------------------------------------------------------------
 
-function buildSystemPrompt(workingDirectory?: string): string {
+function buildSystemPrompt(workingDirectory?: string, language?: string): string {
+  const langName = language === 'pl' ? 'Polish' : 'English';
+
   const lines = [
     'You are a Witcher-themed AI agent in the ClaudeHydra v4 Swarm Control Center.',
     'The swarm consists of 12 agents organized in 3 tiers:',
@@ -68,6 +70,7 @@ function buildSystemPrompt(workingDirectory?: string): string {
     'You have access to local file tools (read_file, list_directory, write_file, search_in_files).',
     'Use them proactively when the user asks about files or code.',
     'Respond concisely and helpfully. Use markdown formatting when appropriate.',
+    `Write ALL text in **${langName}** (except code, file paths, and identifiers).`,
   ];
 
   if (workingDirectory) {
@@ -389,7 +392,7 @@ function VirtualizedMessageArea({
 // ---------------------------------------------------------------------------
 
 export function ClaudeChatView() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Dynamic model registry (falls back to hardcoded list)
   const { data: claudeModels } = useClaudeModels();
@@ -649,7 +652,7 @@ export function ClaudeChatView() {
       try {
         // Build history for context — include system prompt as first message
         const chatHistory: Array<{ role: string; content: string }> = [
-          { role: 'user', content: buildSystemPrompt(settings?.working_directory) },
+          { role: 'user', content: buildSystemPrompt(settings?.working_directory, i18n.language) },
           {
             role: 'assistant',
             content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.',
@@ -789,6 +792,7 @@ export function ClaudeChatView() {
       generateTitleWithSync,
       updateSessionMessages,
       setSessionLoading,
+      i18n.language,
     ],
   );
 
