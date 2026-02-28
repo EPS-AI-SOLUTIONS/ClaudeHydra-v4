@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/atoms';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
+import { GoogleOAuthSection } from './GoogleOAuthSection';
 import { OAuthSection } from './OAuthSection';
 import { WorkingFolderSection } from './WorkingFolderSection';
 
@@ -31,10 +32,17 @@ export const SettingsView = memo(() => {
           </h1>
         </div>
 
-        {/* Authentication Section */}
+        {/* Anthropic OAuth Section */}
         <Card>
           <div className="p-6">
             <OAuthSection />
+          </div>
+        </Card>
+
+        {/* Google OAuth Section */}
+        <Card>
+          <div className="p-6">
+            <GoogleOAuthSection />
           </div>
         </Card>
 

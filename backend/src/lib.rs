@@ -5,6 +5,7 @@ pub mod mcp;
 pub mod model_registry;
 pub mod models;
 pub mod oauth;
+pub mod oauth_google;
 pub mod oauth_github;
 pub mod oauth_vercel;
 pub mod service_tokens;
@@ -175,6 +176,12 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/auth/callback", post(oauth::auth_callback))
         .route("/api/auth/logout", post(oauth::auth_logout))
         .route("/api/auth/mode", get(handlers::auth_mode))
+        // Google OAuth (public — must be accessible to complete auth flow)
+        .route("/api/auth/google/status", get(oauth_google::google_auth_status))
+        .route("/api/auth/google/login", post(oauth_google::google_auth_login))
+        .route("/api/auth/google/redirect", get(oauth_google::google_redirect))
+        .route("/api/auth/google/logout", post(oauth_google::google_auth_logout))
+        .route("/api/auth/google/apikey", post(oauth_google::google_save_api_key).delete(oauth_google::google_delete_api_key))
         // GitHub OAuth (public — must be accessible to complete auth flow)
         .route("/api/auth/github/status", get(oauth_github::github_auth_status))
         .route("/api/auth/github/login", post(oauth_github::github_auth_login))
@@ -243,6 +250,7 @@ pub fn create_router(state: AppState) -> Router {
             patch(handlers::update_session_working_directory),
         )
         .route("/api/files/list", post(handlers::list_files))
+        .route("/api/files/browse", post(handlers::browse_directory))
         .route(
             "/api/sessions/{id}/messages",
             post(handlers::add_session_message),

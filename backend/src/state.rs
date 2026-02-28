@@ -136,6 +136,8 @@ pub struct AppState {
     pub http_client: reqwest::Client,
     pub tool_executor: Arc<ToolExecutor>,
     pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
+    /// Google OAuth PKCE state (separate from Anthropic OAuth PKCE).
+    pub google_oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
     /// GitHub OAuth state (CSRF protection for GitHub OAuth flow).
     pub github_oauth_state: Arc<RwLock<Option<String>>>,
     /// Vercel OAuth state (CSRF protection for Vercel OAuth flow).
@@ -215,6 +217,7 @@ impl AppState {
             http_client,
             tool_executor,
             oauth_pkce: Arc::new(RwLock::new(None)),
+            google_oauth_pkce: Arc::new(RwLock::new(None)),
             github_oauth_state: Arc::new(RwLock::new(None)),
             vercel_oauth_state: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
@@ -249,6 +252,7 @@ impl AppState {
             http_client: http_client.clone(),
             tool_executor: Arc::new(ToolExecutor::new(http_client, HashMap::new())),
             oauth_pkce: Arc::new(RwLock::new(None)),
+            google_oauth_pkce: Arc::new(RwLock::new(None)),
             github_oauth_state: Arc::new(RwLock::new(None)),
             vercel_oauth_state: Arc::new(RwLock::new(None)),
             ready: Arc::new(AtomicBool::new(false)),
