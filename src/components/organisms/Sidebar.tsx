@@ -22,6 +22,7 @@ import {
   MessageSquare,
   MessagesSquare,
   Plus,
+  Settings,
   Sparkles,
   Trash2,
   WifiOff,
@@ -383,6 +384,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
       items: [
         { id: 'home', label: t('nav.home', 'Home'), icon: Zap },
         { id: 'chat', label: t('nav.chat', 'Chat'), icon: MessageSquare },
+        { id: 'settings', label: t('nav.settings', 'Settings'), icon: Settings },
       ],
     },
   ];

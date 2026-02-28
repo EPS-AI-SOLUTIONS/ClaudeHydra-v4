@@ -1,7 +1,8 @@
 {
   "nav": {
     "home": "Start",
-    "chat": "Czat"
+    "chat": "Czat",
+    "settings": "Ustawienia"
   },
   "sidebar": {
     "groups": {
@@ -92,6 +93,40 @@
       "mcpIntegration": "Integracja MCP",
       "streamingChat": "Czat Strumieniowy"
     }
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "authSection": "Uwierzytelnianie"
+  },
+  "oauth": {
+    "title": "Anthropic OAuth (Plan MAX)",
+    "bannerTitle": "Polacz z Claude MAX Plan",
+    "bannerDesc": "Uzyskaj dostep do API za stala cene, bez oplat za tokeny.",
+    "setupOAuth": "Skonfiguruj OAuth",
+    "useApiKey": "Uzyj klucza API",
+    "connectWithClaude": "Polacz z Claude",
+    "disconnect": "Rozlacz",
+    "cancel": "Anuluj",
+    "verify": "Weryfikuj",
+    "connected": "Polaczono",
+    "expired": "Token wygasl",
+    "expiresAt": "Wygasa: {{date}}",
+    "scope": "Zakres: {{scope}}",
+    "benefits": {
+      "flatRate": "Dostep do API za stala cene (bez oplat za tokeny)",
+      "maxPlan": "Funkcje planu Claude MAX w zestawie",
+      "autoRefresh": "Automatyczne odswiezanie tokenow (bez recznej rotacji)",
+      "securePkce": "Bezpieczny protokol PKCE (brak sekretow w przegladarce)"
+    },
+    "waitingTitle": "Oczekiwanie na uwierzytelnienie",
+    "waitingDesc": "Ukoncz uwierzytelnianie na claude.ai, a nastepnie wklej URL zwrotny ponizej.",
+    "callbackPlaceholder": "Wklej URL zwrotny tutaj...",
+    "loginSuccess": "Pomyslnie polaczono z Claude MAX Plan!",
+    "loginError": "Uwierzytelnianie nie powiodlo sie. Sprobuj ponownie.",
+    "logoutSuccess": "Rozlaczono z Claude OAuth.",
+    "invalidUrl": "Nieprawidlowy URL zwrotny. Wklej pelny URL z przegladarki.",
+    "exchanging": "Wymiana tokenow...",
+    "popupBlocked": "Popup zablokowany — kliknij ponizszy link, aby sie uwierzytelnic."
   },
   "health": {
     "title": "Stan systemu",

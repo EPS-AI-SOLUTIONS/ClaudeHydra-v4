@@ -22,6 +22,7 @@ import './styles/globals.css';
 const HomePage = lazy(() => import('@/features/home/components/HomePage'));
 const ClaudeChatView = lazy(() => import('@/features/chat/components/ClaudeChatView'));
 const AgentsView = lazy(() => import('@/features/agents/components/AgentsView'));
+const SettingsView = lazy(() => import('@/features/settings/components/SettingsView'));
 
 // ---------------------------------------------------------------------------
 // ViewRouter — maps the current view id to the correct lazy component
@@ -45,6 +46,14 @@ function ViewRouter() {
         return (
           <ErrorBoundary fallback={<FeatureErrorFallback feature="Agents" onRetry={() => window.location.reload()} />}>
             <AgentsView />
+          </ErrorBoundary>
+        );
+      case 'settings':
+        return (
+          <ErrorBoundary
+            fallback={<FeatureErrorFallback feature="Settings" onRetry={() => window.location.reload()} />}
+          >
+            <SettingsView />
           </ErrorBoundary>
         );
     }

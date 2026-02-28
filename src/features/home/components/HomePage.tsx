@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Button } from '@/components/atoms';
 import { HealthDashboard } from '@/features/health/components/HealthDashboard';
+import { OAuthBanner } from '@/features/settings/components/OAuthBanner';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatSession, useViewStore } from '@/stores/viewStore';
@@ -233,6 +234,9 @@ export const HomePage = memo(() => {
             </Button>
           </motion.div>
         </motion.div>
+
+        {/* ====== OAuth Startup Suggestion ====== */}
+        <OAuthBanner />
 
         {/* ====== Recent Sessions ====== */}
         <AnimatePresence>
