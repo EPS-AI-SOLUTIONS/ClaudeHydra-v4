@@ -20,6 +20,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/utils/cn';
+import { WorkingFolderPicker } from './WorkingFolderPicker';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,6 +47,10 @@ interface ChatInputProps {
   className?: string;
   /** Previous user prompts for arrow-key navigation (newest last). */
   promptHistory?: string[];
+  /** Per-session working directory props */
+  sessionId?: string;
+  workingDirectory?: string;
+  onWorkingDirectoryChange?: (wd: string) => void;
 }
 
 interface ChatInputHandle {
@@ -72,6 +77,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       placeholder = 'Type a message... (Shift+Enter = new line)',
       className,
       promptHistory = [],
+      sessionId,
+      workingDirectory,
+      onWorkingDirectoryChange,
     },
     ref,
   ) => {
@@ -311,6 +319,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               </motion.div>
             ))}
           </div>
+        )}
+
+        {/* Per-session working folder picker */}
+        {sessionId && onWorkingDirectoryChange && (
+          <WorkingFolderPicker
+            sessionId={sessionId}
+            workingDirectory={workingDirectory ?? ''}
+            onDirectoryChange={onWorkingDirectoryChange}
+          />
         )}
 
         {/* Input row */}

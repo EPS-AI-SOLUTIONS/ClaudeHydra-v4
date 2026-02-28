@@ -239,6 +239,11 @@ pub fn create_router(state: AppState) -> Router {
                 .delete(handlers::delete_session),
         )
         .route(
+            "/api/sessions/{id}/working-directory",
+            patch(handlers::update_session_working_directory),
+        )
+        .route("/api/files/list", post(handlers::list_files))
+        .route(
             "/api/sessions/{id}/messages",
             post(handlers::add_session_message),
         )

@@ -7,6 +7,8 @@ export interface ChatSession {
   updatedAt?: number;
   messageCount?: number;
   preview?: string;
+  /** Per-session working directory (empty = inherit from global settings) */
+  workingDirectory?: string;
   /** #16 - Optimistic UI: true while session creation is pending API confirmation */
   _pending?: boolean;
 }

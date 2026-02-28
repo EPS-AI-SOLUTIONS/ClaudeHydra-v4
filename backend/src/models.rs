@@ -22,6 +22,8 @@ pub struct SessionRow {
     pub title: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    #[sqlx(default)]
+    pub working_directory: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -30,6 +32,8 @@ pub struct SessionSummaryRow {
     pub title: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub message_count: i64,
+    #[sqlx(default)]
+    pub working_directory: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -83,6 +87,8 @@ pub struct ChatRequest {
     pub max_tokens: Option<u32>,
     pub stream: Option<bool>,
     pub tools_enabled: Option<bool>,
+    #[serde(default)]
+    pub session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -174,6 +180,8 @@ pub struct SessionSummary {
     pub title: String,
     pub created_at: String,
     pub message_count: usize,
+    #[serde(default)]
+    pub working_directory: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -184,6 +192,11 @@ pub struct CreateSessionRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateSessionRequest {
     pub title: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateWorkingDirectoryRequest {
+    pub working_directory: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

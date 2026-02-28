@@ -42,6 +42,7 @@ interface ViewState {
   createSessionWithId: (id: string, title: string) => void;
   deleteSession: (id: string) => void;
   updateSessionTitle: (id: string, newTitle: string) => void;
+  setSessionWorkingDirectory: (id: string, wd: string) => void;
   hydrateSessions: (sessions: ChatSession[]) => void;
 
   // #16 - Optimistic session creation
@@ -158,6 +159,11 @@ export const useViewStore = create<ViewState>()(
               s.id === id ? { ...s, title: newTitle, updatedAt: Date.now() } : s,
             ),
             tabs: state.tabs.map((t) => (t.sessionId === id ? { ...t, title: newTitle } : t)),
+          })),
+
+        setSessionWorkingDirectory: (id, wd) =>
+          set((state) => ({
+            chatSessions: state.chatSessions.map((s) => (s.id === id ? { ...s, workingDirectory: wd } : s)),
           })),
 
         hydrateSessions: (sessions) =>

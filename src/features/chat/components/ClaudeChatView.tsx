@@ -115,6 +115,7 @@ async function* claudeStreamChat(
   model: string,
   messages: Array<{ role: string; content: string }>,
   toolsEnabled: boolean,
+  sessionId?: string,
   signal?: AbortSignal,
 ): AsyncGenerator<NdjsonEvent> {
   const res = await fetch('/api/claude/chat/stream', {
@@ -129,6 +130,7 @@ async function* claudeStreamChat(
       max_tokens: 4096,
       stream: true,
       tools_enabled: toolsEnabled,
+      ...(sessionId && { session_id: sessionId }),
     }),
     ...(signal !== undefined && { signal }),
   });
@@ -417,6 +419,8 @@ export function ClaudeChatView() {
   // DB sync
   const { addMessageWithSync, renameSessionWithSync, generateTitleWithSync } = useSessionSync();
   const activeSessionId = useViewStore((s) => s.activeSessionId);
+  const activeSession = useViewStore((s) => s.chatSessions.find((cs) => cs.id === s.activeSessionId));
+  const setSessionWorkingDirectory = useViewStore((s) => s.setSessionWorkingDirectory);
 
   // Settings (for welcome message)
   const { data: settings } = useSettingsQuery();
@@ -579,6 +583,17 @@ export function ClaudeChatView() {
     }
   }, [messages, activeSessionId]);
 
+  // ----- Per-session working directory -------------------------------------
+
+  const handleWorkingDirectoryChange = useCallback(
+    (wd: string) => {
+      if (activeSessionId) {
+        setSessionWorkingDirectory(activeSessionId, wd);
+      }
+    },
+    [activeSessionId, setSessionWorkingDirectory],
+  );
+
   // ----- Prompt history for arrow-key navigation ---------------------------
 
   const promptHistory = useMemo(() => messages.filter((m) => m.role === 'user').map((m) => m.content), [messages]);
@@ -651,8 +666,11 @@ export function ClaudeChatView() {
 
       try {
         // Build history for context — include system prompt as first message
+        // Per-session WD with fallback to global settings
+        const sessionWd = useViewStore.getState().chatSessions.find((s) => s.id === sessionId)?.workingDirectory;
+        const effectiveWd = sessionWd || settings?.working_directory;
         const chatHistory: Array<{ role: string; content: string }> = [
-          { role: 'user', content: buildSystemPrompt(settings?.working_directory, i18n.language) },
+          { role: 'user', content: buildSystemPrompt(effectiveWd, i18n.language) },
           {
             role: 'assistant',
             content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.',
@@ -664,7 +682,13 @@ export function ClaudeChatView() {
         }
         chatHistory.push({ role: 'user', content });
 
-        for await (const event of claudeStreamChat(selectedModel, chatHistory, toolsEnabled, controller.signal)) {
+        for await (const event of claudeStreamChat(
+          selectedModel,
+          chatHistory,
+          toolsEnabled,
+          sessionId,
+          controller.signal,
+        )) {
           // Dispatch based on event type
           if (event.type === 'tool_call') {
             // Add a new ToolInteraction in running state
@@ -913,6 +937,9 @@ export function ClaudeChatView() {
                 : 'Configure API key in Settings'
           }
           promptHistory={promptHistory}
+          sessionId={activeSessionId ?? undefined}
+          workingDirectory={activeSession?.workingDirectory}
+          onWorkingDirectoryChange={handleWorkingDirectoryChange}
         />
       </div>
     </div>

@@ -53,6 +53,7 @@ export function useSessionSync() {
       createdAt: new Date(s.created_at).getTime(),
       updatedAt: new Date(s.updated_at ?? s.created_at).getTime(),
       messageCount: s.message_count,
+      workingDirectory: s.working_directory ?? '',
     }));
 
     if (mapped.length > 0) {

@@ -844,11 +844,38 @@ async fn claude_chat_stream_with_tools(
 
     let state_clone = state.clone();
 
-    // Read working_directory from settings for tool path resolution
-    let wd: String = sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
-        .fetch_one(&state.db)
-        .await
-        .unwrap_or_default();
+    // Read working_directory: prefer session-specific, fallback to global
+    let wd: String = if let Some(ref sid) = req.session_id {
+        if let Ok(session_uuid) = uuid::Uuid::parse_str(sid) {
+            let session_wd: String = sqlx::query_scalar(
+                "SELECT working_directory FROM ch_sessions WHERE id = $1",
+            )
+            .bind(session_uuid)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default();
+            if !session_wd.is_empty() {
+                session_wd
+            } else {
+                sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
+                    .fetch_one(&state.db)
+                    .await
+                    .unwrap_or_default()
+            }
+        } else {
+            sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
+                .fetch_one(&state.db)
+                .await
+                .unwrap_or_default()
+        }
+    } else {
+        sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or_default()
+    };
 
     tokio::spawn(async move {
         let mut conversation: Vec<Value> = initial_messages;
@@ -1363,7 +1390,8 @@ pub async fn list_sessions(
         })?;
         sqlx::query_as::<_, SessionSummaryRow>(
             "SELECT s.id, s.title, s.created_at, \
-             (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
+             (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count, \
+             s.working_directory \
              FROM ch_sessions s \
              WHERE s.updated_at < (SELECT updated_at FROM ch_sessions WHERE id = $1) \
              ORDER BY s.updated_at DESC \
@@ -1377,7 +1405,8 @@ pub async fn list_sessions(
         let offset = params.offset.unwrap_or(0).max(0);
         sqlx::query_as::<_, SessionSummaryRow>(
             "SELECT s.id, s.title, s.created_at, \
-             (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count \
+             (SELECT COUNT(*) FROM ch_messages WHERE session_id = s.id) as message_count, \
+             s.working_directory \
              FROM ch_sessions s ORDER BY s.updated_at DESC \
              LIMIT $1 OFFSET $2",
         )
@@ -1407,6 +1436,7 @@ pub async fn list_sessions(
             title: r.title,
             created_at: r.created_at.to_rfc3339(),
             message_count: r.message_count as usize,
+            working_directory: r.working_directory,
         })
         .collect();
 
@@ -1432,7 +1462,7 @@ pub async fn create_session(
 
     let row = sqlx::query_as::<_, SessionRow>(
         "INSERT INTO ch_sessions (title) VALUES ($1) \
-         RETURNING id, title, created_at, updated_at",
+         RETURNING id, title, created_at, updated_at, working_directory",
     )
     .bind(&req.title)
     .fetch_one(&state.db)
@@ -1476,7 +1506,7 @@ pub async fn get_session(
     let msg_offset = params.offset.unwrap_or(0).max(0);
 
     let session_row = sqlx::query_as::<_, SessionRow>(
-        "SELECT id, title, created_at, updated_at FROM ch_sessions WHERE id = $1",
+        "SELECT id, title, created_at, updated_at, working_directory FROM ch_sessions WHERE id = $1",
     )
     .bind(session_id)
     .fetch_optional(&state.db)
@@ -1572,6 +1602,7 @@ pub async fn get_session(
         "id": session_row.id.to_string(),
         "title": session_row.title,
         "created_at": session_row.created_at.to_rfc3339(),
+        "working_directory": session_row.working_directory,
         "messages": serde_json::to_value(&messages).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
         "pagination": {
             "total": total_messages,
@@ -1605,7 +1636,7 @@ pub async fn update_session(
 
     let row = sqlx::query_as::<_, SessionRow>(
         "UPDATE ch_sessions SET title = $1, updated_at = NOW() WHERE id = $2 \
-         RETURNING id, title, created_at, updated_at",
+         RETURNING id, title, created_at, updated_at, working_directory",
     )
     .bind(&req.title)
     .bind(session_id)
@@ -1622,9 +1653,83 @@ pub async fn update_session(
         title: row.title,
         created_at: row.created_at.to_rfc3339(),
         message_count: 0,
+        working_directory: row.working_directory,
     };
 
     Ok(Json(serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Per-session working directory
+// ═══════════════════════════════════════════════════════════════════════
+
+/// PATCH /api/sessions/{id}/working-directory
+pub async fn update_session_working_directory(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateWorkingDirectoryRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+    let wd = req.working_directory.trim().to_string();
+
+    if !wd.is_empty() && !std::path::Path::new(&wd).is_dir() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    sqlx::query("UPDATE ch_sessions SET working_directory = $1, updated_at = NOW() WHERE id = $2")
+        .bind(&wd)
+        .bind(session_id)
+        .execute(&state.db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(json!({ "working_directory": wd })))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  File listing (DirBrowser) — Jaskier Shared Pattern
+// ═══════════════════════════════════════════════════════════════════════
+
+#[derive(Debug, serde::Deserialize)]
+pub struct FileListRequest {
+    pub path: String,
+    #[serde(default)]
+    pub show_hidden: bool,
+}
+
+pub async fn list_files(Json(body): Json<FileListRequest>) -> Json<Value> {
+    let path = std::path::Path::new(&body.path);
+    if !path.is_dir() {
+        return Json(json!({ "error": "Path is not a directory", "path": body.path }));
+    }
+
+    let mut entries = Vec::new();
+    match tokio::fs::read_dir(&body.path).await {
+        Ok(mut rd) => {
+            while let Ok(Some(entry)) = rd.next_entry().await {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if !body.show_hidden && name.starts_with('.') {
+                    continue;
+                }
+                let is_dir = entry
+                    .metadata()
+                    .await
+                    .map(|m| m.is_dir())
+                    .unwrap_or(false);
+                entries.push(json!({
+                    "name": name,
+                    "path": entry.path().to_string_lossy().to_string(),
+                    "is_dir": is_dir,
+                }));
+            }
+            entries.sort_by(|a, b| a["name"].as_str().cmp(&b["name"].as_str()));
+            Json(json!({ "path": body.path, "entries": entries, "count": entries.len() }))
+        }
+        Err(e) => Json(json!({
+            "error": format!("Cannot read directory: {}", e),
+            "path": body.path,
+        })),
+    }
 }
 
 #[utoipa::path(delete, path = "/api/sessions/{id}", tag = "sessions",
