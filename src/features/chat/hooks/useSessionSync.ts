@@ -28,6 +28,7 @@ export function useSessionSync() {
     deleteSession: deleteSessionLocal,
     updateSessionTitle: updateSessionTitleLocal,
     hydrateSessions,
+    syncWorkingDirectories,
     selectSession,
     openTab,
     setView,
@@ -69,6 +70,16 @@ export function useSessionSync() {
       localStorage.setItem(MIGRATION_FLAG, '1');
     }
   }, [dbLoaded, dbSessions, chatSessions, hydrateSessions, createMutation]);
+
+  // Sync workingDirectory from DB on every load (DB is source of truth)
+  useEffect(() => {
+    if (!dbLoaded || !dbSessions) return;
+    const dirs = dbSessions.map((s) => ({
+      id: s.id,
+      workingDirectory: s.working_directory ?? '',
+    }));
+    syncWorkingDirectories(dirs);
+  }, [dbLoaded, dbSessions, syncWorkingDirectories]);
 
   // ── Synced CRUD operations ──────────────────────────────────────────
 

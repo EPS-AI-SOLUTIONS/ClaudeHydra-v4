@@ -152,6 +152,10 @@ pub struct AppState {
     pub circuit_breaker: Arc<CircuitBreaker>,
     /// MCP client manager — connects to external MCP servers
     pub mcp_client: Arc<McpClientManager>,
+    /// `false` when OAuth token was rejected by Gemini API (401/403).
+    /// Causes credential resolution to skip OAuth and use API key.
+    /// Reset to `true` on new OAuth login.
+    pub oauth_gemini_valid: Arc<AtomicBool>,
 }
 
 // ── Shared: readiness helpers ───────────────────────────────────────────────
@@ -225,6 +229,7 @@ impl AppState {
             auth_secret,
             circuit_breaker: Arc::new(CircuitBreaker::new()),
             mcp_client,
+            oauth_gemini_valid: Arc::new(AtomicBool::new(true)),
         }
     }
 
@@ -259,6 +264,7 @@ impl AppState {
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret: None,
             circuit_breaker: Arc::new(CircuitBreaker::new()),
+            oauth_gemini_valid: Arc::new(AtomicBool::new(true)),
         }
     }
 }

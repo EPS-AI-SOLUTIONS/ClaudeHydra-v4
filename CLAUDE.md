@@ -37,24 +37,24 @@
 - Stack: Rust + Axum 0.8 + SQLx + PostgreSQL 17
 - Route syntax: `{id}` (NOT `:id` — axum 0.8 breaking change)
 - Entry point: `backend/src/lib.rs` → `create_router()` builds all API routes
-- Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState), `models.rs`, `tools.rs`, `model_registry.rs` (dynamic model discovery)
+- Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState), `models.rs`, `tools/` (mod.rs + fs_tools.rs + pdf_tools.rs + zip_tools.rs + image_tools.rs + git_tools.rs + github_tools.rs + vercel_tools.rs + fly_tools.rs), `model_registry.rs` (dynamic model discovery), `oauth.rs` (Anthropic OAuth PKCE), `oauth_google.rs` (Google OAuth PKCE + API key), `oauth_github.rs` (GitHub OAuth), `oauth_vercel.rs` (Vercel OAuth), `service_tokens.rs` (Fly.io PAT), `mcp/` (client.rs + server.rs + config.rs)
 - DB: `claudehydra` on localhost:5433 (user: claude, pass: claude_local)
-- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins
+- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins, ch_oauth_tokens, ch_google_auth, ch_oauth_github, ch_oauth_vercel, ch_service_tokens, ch_mcp_servers, ch_mcp_discovered_tools
 
 ## Backend Local Dev
 - Wymaga Docker Desktop (PostgreSQL container)
 - Image: `postgres:17-alpine` (NO pgvector needed — ClaudeHydra doesn't use embeddings)
 - Start: `docker compose up -d` (from `backend/`)
 - Backend: `DATABASE_URL="postgresql://claude:claude_local@localhost:5433/claudehydra" cargo run --release`
-- Env vars: `DATABASE_URL` (required), `ANTHROPIC_API_KEY` (required), `GOOGLE_API_KEY` (optional, for model_registry Google fetch), `PORT` (default 8082)
+- Env vars: `DATABASE_URL` (required), `ANTHROPIC_API_KEY` (required), `GOOGLE_API_KEY` (optional, for model_registry Google fetch), `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` (optional — enables Google OAuth button), `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` (optional), `VERCEL_CLIENT_ID` + `VERCEL_CLIENT_SECRET` (optional), `PORT` (default 8082)
 
 ## Fly.io Deploy
 - App: `claudehydra-v4-backend` | Region: `arn` | VM: shared-cpu-1x 256MB
 - Deploy: `cd backend && fly deploy`
-- Dockerfile: multi-stage (rust builder → debian:bookworm-slim runtime)
+- Dockerfile: multi-stage (rust builder → debian:trixie-slim runtime)
 - DB: Fly Postgres `jaskier-db` → database `claudehydra_v4_backend` (NOT `claudehydra`!)
 - Shared DB cluster `jaskier-db` hosts: geminihydra_v15_backend, claudehydra_v4_backend, tissaia_v4_backend
-- Secrets: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` (set via `fly secrets set`)
+- Secrets: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `AUTH_SECRET` (set via `fly secrets set`)
 - auto_stop_machines=stop, auto_start_machines=true, min_machines=0 (scales to zero)
 - Connect to prod DB: `fly pg connect -a jaskier-db -d claudehydra_v4_backend`
 - Logs: `fly logs --no-tail` or `fly logs`
@@ -87,11 +87,39 @@
 - Pin override: `POST /api/models/pin` saves to `ch_model_pins` (priority 1, above auto-selection)
 - API endpoints: `GET /api/models`, `POST /api/models/refresh`, `POST /api/models/pin`, `DELETE /api/models/pin/{use_case}`, `GET /api/models/pins`
 
-## Agent Tools (all tested & working)
-- `read_file` — reads local files by absolute path
-- `write_file` — creates/overwrites local files (with automatic backup)
-- `list_directory` — lists directory contents with depth
-- `search_in_files` — regex pattern search in files
+## OAuth / Authentication (Anthropic Claude MAX Plan)
+- Backend module: `backend/src/oauth.rs` — Anthropic PKCE flow for Claude MAX Plan flat-rate API access
+- State: `OAuthPkceState` in `state.rs` → `AppState.oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>`
+- DB table: `ch_oauth_tokens` (singleton row with `id=1` CHECK constraint)
+- Token auto-refresh: `get_valid_access_token()` refreshes expired tokens automatically
+- API endpoints: `GET /api/auth/status`, `POST /api/auth/login`, `POST /api/auth/callback`, `POST /api/auth/logout`
+- Frontend: `src/features/settings/components/OAuthSection.tsx` — 3-step PKCE flow (idle → waiting_code → exchanging)
+
+## OAuth / Authentication (Google OAuth PKCE + API Key)
+- Backend module: `backend/src/oauth_google.rs` — Google OAuth 2.0 redirect-based PKCE + API key management
+- **Separate from Anthropic OAuth** — ClaudeHydra has dual OAuth (Anthropic for Claude API + Google for Gemini models)
+- State: `AppState.google_oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>` (separate from `oauth_pkce`)
+- DB table: `ch_google_auth` (singleton row, id=1 CHECK) — stores auth_method, access_token, refresh_token, api_key_encrypted, user_email
+- `get_google_credential(state)` → credential resolution: DB OAuth token → DB API key → env var (`GOOGLE_API_KEY`/`GEMINI_API_KEY`)
+- API endpoints: `GET /api/auth/google/status`, `POST /api/auth/google/login`, `GET /api/auth/google/redirect`, `POST /api/auth/google/logout`, `POST/DELETE /api/auth/google/apikey`
+- Env vars: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` (optional — OAuth button hidden if not set)
+- Google Cloud Console: app "Jaskier", redirect URI: `http://localhost:8082/api/auth/google/redirect`
+- Frontend: `GoogleOAuthSection.tsx` + `useGoogleAuthStatus.ts` in `src/features/settings/components/`
+
+## OAuth — GitHub + Vercel + Fly.io
+- `oauth_github.rs` — GitHub OAuth code exchange, DB table `ch_oauth_github`, endpoints `/api/auth/github/*`
+- `oauth_vercel.rs` — Vercel OAuth code exchange, DB table `ch_oauth_vercel`, endpoints `/api/auth/vercel/*`
+- `service_tokens.rs` — encrypted PAT storage (AES-256-GCM), DB table `ch_service_tokens`, endpoints `/api/tokens`
+
+## Agent Tools (17+ tools, all tested & working)
+- **Filesystem** (fs_tools.rs): `read_file`, `list_directory`, `write_file`, `search_in_files`
+- **PDF/ZIP** (pdf_tools.rs, zip_tools.rs): `read_pdf`, `list_zip`, `extract_zip_file`
+- **Image** (image_tools.rs): `analyze_image` (Claude Vision API, 5MB limit)
+- **Git** (git_tools.rs): `git_status`, `git_log`, `git_diff`, `git_branch`, `git_commit` (NO push)
+- **GitHub** (github_tools.rs): `github_list_repos`, `github_get_repo`, `github_list_issues`, `github_get_issue`, `github_create_issue`, `github_create_pr`
+- **Vercel** (vercel_tools.rs): `vercel_list_projects`, `vercel_deploy`, `vercel_get_deployment`
+- **Fly.io** (fly_tools.rs): `fly_list_apps`, `fly_get_status`, `fly_get_logs` (read-only)
+- **MCP proxy**: `mcp_{server}_{tool}` — routed via `state.mcp_client.call_tool()`
 
 ## Dead Code Cleanup (2026-02-24)
 - Removed 13 files, ~200 lines of unused code
@@ -100,6 +128,12 @@
 - Deleted 5 barrel index.ts files (features/home, agents, history, settings, chat)
 - Deleted 2 empty .gitkeep files (chat/workers, shared/workers)
 - Schema types made private: ProviderInfo, ClaudeModels (removed from exports in schemas.ts)
+
+## Workspace CLAUDE.md (canonical reference)
+- Full Jaskier ecosystem docs: `C:\Users\BIURODOM\Desktop\ClaudeDesktop\CLAUDE.md`
+- Covers: shared patterns, cross-project conventions, backend safety rules, OAuth details, MCP, working directory, fly.io infra
+- This file is a project-scoped summary; workspace CLAUDE.md is the source of truth
+- Last synced: 2026-02-28 (F20)
 
 ## Knowledge Base (SQLite)
 - Plik: `C:\Users\BIURODOM\Desktop\ClaudeDesktop\jaskier_knowledge.db`

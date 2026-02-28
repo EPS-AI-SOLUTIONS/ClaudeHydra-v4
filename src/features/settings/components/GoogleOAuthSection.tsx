@@ -84,6 +84,23 @@ export const GoogleOAuthSection = memo(() => {
                 {t('googleAuth.disconnect')}
               </Button>
             )}
+
+            {/* Allow upgrading from env var to OAuth */}
+            {authMethod === 'env' && status?.oauth_available && (
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <p className={cn('text-xs', theme.textMuted)}>{t('googleAuth.upgradeToOAuth')}</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<Chrome size={14} />}
+                  onClick={login}
+                  isLoading={isMutating}
+                  className="w-full"
+                >
+                  {t('googleAuth.signInWithGoogle')}
+                </Button>
+              </div>
+            )}
           </motion.div>
         )}
 

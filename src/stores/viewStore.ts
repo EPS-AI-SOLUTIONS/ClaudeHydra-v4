@@ -43,6 +43,7 @@ interface ViewState {
   deleteSession: (id: string) => void;
   updateSessionTitle: (id: string, newTitle: string) => void;
   setSessionWorkingDirectory: (id: string, wd: string) => void;
+  syncWorkingDirectories: (dirs: Array<{ id: string; workingDirectory: string }>) => void;
   hydrateSessions: (sessions: ChatSession[]) => void;
 
   // #16 - Optimistic session creation
@@ -165,6 +166,21 @@ export const useViewStore = create<ViewState>()(
           set((state) => ({
             chatSessions: state.chatSessions.map((s) => (s.id === id ? { ...s, workingDirectory: wd } : s)),
           })),
+
+        syncWorkingDirectories: (dirs) =>
+          set((state) => {
+            const dirMap = new Map(dirs.map((d) => [d.id, d.workingDirectory]));
+            let changed = false;
+            const chatSessions = state.chatSessions.map((s) => {
+              const dbWd = dirMap.get(s.id);
+              if (dbWd !== undefined && dbWd !== (s.workingDirectory ?? '')) {
+                changed = true;
+                return { ...s, workingDirectory: dbWd };
+              }
+              return s;
+            });
+            return changed ? { chatSessions } : state;
+          }),
 
         hydrateSessions: (sessions) =>
           set((state) => {

@@ -135,6 +135,7 @@
     "connectedAs": "Signed in as {{email}}",
     "expiresAt": "Expires: {{date}}",
     "disconnect": "Disconnect",
+    "upgradeToOAuth": "Sign in with your Google account to use your plan instead of the API key:",
     "expired": "Token expired. Please reconnect.",
     "oauthWaiting": "Completing sign-in...",
     "oauthWaitingDesc": "Complete authentication in the Google tab that opened. This page will update automatically.",

@@ -135,6 +135,7 @@
     "connectedAs": "Zalogowano jako {{email}}",
     "expiresAt": "Wygasa: {{date}}",
     "disconnect": "Rozlacz",
+    "upgradeToOAuth": "Zaloguj sie kontem Google, aby uzywac planu zamiast klucza API:",
     "expired": "Token wygasl. Polacz ponownie.",
     "oauthWaiting": "Logowanie w toku...",
     "oauthWaitingDesc": "Ukoncz uwierzytelnianie w karcie Google. Ta strona zaktualizuje sie automatycznie.",
