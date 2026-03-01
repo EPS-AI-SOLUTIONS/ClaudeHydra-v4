@@ -42,6 +42,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePartnerSessions } from '@/features/chat/hooks/usePartnerSessions';
+import { useIsMobile } from '@/shared/hooks/useIsMobile';
 
 const PartnerChatModal = lazy(() => import('@/features/chat/components/PartnerChatModal'));
 
@@ -63,27 +64,6 @@ interface NavGroup {
   label: string;
   icon: LucideIcon;
   items: { id: ViewId; label: string; icon: LucideIcon }[];
-}
-
-const MOBILE_BREAKPOINT = 768;
-
-// ---------------------------------------------------------------------------
-// useIsMobile hook (inline — matches legacy useIsMobile)
-// ---------------------------------------------------------------------------
-
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false,
-  );
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
-
-  return isMobile;
 }
 
 // ---------------------------------------------------------------------------

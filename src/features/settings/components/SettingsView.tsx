@@ -9,7 +9,10 @@ import { Card } from '@/components/atoms';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { GoogleOAuthSection } from './GoogleOAuthSection';
+import { MaxIterationsSection } from './MaxIterationsSection';
+import { MaxTokensSection } from './MaxTokensSection';
 import { OAuthSection } from './OAuthSection';
+import { TemperatureSection } from './TemperatureSection';
 import { WorkingFolderSection } from './WorkingFolderSection';
 
 export const SettingsView = memo(() => {
@@ -50,6 +53,27 @@ export const SettingsView = memo(() => {
         <Card>
           <div className="p-6">
             <WorkingFolderSection />
+          </div>
+        </Card>
+
+        {/* Temperature Section */}
+        <Card>
+          <div className="p-6">
+            <TemperatureSection />
+          </div>
+        </Card>
+
+        {/* Max Tokens Section */}
+        <Card>
+          <div className="p-6">
+            <MaxTokensSection />
+          </div>
+        </Card>
+
+        {/* Agent Iterations Section */}
+        <Card>
+          <div className="p-6">
+            <MaxIterationsSection />
           </div>
         </Card>
       </motion.div>

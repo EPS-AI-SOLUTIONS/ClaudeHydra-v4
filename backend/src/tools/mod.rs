@@ -5,7 +5,7 @@ pub mod git_tools;
 pub mod image_tools;
 pub mod pdf_tools;
 pub mod vercel_tools;
-pub mod web_tools;
+pub mod web;
 pub mod zip_tools;
 
 use std::collections::HashMap;
@@ -393,7 +393,7 @@ impl ToolExecutor {
         defs.extend(github_tools::tool_definitions());
         defs.extend(vercel_tools::tool_definitions());
         defs.extend(fly_tools::tool_definitions());
-        defs.extend(web_tools::tool_definitions());
+        defs.extend(web::tool_definitions());
 
         defs
     }
@@ -451,7 +451,7 @@ impl ToolExecutor {
         }
         // Web tools — fetching and crawling web pages
         if tool_name == "fetch_webpage" || tool_name == "crawl_website" {
-            return web_tools::execute(tool_name, input, state).await;
+            return web::execute(tool_name, input, state).await;
         }
         // Fall back to existing execute for local tools
         self.execute(tool_name, input).await

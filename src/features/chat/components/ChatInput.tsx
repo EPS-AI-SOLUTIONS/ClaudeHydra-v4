@@ -6,7 +6,7 @@
  * ClaudeHydra-v4: Extracted as a standalone component for reuse and testing.
  */
 
-import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
+import { Loader2, Paperclip, Send } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
   type ChangeEvent,
@@ -20,7 +20,9 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTextareaAutoResize } from '@/shared/hooks/useTextareaAutoResize';
 import { cn } from '@/shared/utils/cn';
+import { AttachmentPreview } from './AttachmentPreview';
 import { WorkingFolderPicker } from './WorkingFolderPicker';
 
 // ---------------------------------------------------------------------------
@@ -103,6 +105,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Shared auto-resize hook (Jaskier Shared Pattern)
+    const adjustHeight = useTextareaAutoResize({
+      textareaRef,
+      lineHeight: 24,
+      minRows: 2,
+      maxRows: 8,
+    });
 
     // Expose imperative methods
     useImperativeHandle(ref, () => ({
@@ -211,8 +221,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           setInput(newValue);
           requestAnimationFrame(() => {
             el.selectionStart = el.selectionEnd = selectionStart + 1;
-            el.style.height = 'auto';
-            el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+            adjustHeight();
           });
         } else if (e.key === 'ArrowUp' && promptHistory.length > 0) {
           const el = e.currentTarget;
@@ -230,8 +239,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             requestAnimationFrame(() => {
               if (textareaRef.current) {
                 textareaRef.current.selectionStart = textareaRef.current.selectionEnd = historyValue.length;
-                textareaRef.current.style.height = 'auto';
-                textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+                adjustHeight();
               }
             });
           }
@@ -245,28 +253,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               setHistoryIndex(-1);
               const draft = savedDraftRef.current;
               setInput(draft);
-              requestAnimationFrame(() => {
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = 'auto';
-                  textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-                }
-              });
+              requestAnimationFrame(() => adjustHeight());
             } else {
               const nextIndex = historyIndex + 1;
               setHistoryIndex(nextIndex);
               const historyValue = promptHistory[nextIndex] ?? '';
               setInput(historyValue);
-              requestAnimationFrame(() => {
-                if (textareaRef.current) {
-                  textareaRef.current.style.height = 'auto';
-                  textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-                }
-              });
+              requestAnimationFrame(() => adjustHeight());
             }
           }
         }
       },
-      [handleSend, input, promptHistory, historyIndex],
+      [handleSend, input, promptHistory, historyIndex, adjustHeight],
     );
 
     // ----- Paste handler (images from clipboard) ---------------------------
@@ -289,13 +287,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     // ----- Auto-resize textarea ------------------------------------------
 
-    const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
-      setInput(e.target.value);
-      // Auto-resize
-      const el = e.target;
-      el.style.height = 'auto';
-      el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
-    }, []);
+    const handleChange = useCallback(
+      (e: ChangeEvent<HTMLTextAreaElement>) => {
+        setInput(e.target.value);
+        adjustHeight();
+      },
+      [adjustHeight],
+    );
 
     // ----- Render --------------------------------------------------------
 
@@ -316,37 +314,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           </div>
         )}
 
-        {/* Attachments preview */}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {attachments.map((att) => (
-              <motion.div
-                key={att.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="flex items-center gap-2 px-3 py-2 bg-[var(--matrix-bg-secondary)] border border-[var(--matrix-accent)]/30 rounded-lg"
-              >
-                {att.type === 'image' ? (
-                  <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
-                    <img src={att.content} alt={att.name} className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <FileText size={16} className="text-blue-400 flex-shrink-0" />
-                )}
-                <span className="text-sm truncate max-w-[150px] text-[var(--matrix-text-primary)]">{att.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(att.id)}
-                  className="text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-error)] transition-colors"
-                  aria-label={`Remove ${att.name}`}
-                >
-                  <X size={14} />
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {/* Attachments preview (extracted component) */}
+        <AttachmentPreview attachments={attachments} onRemove={removeAttachment} />
 
         {/* Per-session working folder picker */}
         {sessionId && onWorkingDirectoryChange && (

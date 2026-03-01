@@ -309,3 +309,5 @@ export const MessageBubble = memo(function MessageBubble({ message, className }:
     </motion.div>
   );
 });
+
+MessageBubble.displayName = 'MessageBubble';

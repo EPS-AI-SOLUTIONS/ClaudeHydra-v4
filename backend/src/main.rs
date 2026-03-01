@@ -57,16 +57,28 @@ fn build_app(state: AppState) -> axum::Router {
     // CORS — allow Vite dev server + Vercel production
     let cors = CorsLayer::new()
         .allow_origin([
-            "http://localhost:4173".parse().unwrap(),
-            "http://localhost:5199".parse().unwrap(),
-            "http://127.0.0.1:5199".parse().unwrap(),
+            "http://localhost:4173"
+                .parse()
+                .expect("localhost:4173 is a valid hardcoded URL"),
+            "http://localhost:5199"
+                .parse()
+                .expect("localhost:5199 is a valid hardcoded URL"),
+            "http://127.0.0.1:5199"
+                .parse()
+                .expect("127.0.0.1:5199 is a valid hardcoded URL"),
             // GeminiHydra frontend (partner app cross-session access)
-            "http://localhost:5176".parse().unwrap(),
-            "http://127.0.0.1:5176".parse().unwrap(),
-            "https://claudehydra-v4.vercel.app".parse().unwrap(),
+            "http://localhost:5176"
+                .parse()
+                .expect("localhost:5176 is a valid hardcoded URL"),
+            "http://127.0.0.1:5176"
+                .parse()
+                .expect("127.0.0.1:5176 is a valid hardcoded URL"),
+            "https://claudehydra-v4.vercel.app"
+                .parse()
+                .expect("claudehydra-v4.vercel.app is a valid hardcoded URL"),
             "https://claudehydra-v4-pawelserkowskis-projects.vercel.app"
                 .parse()
-                .unwrap(),
+                .expect("claudehydra-v4-pawelserkowskis-projects.vercel.app is a valid hardcoded URL"),
         ])
         .allow_methods([
             Method::GET,

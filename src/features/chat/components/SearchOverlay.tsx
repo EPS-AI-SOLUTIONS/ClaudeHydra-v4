@@ -23,15 +23,25 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
   const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Debounce query for match computation (300ms)
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
+
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Find all matches
+  // Find all matches (uses debounced query)
   const matches = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
+    if (!debouncedQuery.trim()) return [];
+    const q = debouncedQuery.toLowerCase();
     const result: Array<{ messageId: string; messageIndex: number }> = [];
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
@@ -41,7 +51,7 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
       }
     }
     return result;
-  }, [query, messages]);
+  }, [debouncedQuery, messages]);
 
   // Notify parent of current match
   useEffect(() => {
@@ -52,11 +62,11 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
     }
   }, [matches, currentMatchIdx, onMatchChange]);
 
-  // Reset index when query changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: query is intentional — resets match index whenever the search query changes
+  // Reset index when debounced query changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: debouncedQuery is intentional — resets match index whenever the search query settles
   useEffect(() => {
     setCurrentMatchIdx(0);
-  }, [query]);
+  }, [debouncedQuery]);
 
   const goNext = useCallback(() => {
     if (matches.length === 0) return;

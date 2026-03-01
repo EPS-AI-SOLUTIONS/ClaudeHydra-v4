@@ -103,6 +103,8 @@ export const settingsSchema = z.object({
   welcome_message: z.string().optional().default(''),
   /** Working directory for filesystem tools (empty = absolute paths only) */
   working_directory: z.string().optional().default(''),
+  /** Max tool-call iterations per agent request */
+  max_iterations: z.number().optional().default(10),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

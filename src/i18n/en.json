@@ -119,7 +119,22 @@
   },
   "settings": {
     "title": "Settings",
-    "authSection": "Authentication"
+    "authSection": "Authentication",
+    "temperature": {
+      "title": "Temperature",
+      "description": "Controls response creativity. Lower values produce focused, deterministic output. Higher values increase variety and exploration.",
+      "saved": "Temperature updated"
+    },
+    "maxTokens": {
+      "title": "Max Output Tokens",
+      "description": "Maximum number of tokens the model can generate per response. Higher values allow longer, more detailed answers.",
+      "saved": "Max tokens updated"
+    },
+    "maxIterations": {
+      "title": "Agent Iterations",
+      "description": "How many tool-call rounds the agent can perform per request. Higher values let agents complete complex tasks autonomously.",
+      "saved": "Max iterations updated"
+    }
   },
   "oauth": {
     "title": "Anthropic OAuth (MAX Plan)",

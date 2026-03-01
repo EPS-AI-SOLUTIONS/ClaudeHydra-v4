@@ -119,7 +119,22 @@
   },
   "settings": {
     "title": "Ustawienia",
-    "authSection": "Uwierzytelnianie"
+    "authSection": "Uwierzytelnianie",
+    "temperature": {
+      "title": "Temperatura",
+      "description": "Kontroluje kreatywność odpowiedzi. Niższe wartości dają skoncentrowane, deterministyczne wyniki. Wyższe zwiększają różnorodność i eksplorację.",
+      "saved": "Zaktualizowano temperaturę"
+    },
+    "maxTokens": {
+      "title": "Maks. Tokenów Wyjściowych",
+      "description": "Maksymalna liczba tokenów, które model może wygenerować w odpowiedzi. Wyższe wartości pozwalają na dłuższe, bardziej szczegółowe odpowiedzi.",
+      "saved": "Zaktualizowano limit tokenów"
+    },
+    "maxIterations": {
+      "title": "Iteracje Agenta",
+      "description": "Ile rund wywołań narzędzi agent może wykonać na zapytanie. Wyższe wartości pozwalają agentom samodzielnie realizować złożone zadania.",
+      "saved": "Zaktualizowano limit iteracji"
+    }
   },
   "oauth": {
     "title": "Anthropic OAuth (Plan MAX)",

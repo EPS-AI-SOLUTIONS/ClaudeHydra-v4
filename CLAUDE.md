@@ -124,6 +124,10 @@
 - **Fly.io** (fly_tools.rs): `fly_list_apps`, `fly_get_status`, `fly_get_logs` (read-only)
 - **MCP proxy**: `mcp_{server}_{tool}` — routed via `state.mcp_client.call_tool()`
 
+## "Co dalej?" — Follow-up Task Proposals
+- System prompt rule in `build_system_prompt()` (`handlers.rs` ~L686): after every completed task, agent MUST add a `## Co dalej?` section with exactly 5 numbered follow-up tasks (specific, actionable, relevant)
+- Works on both streaming (`/api/claude/chat/stream`) and non-streaming (`/api/claude/chat` via `resolve_chat_context()`)
+
 ## Dead Code Cleanup (2026-02-24)
 - Removed 13 files, ~200 lines of unused code
 - Deleted hooks: useAgents.ts, useChat.ts, useHealth.ts, useHistory.ts (features), useMarkdownWorker.ts (shared)
@@ -141,11 +145,24 @@
 - Sidebar: `ScrollText` icon, i18n keys `nav.logs`, `logs.*`
 - View type: `| 'logs'` in `src/stores/viewStore.ts`
 
+## Prompt History (Jaskier Shared Pattern — identical in GH)
+- **Hook**: `usePromptHistory.ts` w `src/features/chat/hooks/` — eksportuje `{ promptHistory, addPrompt }`
+- **Storage**: DB table `ch_prompt_history` (max 200 wpisów, auto-cleanup) + `localStorage` cache (`'prompt-history-cache'`)
+- **Endpoints** (PROTECTED): `GET /api/prompt-history` (ASC, limit 500), `POST /api/prompt-history` (consecutive dedup + cap 200), `DELETE /api/prompt-history`
+- **Backend**: `handlers.rs` linie 2360-2458
+- **Migration**: `016_prompt_history.sql`
+- **Arrow Up/Down w ChatInput.tsx** — bash-like nawigacja historii promptów:
+  - **ArrowUp**: kursor na początku textarea LUB single-line → nawigacja wstecz (newest→oldest). Pierwszy press zapisuje draft do `savedDraftRef`
+  - **ArrowDown**: kursor na końcu LUB single-line → nawigacja do przodu. Po ostatnim wpisie przywraca zapisany draft
+  - **Draft preservation**: tekst użytkownika zachowany przy nawigacji, przywracany po wyjściu z historii
+  - **Session change**: resetuje `historyIndex` do -1
+- **Integracja**: `ClaudeChatView.tsx` → `usePromptHistory()` + `addPrompt()` w `handleSend()` → props `promptHistory` do `ChatInput`
+
 ## Workspace CLAUDE.md (canonical reference)
 - Full Jaskier ecosystem docs: `C:\Users\BIURODOM\Desktop\ClaudeDesktop\CLAUDE.md`
 - Covers: shared patterns, cross-project conventions, backend safety rules, OAuth details, MCP, working directory, fly.io infra
 - This file is a project-scoped summary; workspace CLAUDE.md is the source of truth
-- Last synced: 2026-03-01 (F21)
+- Last synced: 2026-03-01 (F23 + Prompt History + Co dalej?)
 
 ## Knowledge Base (SQLite)
 - Plik: `C:\Users\BIURODOM\Desktop\ClaudeDesktop\jaskier_knowledge.db`

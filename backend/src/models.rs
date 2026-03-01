@@ -14,6 +14,15 @@ pub struct SettingsRow {
     /// Working directory for filesystem tools (empty = uses ALLOWED_FILE_DIRS / Desktop fallback)
     #[sqlx(default)]
     pub working_directory: String,
+    /// Max tool-call iterations per agent request (default 10)
+    #[sqlx(default)]
+    pub max_iterations: i32,
+    /// Temperature for generation (default 0.7)
+    #[sqlx(default)]
+    pub temperature: f64,
+    /// Max output tokens (default 4096)
+    #[sqlx(default)]
+    pub max_tokens: i32,
 }
 
 #[derive(sqlx::FromRow)]
@@ -139,6 +148,27 @@ pub struct AppSettings {
     /// Working directory for filesystem tools (empty = uses ALLOWED_FILE_DIRS / Desktop fallback)
     #[serde(default)]
     pub working_directory: String,
+    /// Max tool-call iterations per agent request (default 10)
+    #[serde(default = "default_max_iterations")]
+    pub max_iterations: i32,
+    /// Temperature for generation (default 0.7)
+    #[serde(default = "default_temperature")]
+    pub temperature: f64,
+    /// Max output tokens (default 4096)
+    #[serde(default = "default_max_tokens")]
+    pub max_tokens: i32,
+}
+
+fn default_max_iterations() -> i32 {
+    10
+}
+
+fn default_temperature() -> f64 {
+    0.7
+}
+
+fn default_max_tokens() -> i32 {
+    4096
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

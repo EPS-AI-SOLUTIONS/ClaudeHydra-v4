@@ -694,7 +694,7 @@ mod tests {
         let best = select_best(&models, &[], &[]);
         // Both opus and sonnet have version 6000, but opus sorts first alphabetically
         // Actually they have identical version_key — sort is stable so first in sorted order wins
-        let best_id = best.unwrap().id;
+        let best_id = best.expect("select_best should find a model from non-empty list").id;
         assert!(
             best_id == "claude-sonnet-4-6" || best_id == "claude-opus-4-6",
             "Expected opus or sonnet, got: {}",
@@ -711,7 +711,7 @@ mod tests {
         ];
 
         let best = select_best(&models, &["opus"], &[]);
-        assert_eq!(best.unwrap().id, "claude-opus-4-6");
+        assert_eq!(best.expect("opus filter should match claude-opus-4-6").id, "claude-opus-4-6");
     }
 
     #[test]
@@ -724,7 +724,7 @@ mod tests {
         ];
 
         let best = select_best(&models, &["sonnet"], &[]);
-        assert_eq!(best.unwrap().id, "claude-sonnet-4-6");
+        assert_eq!(best.expect("sonnet filter should match claude-sonnet-4-6").id, "claude-sonnet-4-6");
     }
 
     #[test]
@@ -735,7 +735,7 @@ mod tests {
         ];
 
         let best = select_best(&models, &["haiku"], &[]);
-        assert_eq!(best.unwrap().id, "claude-haiku-4-5-20251001");
+        assert_eq!(best.expect("haiku filter should match claude-haiku-4-5-20251001").id, "claude-haiku-4-5-20251001");
     }
 
     #[test]
@@ -747,7 +747,7 @@ mod tests {
 
         // Excluding "20" removes dated variants
         let best = select_best(&models, &["sonnet"], &["20"]);
-        assert_eq!(best.unwrap().id, "claude-sonnet-4-6");
+        assert_eq!(best.expect("sonnet filter excluding dated should match claude-sonnet-4-6").id, "claude-sonnet-4-6");
     }
 
     #[test]
