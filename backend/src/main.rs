@@ -4,6 +4,7 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 
+use claudehydra_backend::handlers;
 use claudehydra_backend::model_registry;
 use claudehydra_backend::state::{AppState, LogEntry, LogRingBuffer};
 use claudehydra_backend::watchdog;
@@ -149,6 +150,7 @@ async fn main() -> shuttle_axum::ShuttleAxum {
     claudehydra_backend::system_monitor::spawn(state.system_monitor.clone());
 
     model_registry::startup_sync(&state).await;
+    handlers::warm_prompt_cache(&state).await;
     state.mark_ready();
     Ok(build_app(state).into())
 }
@@ -258,6 +260,7 @@ async fn main() -> anyhow::Result<()> {
             );
         }
 
+        handlers::warm_prompt_cache(&startup_state).await;
         startup_state.mark_ready();
     });
 

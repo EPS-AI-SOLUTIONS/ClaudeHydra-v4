@@ -339,15 +339,41 @@ pub async fn resolve_models(state: &AppState) -> ResolvedModels {
     let executor = select_best(&anthropic, &["haiku"], &["20"])
         .or_else(|| select_best(&anthropic, &["haiku"], &[]));
 
-    // Flash: Gemini flash model for fast tasks (classification, etc.)
+    // Flash: latest Google Flash model for fast simple tasks
     let google = cache.models.get("google").cloned().unwrap_or_default();
-    let flash = select_best(&google, &["flash"], &[]);
+    let flash = select_best(
+        &google,
+        &["flash"],
+        &["lite", "latest", "image", "tts", "computer", "robotics", "audio", "thinking"],
+    );
 
     ResolvedModels {
         commander,
         coordinator,
         executor,
         flash,
+    }
+}
+
+/// Classify prompt complexity for auto-tier routing.
+/// Returns "simple" (→ flash), "complex" (→ commander), or "medium" (→ coordinator).
+pub fn classify_complexity(prompt: &str) -> &'static str {
+    let chars = prompt.len();
+    let words = prompt.split_whitespace().count();
+    let lower = prompt.to_lowercase();
+    let complex_keywords = [
+        "architect", "refactor", "design pattern", "migration", "security audit",
+        "performance", "optimize", "scale", "infrastructure", "deploy",
+        "```", "fn ", "function ", "class ", "impl ", "async ", "struct ",
+    ];
+    let has_complex = complex_keywords.iter().any(|k| lower.contains(k));
+
+    if chars > 1000 || has_complex {
+        "complex"
+    } else if chars < 80 && words < 15 {
+        "simple"
+    } else {
+        "medium"
     }
 }
 
@@ -376,6 +402,7 @@ pub async fn get_model_id(state: &AppState, use_case: &str) -> String {
         "commander" | "Commander" => (resolved.commander, "claude-opus-4-6"),
         "coordinator" | "Coordinator" => (resolved.coordinator, "claude-sonnet-4-6"),
         "executor" | "Executor" => (resolved.executor, "claude-haiku-4-5-20251001"),
+        "flash" | "Flash" => (resolved.flash, "gemini-3-flash-preview"),
         _ => (resolved.coordinator, "claude-sonnet-4-6"),
     };
 
@@ -446,10 +473,11 @@ pub async fn startup_sync(state: &AppState) {
     }
 
     tracing::info!(
-        "model_registry: resolved → commander={}, coordinator={}, executor={}",
+        "model_registry: resolved → commander={}, coordinator={}, executor={}, flash={}",
         resolved.commander.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
         resolved.coordinator.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
         resolved.executor.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
+        resolved.flash.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
     );
 }
 
@@ -477,6 +505,7 @@ pub async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
             "commander": resolved.commander,
             "coordinator": resolved.coordinator,
             "executor": resolved.executor,
+            "flash": resolved.flash,
         },
         "providers": {
             "anthropic": cache.models.get("anthropic").cloned().unwrap_or_default(),
@@ -507,6 +536,7 @@ pub async fn refresh_models(State(state): State<AppState>) -> Json<Value> {
             "commander": resolved.commander,
             "coordinator": resolved.coordinator,
             "executor": resolved.executor,
+            "flash": resolved.flash,
         }
     });
     if !errors.is_empty() {
@@ -524,7 +554,7 @@ pub async fn pin_model(
     State(state): State<AppState>,
     Json(body): Json<PinModelRequest>,
 ) -> Json<Value> {
-    let valid = ["commander", "Commander", "coordinator", "Coordinator", "executor", "Executor"];
+    let valid = ["commander", "Commander", "coordinator", "Coordinator", "executor", "Executor", "flash", "Flash"];
 
     if !valid.contains(&body.use_case.as_str()) {
         return Json(json!({ "error": format!("Invalid use_case '{}'. Valid: commander, coordinator, executor", body.use_case) }));

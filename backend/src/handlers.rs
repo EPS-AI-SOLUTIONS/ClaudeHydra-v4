@@ -647,6 +647,18 @@ pub async fn claude_chat(
 // ═══════════════════════════════════════════════════════════════════════
 
 /// Shared preprocessing for both tools and no-tools streaming paths.
+/// Context window token budget per model tier.
+fn tier_token_budget(model: &str) -> u32 {
+    let lower = model.to_lowercase();
+    if lower.contains("opus") { 8192 }
+    else if lower.contains("sonnet") { 4096 }
+    else if lower.contains("haiku") { 2048 }
+    else if lower.contains("flash") || lower.contains("gemini") { 8192 }
+    else { 4096 }
+}
+
+// is_retryable_status already defined above (line 199)
+
 struct ChatContext {
     model: String,
     max_tokens: u32,
@@ -686,9 +698,37 @@ fn build_system_prompt(working_directory: &str, language: &str) -> String {
 /// Resolves model, max_tokens, session WD (session → global fallback).
 /// Uses a single DB query (LEFT JOIN) to fetch both session WD and global WD.
 async fn resolve_chat_context(state: &AppState, req: &ChatRequest) -> ChatContext {
-    let default_model = crate::model_registry::get_model_id(state, "coordinator").await;
-    let model = req.model.clone().unwrap_or(default_model);
-    let max_tokens = req.max_tokens.unwrap_or(4096);
+    let model = if let Some(ref m) = req.model {
+        m.clone()
+    } else {
+        // Auto-tier routing based on prompt complexity
+        let prompt_text: String = req.messages.iter().rev().take(1).map(|m| m.content.as_str()).collect();
+        let complexity = crate::model_registry::classify_complexity(&prompt_text);
+        match complexity {
+            "simple" => crate::model_registry::get_model_id(state, "flash").await,
+            "complex" => crate::model_registry::get_model_id(state, "commander").await,
+            _ => crate::model_registry::get_model_id(state, "coordinator").await,
+        }
+    };
+    // A/B testing: read ab_model_b + ab_split from settings
+    let model = {
+        let ab_row: Option<(Option<String>, Option<f64>)> = sqlx::query_as(
+            "SELECT ab_model_b, ab_split::float8 FROM ch_settings WHERE id = 1",
+        )
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten();
+        if let Some((Some(model_b), Some(split))) = ab_row {
+            if !model_b.is_empty() && rand::random::<f64>() < split {
+                tracing::info!("A/B test: using model_b={} (split={:.0}%)", model_b, split * 100.0);
+                model_b
+            } else { model }
+        } else { model }
+    };
+
+    let budget = tier_token_budget(&model);
+    let max_tokens = req.max_tokens.unwrap_or(budget).min(budget);
 
     let session_uuid = req
         .session_id
@@ -728,7 +768,21 @@ async fn resolve_chat_context(state: &AppState, req: &ChatRequest) -> ChatContex
         row.unwrap_or_default()
     };
 
-    let system_prompt = build_system_prompt(&working_directory, &language);
+    // Use cached system prompt if available (warm pool)
+    let cache_key = format!("{}:{}", working_directory, language);
+    let system_prompt = {
+        let cache = state.prompt_cache.read().await;
+        cache.get(&cache_key).cloned()
+    }.unwrap_or_else(|| {
+        let prompt = build_system_prompt(&working_directory, &language);
+        let prompt_clone = prompt.clone();
+        let state_clone = state.prompt_cache.clone();
+        let key_clone = cache_key;
+        tokio::spawn(async move {
+            state_clone.write().await.insert(key_clone, prompt_clone);
+        });
+        prompt
+    });
 
     ChatContext {
         model,
@@ -737,6 +791,133 @@ async fn resolve_chat_context(state: &AppState, req: &ChatRequest) -> ChatContex
         session_id: session_uuid,
         system_prompt,
     }
+}
+
+/// Pre-warm system prompt cache for common language variants.
+pub async fn warm_prompt_cache(state: &AppState) {
+    let languages = ["en", "pl"];
+    let mut count = 0;
+    for lang in &languages {
+        let prompt = build_system_prompt("", lang);
+        state.prompt_cache.write().await.insert(
+            format!(":{}", lang),
+            prompt,
+        );
+        count += 1;
+    }
+    tracing::info!("prompt_cache: pre-warmed {} system prompt variants", count);
+}
+
+/// Hybrid routing: stream chat via Google Gemini API (for gemini-* models).
+async fn google_chat_stream(
+    state: AppState,
+    req: ChatRequest,
+    ctx: ChatContext,
+) -> Result<Response, (StatusCode, Json<Value>)> {
+    use axum::body::Body;
+
+    let credential = crate::oauth_google::get_google_credential(&state).await;
+    let (api_key, is_oauth) = match credential {
+        Some(c) => c,
+        None => return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({ "error": "No Google API credential configured" })),
+        )),
+    };
+
+    let model = &ctx.model;
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse",
+        model
+    );
+
+    // Build Gemini messages from Chat messages
+    let contents: Vec<Value> = req.messages.iter().map(|m| {
+        let role = if m.role == "assistant" { "model" } else { "user" };
+        json!({ "role": role, "parts": [{ "text": m.content }] })
+    }).collect();
+
+    let body = json!({
+        "systemInstruction": { "parts": [{ "text": ctx.system_prompt }] },
+        "contents": contents,
+        "generationConfig": {
+            "temperature": req.temperature.unwrap_or(1.0),
+            "maxOutputTokens": ctx.max_tokens,
+        }
+    });
+
+    let request = crate::oauth_google::apply_google_auth(
+        state.http_client.post(&url), &api_key, is_oauth,
+    )
+    .json(&body)
+    .timeout(std::time::Duration::from_secs(300));
+
+    let resp = request.send().await.map_err(|e| (
+        StatusCode::BAD_GATEWAY,
+        Json(json!({ "error": format!("Google API request failed: {}", e) })),
+    ))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let err = resp.text().await.unwrap_or_default();
+        return Err((
+            StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
+            Json(json!({ "error": err })),
+        ));
+    }
+
+    let model_for_done = ctx.model.clone();
+    let byte_stream = resp.bytes_stream();
+
+    let ndjson_stream = async_stream::stream! {
+        let mut sse_buffer = String::new();
+        let mut total_tokens: u32 = 0;
+        let mut stream = byte_stream;
+
+        while let Some(chunk_result) = futures_util::StreamExt::next(&mut stream).await {
+            let chunk = match chunk_result {
+                Ok(b) => b,
+                Err(e) => {
+                    let err_line = serde_json::to_string(&json!({ "token": format!("[Error: {}]", e), "done": true, "model": &model_for_done })).unwrap_or_default();
+                    yield Ok::<_, std::io::Error>(axum::body::Bytes::from(format!("{}\n", err_line)));
+                    break;
+                }
+            };
+            sse_buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+            while let Some(nl) = sse_buffer.find('\n') {
+                let line = sse_buffer[..nl].trim().to_string();
+                sse_buffer = sse_buffer[nl + 1..].to_string();
+                if line.is_empty() || line.starts_with(':') { continue; }
+                if let Some(data) = line.strip_prefix("data: ") {
+                    if let Ok(event) = serde_json::from_str::<Value>(data) {
+                        // Extract text from candidates[0].content.parts[0].text
+                        if let Some(text) = event.pointer("/candidates/0/content/parts/0/text").and_then(|t| t.as_str()) {
+                            if !text.is_empty() {
+                                let ndjson_line = serde_json::to_string(&json!({ "token": text, "done": false })).unwrap_or_default();
+                                yield Ok::<_, std::io::Error>(axum::body::Bytes::from(format!("{}\n", ndjson_line)));
+                            }
+                        }
+                        // Extract usage from usageMetadata
+                        if let Some(usage) = event.get("usageMetadata") {
+                            total_tokens = usage.get("totalTokenCount").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                        }
+                    }
+                }
+            }
+        }
+        // Final done message
+        let done_line = serde_json::to_string(&json!({ "token": "", "done": true, "model": &model_for_done, "total_tokens": total_tokens })).unwrap_or_default();
+        yield Ok::<_, std::io::Error>(axum::body::Bytes::from(format!("{}\n", done_line)));
+    };
+
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "application/x-ndjson")
+        .header("cache-control", "no-cache")
+        .header("x-content-type-options", "nosniff")
+        .body(Body::from_stream(ndjson_stream))
+        .expect("Response builder with valid status and headers"))
 }
 
 /// Filter out old client-side system prompt injection pattern.
@@ -792,8 +973,15 @@ pub async fn claude_chat_stream(
     tracing::info!(
         session_id = ?ctx.session_id,
         wd = %ctx.working_directory,
+        model = %ctx.model,
         "chat stream (no-tools)"
     );
+
+    // Hybrid routing: Gemini models → Google API
+    if ctx.model.starts_with("gemini-") {
+        return google_chat_stream(state, req, ctx).await;
+    }
+
     let model = ctx.model;
     let max_tokens = ctx.max_tokens;
     let system_prompt = ctx.system_prompt;
@@ -817,6 +1005,26 @@ pub async fn claude_chat_stream(
 
     let resp = send_to_anthropic(&state, &body, 300).await?;
 
+    // Fallback chain: if retryable error (429/503), try lighter model
+    let resp = if !resp.status().is_success() && is_retryable_status(resp.status().as_u16()) {
+        let fallback_models = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
+        let mut fallback_resp = None;
+        for fb_model in &fallback_models {
+            if *fb_model == model { continue; }
+            tracing::warn!("claude_chat_stream: {} returned {}, falling back to {}", model, resp.status(), fb_model);
+            body["model"] = json!(fb_model);
+            if let Ok(fb) = send_to_anthropic(&state, &body, 300).await {
+                if fb.status().is_success() {
+                    fallback_resp = Some(fb);
+                    break;
+                }
+            }
+        }
+        fallback_resp.unwrap_or(resp)
+    } else {
+        resp
+    };
+
     if !resp.status().is_success() {
         let status = resp.status();
         let err_body: Value = resp.json().await.unwrap_or_default();
@@ -828,14 +1036,19 @@ pub async fn claude_chat_stream(
 
     // Convert Anthropic SSE stream into NDJSON
     let model_for_done = model.clone();
+    let model_for_usage = model.clone();
+    let db_for_usage = state.db.clone();
+    let stream_start = std::time::Instant::now();
+    let prompt_len = req.messages.iter().map(|m| m.content.len()).sum::<usize>();
     let byte_stream = resp.bytes_stream();
 
     let ndjson_stream = async_stream::stream! {
         let mut sse_buffer = String::new();
         let mut total_tokens: u32 = 0;
+        let mut output_chars: usize = 0;
         let mut stream = byte_stream;
 
-        while let Some(chunk_result) = stream.next().await {
+        while let Some(chunk_result) = futures_util::StreamExt::next(&mut stream).await {
             let chunk = match chunk_result {
                 Ok(bytes) => bytes,
                 Err(e) => {
@@ -883,6 +1096,7 @@ pub async fn claude_chat_stream(
                                     .unwrap_or("");
 
                                 if !text.is_empty() {
+                                    output_chars += text.len();
                                     let ndjson_line = serde_json::to_string(&json!({
                                         "token": text,
                                         "done": false,
@@ -914,6 +1128,32 @@ pub async fn claude_chat_stream(
                                 yield Ok::<_, std::io::Error>(
                                     axum::body::Bytes::from(format!("{}\n", done_line))
                                 );
+
+                                // Token usage tracking — fire-and-forget
+                                let latency = stream_start.elapsed().as_millis() as i32;
+                                let input_est = (prompt_len / 4) as i32;
+                                let output_est = (output_chars / 4) as i32;
+                                let db = db_for_usage.clone();
+                                let m = model_for_usage.clone();
+                                let tier = if m.contains("opus") { "commander" }
+                                    else if m.contains("sonnet") { "coordinator" }
+                                    else if m.contains("haiku") { "executor" }
+                                    else if m.contains("flash") { "flash" }
+                                    else { "coordinator" };
+                                tokio::spawn(async move {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO ch_agent_usage (agent_id, model, input_tokens, output_tokens, total_tokens, latency_ms, success, tier) \
+                                         VALUES (NULL, $1, $2, $3, $4, $5, TRUE, $6)",
+                                    )
+                                    .bind(&m)
+                                    .bind(input_est)
+                                    .bind(output_est)
+                                    .bind(input_est + output_est)
+                                    .bind(latency)
+                                    .bind(tier)
+                                    .execute(&db)
+                                    .await;
+                                });
                             }
                             _ => {}
                         }

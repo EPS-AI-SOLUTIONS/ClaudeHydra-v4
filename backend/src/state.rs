@@ -254,6 +254,8 @@ pub struct AppState {
     pub oauth_gemini_valid: Arc<AtomicBool>,
     /// In-memory ring buffer for backend log entries (last 1000).
     pub log_buffer: Arc<LogRingBuffer>,
+    /// Cached system prompts for agent warm pool (key: "{language}", value: system prompt).
+    pub prompt_cache: Arc<RwLock<HashMap<String, String>>>,
 }
 
 // ── Shared: readiness helpers ───────────────────────────────────────────────
@@ -338,6 +340,7 @@ impl AppState {
             mcp_client,
             oauth_gemini_valid: Arc::new(AtomicBool::new(true)),
             log_buffer,
+            prompt_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -374,6 +377,7 @@ impl AppState {
             circuit_breaker: Arc::new(CircuitBreaker::new()),
             oauth_gemini_valid: Arc::new(AtomicBool::new(true)),
             log_buffer: Arc::new(LogRingBuffer::new(1000)),
+            prompt_cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }

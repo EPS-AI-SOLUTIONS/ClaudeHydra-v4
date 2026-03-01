@@ -39,7 +39,7 @@
 - Entry point: `backend/src/lib.rs` → `create_router()` builds all API routes
 - Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState + LogRingBuffer), `models.rs`, `logs.rs` (4 log endpoints — backend/audit/flyio/activity), `tools/` (mod.rs + fs_tools.rs + pdf_tools.rs + zip_tools.rs + image_tools.rs + git_tools.rs + github_tools.rs + vercel_tools.rs + fly_tools.rs), `model_registry.rs` (dynamic model discovery), `oauth.rs` (Anthropic OAuth PKCE), `oauth_google.rs` (Google OAuth PKCE + API key), `oauth_github.rs` (GitHub OAuth), `oauth_vercel.rs` (Vercel OAuth), `service_tokens.rs` (Fly.io PAT), `mcp/` (client.rs + server.rs + config.rs)
 - DB: `claudehydra` on localhost:5433 (user: claude, pass: claude_local)
-- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins, ch_oauth_tokens, ch_google_auth, ch_oauth_github, ch_oauth_vercel, ch_service_tokens, ch_mcp_servers, ch_mcp_discovered_tools, ch_audit_log
+- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins, ch_oauth_tokens, ch_google_auth, ch_oauth_github, ch_oauth_vercel, ch_service_tokens, ch_mcp_servers, ch_mcp_discovered_tools, ch_audit_log, ch_prompt_history
 
 ## Backend Local Dev
 - Wymaga Docker Desktop (PostgreSQL container)
@@ -63,14 +63,16 @@
 ## Migrations
 - Folder: `backend/migrations/`
 - SQLx sorts by filename prefix — each migration MUST have a unique date prefix
-- Current order: 20260214_001 → 20260215_002 → 20260216_003 → 20260217_004 → 20260224_005
+- Format: YYYYMMDDNN (unique 10-digit prefix — date + 2-digit sequence number within date)
+- Current order: 2026021401_001 → 2026021501_002 → 2026021601_003 → 2026021701_004 → 2026022401_005 → 2026022402_006 → 2026022601_007 → 2026022801_009 → 2026022802_010 → 2026022803_011 → 2026022804_012 → 2026022805_013 → 2026022806_014 → 2026022807_015 → 2026030101_016
 - All migrations MUST be idempotent (IF NOT EXISTS, ON CONFLICT DO NOTHING) — SQLx checks checksums
 - All migration files MUST use LF line endings (not CRLF) — `.gitattributes` with `*.sql text eol=lf` enforces this
 - Migration 005: model_pins table for pinning preferred models per role
+- Migration 016: prompt_history table for input history persistence
 
 ## Migrations Gotchas (learned the hard way)
 - **Checksum mismatch on deploy**: SQLx stores SHA-256 checksum per migration. If line endings change (CRLF→LF between Windows and Docker), checksum won't match → `VersionMismatch` panic. Fix: reset `_sqlx_migrations` table
-- **Duplicate date prefixes**: Multiple files with same prefix cause `duplicate key` error on fresh DB init. Each file MUST have unique prefix (fixed 2026-02-24: 004 was 20260215 → 20260217)
+- **Duplicate date prefixes**: Multiple files with same date cause `duplicate key` error. Fixed 2026-03-01: all files renamed from YYYYMMDD to YYYYMMDDNN format (10-digit unique prefix)
 - **pgvector not on fly.io**: Fly Postgres (`jaskier-db`) does NOT have pgvector. If future migrations need it, use `DO $$ ... EXCEPTION WHEN OTHERS` to skip gracefully
 - **Reset prod DB migrations**: `fly pg connect -a jaskier-db -d claudehydra_v4_backend` then `DROP TABLE _sqlx_migrations CASCADE;` + drop all ch_* tables, then redeploy
 
@@ -111,10 +113,11 @@
 - `oauth_vercel.rs` — Vercel OAuth code exchange, DB table `ch_oauth_vercel`, endpoints `/api/auth/vercel/*`
 - `service_tokens.rs` — encrypted PAT storage (AES-256-GCM), DB table `ch_service_tokens`, endpoints `/api/tokens`
 
-## Agent Tools (17+ tools, all tested & working)
+## Agent Tools (20+ tools, all tested & working)
 - **Filesystem** (fs_tools.rs): `read_file`, `list_directory`, `write_file`, `search_in_files`
 - **PDF/ZIP** (pdf_tools.rs, zip_tools.rs): `read_pdf`, `list_zip`, `extract_zip_file`
 - **Image** (image_tools.rs): `analyze_image` (Claude Vision API, 5MB limit)
+- **Web Scraping v2** (web_tools.rs, ~950 lines): `fetch_webpage` (SSRF protection, enhanced HTML→markdown, metadata/OpenGraph/JSON-LD, link categorization, retry+backoff, JSON output), `crawl_website` (robots.txt, sitemap, concurrent JoinSet, SHA-256 dedup, path prefix filter, exclude patterns)
 - **Git** (git_tools.rs): `git_status`, `git_log`, `git_diff`, `git_branch`, `git_commit` (NO push)
 - **GitHub** (github_tools.rs): `github_list_repos`, `github_get_repo`, `github_list_issues`, `github_get_issue`, `github_create_issue`, `github_create_pr`
 - **Vercel** (vercel_tools.rs): `vercel_list_projects`, `vercel_deploy`, `vercel_get_deployment`

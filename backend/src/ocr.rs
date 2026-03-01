@@ -2,13 +2,17 @@
 // ClaudeHydra v4 — OCR via Claude Vision API (primary) / Gemini Vision (fallback)
 //
 // Endpoints:
-//   POST /api/ocr        — synchronous OCR (single image or PDF)
-//   POST /api/ocr/stream — SSE streaming OCR with progress events
+//   POST /api/ocr              — synchronous OCR (single image or PDF)
+//   POST /api/ocr/stream       — SSE streaming OCR with progress events
+//   POST /api/ocr/batch/stream — SSE batch OCR (multiple files)
+//   GET  /api/ocr/history      — paginated OCR history
+//   GET  /api/ocr/history/{id} — single history entry (full text)
+//   DELETE /api/ocr/history/{id} — delete history entry
 
 use std::convert::Infallible;
 use std::time::Instant;
 
-use axum::extract::State;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::IntoResponse;
@@ -40,10 +44,31 @@ FORMATTING RULES:\n\
 \n\
 Return ONLY the extracted text with markdown formatting, no descriptions or commentary.";
 
+const STRUCTURED_EXTRACTION_PROMPT: &str = "\
+Extract structured data from this OCR text into a JSON object.\n\
+\n\
+Return ONLY a valid JSON object with these fields (omit fields not found):\n\
+{\n\
+  \"document_type\": \"invoice|receipt|document|unknown\",\n\
+  \"seller\": { \"name\": \"\", \"address\": \"\", \"nip\": \"\", \"phone\": \"\", \"email\": \"\" },\n\
+  \"buyer\": { \"name\": \"\", \"address\": \"\", \"nip\": \"\" },\n\
+  \"invoice_number\": \"\",\n\
+  \"issue_date\": \"\",\n\
+  \"due_date\": \"\",\n\
+  \"items\": [{ \"name\": \"\", \"quantity\": 0, \"unit\": \"\", \"net_price\": 0, \"net_value\": 0, \"vat_rate\": \"\", \"vat_amount\": 0, \"gross_value\": 0 }],\n\
+  \"totals\": { \"net\": 0, \"vat\": 0, \"gross\": 0, \"currency\": \"PLN\" },\n\
+  \"payment\": { \"method\": \"\", \"bank_account\": \"\", \"due_date\": \"\" }\n\
+}\n\
+\n\
+Return ONLY the JSON, no explanation or markdown fences.";
+
 const CLAUDE_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL: &str = "claude-sonnet-4-6";
 const ANTHROPIC_VERSION: &str = "2023-06-01";
+const GEMINI_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_OCR_MODEL: &str = "gemini-3-flash-preview";
 const MAX_INPUT_SIZE: usize = 30_000_000; // ~22 MB decoded
+const MAX_BATCH_ITEMS: usize = 10;
 
 // ── Request / Response models ────────────────────────────────────────────────
 
@@ -61,6 +86,10 @@ pub struct OcrRequest {
     pub language: Option<String>,
     /// OCR preset: "invoice", "document", "handwriting", "table", "receipt".
     pub preset: Option<String>,
+    /// Original filename — used for auto-detection of preset when preset is None.
+    pub filename: Option<String>,
+    /// If true, perform a second AI call to extract structured data from the OCR text.
+    pub extract_structured: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -70,15 +99,111 @@ pub struct OcrResponse {
     pub total_pages: usize,
     pub processing_time_ms: u64,
     pub provider: String,
-    /// Approximate confidence score (0.0–1.0) derived from model logprobs, if available.
+    /// Approximate confidence score (0.0-1.0) derived from model logprobs, if available.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detected_preset: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub structured_data: Option<Value>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct OcrPage {
     pub page_number: usize,
     pub text: String,
+}
+
+// ── Batch models ─────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct OcrBatchRequest {
+    pub items: Vec<OcrBatchItem>,
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OcrBatchItem {
+    pub data_base64: String,
+    pub mime_type: String,
+    pub filename: Option<String>,
+    pub preset: Option<String>,
+    pub language: Option<String>,
+    pub extract_structured: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OcrBatchItemResult {
+    pub filename: Option<String>,
+    pub response: Option<OcrResponse>,
+    pub error: Option<String>,
+}
+
+// ── History models ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct OcrHistoryParams {
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+    pub search: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedOcrHistory {
+    pub items: Vec<OcrHistoryEntry>,
+    pub total: i64,
+    pub limit: i64,
+    pub offset: i64,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct OcrHistoryEntry {
+    pub id: String,
+    pub filename: Option<String>,
+    pub mime_type: String,
+    pub preset: Option<String>,
+    pub total_pages: i32,
+    pub provider: String,
+    pub processing_time_ms: i64,
+    pub detected_preset: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct OcrHistoryFull {
+    pub id: String,
+    pub filename: Option<String>,
+    pub mime_type: String,
+    pub preset: Option<String>,
+    pub text: String,
+    pub pages_json: Value,
+    pub total_pages: i32,
+    pub confidence: Option<f64>,
+    pub provider: String,
+    pub processing_time_ms: i64,
+    pub detected_preset: Option<String>,
+    pub structured_data: Option<Value>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+// ── Auto-detect preset ──────────────────────────────────────────────────────
+
+/// Auto-detect OCR preset from filename keywords.
+fn detect_preset(filename: Option<&str>, _mime_type: &str) -> Option<&'static str> {
+    let name = filename?;
+    let lower = name.to_lowercase();
+    if lower.contains("faktura") || lower.contains("invoice") || lower.contains("rechnung") {
+        return Some("invoice");
+    }
+    if lower.contains("paragon") || lower.contains("receipt") || lower.contains("bon") {
+        return Some("receipt");
+    }
+    if lower.contains("dokument") || lower.contains("document") || lower.contains("umowa")
+        || lower.contains("wniosek") || lower.contains("zaswiadczenie")
+    {
+        return Some("document");
+    }
+    None
 }
 
 // ── Prompt builder ──────────────────────────────────────────────────────────
@@ -137,25 +262,61 @@ pub async fn ocr(
 
     let started = Instant::now();
 
-    let (text, provider, confidence) = ocr_extract(&state, &body).await.map_err(|e| {
-        tracing::error!("OCR failed: {e}");
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e})),
-        )
-    })?;
+    // Auto-detect preset if not explicitly set
+    let detected = detect_preset(body.filename.as_deref(), &body.mime_type);
+    let effective_preset = body.preset.as_deref().or(detected);
+
+    let base_prompt = body.prompt.as_deref().unwrap_or(OCR_PROMPT);
+    let effective_prompt = build_ocr_prompt(base_prompt, body.language.as_deref(), effective_preset);
+
+    let (text, provider, confidence) = ocr_extract(&state, &body.data_base64, &body.mime_type, &effective_prompt)
+        .await
+        .map_err(|e| {
+            tracing::error!("OCR failed: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e})),
+            )
+        })?;
 
     let pages = split_into_pages(&text);
     let total_pages = pages.len().max(1);
 
-    Ok(Json(OcrResponse {
+    // Structured data extraction (optional second AI call)
+    let structured_data = if body.extract_structured == Some(true)
+        && matches!(effective_preset, Some("invoice" | "receipt"))
+    {
+        extract_structured_data(&state, &text).await.ok()
+    } else {
+        None
+    };
+
+    let detected_preset = detected.map(|s| s.to_string());
+
+    let response = OcrResponse {
         text,
         pages,
         total_pages,
         processing_time_ms: started.elapsed().as_millis() as u64,
         provider,
         confidence,
-    }))
+        detected_preset: detected_preset.clone(),
+        structured_data: structured_data.clone(),
+    };
+
+    // Save to history (fire-and-forget)
+    let db = state.db.clone();
+    let resp_clone = response.clone();
+    let filename = body.filename.clone();
+    let mime = body.mime_type.clone();
+    let preset_str = body.preset.clone().or(detected_preset);
+    tokio::spawn(async move {
+        if let Err(e) = save_ocr_result(&db, filename.as_deref(), &mime, preset_str.as_deref(), &resp_clone).await {
+            tracing::warn!("Failed to save OCR history: {e}");
+        }
+    });
+
+    Ok(Json(response))
 }
 
 // ── SSE streaming OCR endpoint ───────────────────────────────────────────────
@@ -176,17 +337,22 @@ pub async fn ocr_stream(
     tokio::spawn(async move {
         let started = Instant::now();
 
-        // ocr/start
         send_progress(&tx, "start", None).await;
 
-        let result = ocr_extract(&state, &body).await;
+        // Auto-detect preset
+        let detected = detect_preset(body.filename.as_deref(), &body.mime_type);
+        let effective_preset = body.preset.as_deref().or(detected);
+
+        let base_prompt = body.prompt.as_deref().unwrap_or(OCR_PROMPT);
+        let effective_prompt = build_ocr_prompt(base_prompt, body.language.as_deref(), effective_preset);
+
+        let result = ocr_extract(&state, &body.data_base64, &body.mime_type, &effective_prompt).await;
 
         match result {
             Ok((text, provider, confidence)) => {
                 let pages = split_into_pages(&text);
                 let total = pages.len().max(1);
 
-                // ocr/progress for each page
                 for (i, page) in pages.iter().enumerate() {
                     let preview = if page.text.len() > 200 {
                         let end = page.text.char_indices()
@@ -212,10 +378,18 @@ pub async fn ocr_stream(
                     .await;
                 }
 
-                // ocr/done
+                // Structured extraction if requested
+                let structured_data = if body.extract_structured == Some(true)
+                    && matches!(effective_preset, Some("invoice" | "receipt"))
+                {
+                    extract_structured_data(&state, &text).await.ok()
+                } else {
+                    None
+                };
+
                 send_progress(&tx, "done", None).await;
 
-                // complete event with full response
+                let detected_preset = detected.map(|s| s.to_string());
                 let response = OcrResponse {
                     text,
                     pages,
@@ -223,7 +397,22 @@ pub async fn ocr_stream(
                     processing_time_ms: started.elapsed().as_millis() as u64,
                     provider,
                     confidence,
+                    detected_preset: detected_preset.clone(),
+                    structured_data: structured_data.clone(),
                 };
+
+                // Save to history
+                let db = state.db.clone();
+                let resp_clone = response.clone();
+                let filename = body.filename.clone();
+                let mime = body.mime_type.clone();
+                let preset_str = body.preset.clone().or(detected_preset);
+                tokio::spawn(async move {
+                    if let Err(e) = save_ocr_result(&db, filename.as_deref(), &mime, preset_str.as_deref(), &resp_clone).await {
+                        tracing::warn!("Failed to save OCR history: {e}");
+                    }
+                });
+
                 let complete = Event::default()
                     .event("complete")
                     .data(serde_json::to_string(&response).unwrap_or_default());
@@ -243,16 +432,239 @@ pub async fn ocr_stream(
     Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
 }
 
+// ── Batch SSE streaming endpoint ─────────────────────────────────────────────
+
+pub async fn ocr_batch_stream(
+    State(state): State<AppState>,
+    Json(body): Json<OcrBatchRequest>,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, impl IntoResponse> {
+    if body.items.len() > MAX_BATCH_ITEMS {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": format!("Maximum {MAX_BATCH_ITEMS} files per batch")})),
+        ));
+    }
+    for item in &body.items {
+        if item.data_base64.len() > MAX_INPUT_SIZE {
+            return Err((
+                StatusCode::PAYLOAD_TOO_LARGE,
+                Json(json!({"error": "One or more files exceed maximum size (22 MB)"})),
+            ));
+        }
+    }
+
+    let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(64);
+    let files_total = body.items.len();
+
+    tokio::spawn(async move {
+        let started = Instant::now();
+        let mut results: Vec<OcrBatchItemResult> = Vec::new();
+
+        for (idx, item) in body.items.iter().enumerate() {
+            let filename = item.filename.clone();
+
+            // batch/file_start
+            let start_event = Event::default()
+                .event("batch_file_start")
+                .data(json!({"file_index": idx, "filename": &filename, "files_total": files_total}).to_string());
+            let _ = tx.send(Ok(start_event)).await;
+
+            let detected = detect_preset(item.filename.as_deref(), &item.mime_type);
+            let effective_preset = item.preset.as_deref().or(detected);
+            let base_prompt = body.prompt.as_deref().unwrap_or(OCR_PROMPT);
+            let effective_prompt = build_ocr_prompt(base_prompt, item.language.as_deref(), effective_preset);
+
+            match ocr_extract(&state, &item.data_base64, &item.mime_type, &effective_prompt).await {
+                Ok((text, provider, confidence)) => {
+                    let pages = split_into_pages(&text);
+                    let total_pages = pages.len().max(1);
+
+                    let structured_data = if item.extract_structured == Some(true)
+                        && matches!(effective_preset, Some("invoice" | "receipt"))
+                    {
+                        extract_structured_data(&state, &text).await.ok()
+                    } else {
+                        None
+                    };
+
+                    let response = OcrResponse {
+                        text,
+                        pages,
+                        total_pages,
+                        processing_time_ms: started.elapsed().as_millis() as u64,
+                        provider,
+                        confidence,
+                        detected_preset: detected.map(|s| s.to_string()),
+                        structured_data,
+                    };
+
+                    // Save to history
+                    let db = state.db.clone();
+                    let resp_clone = response.clone();
+                    let fn_clone = filename.clone();
+                    let mime = item.mime_type.clone();
+                    let preset_str = item.preset.clone().or_else(|| detected.map(|s| s.to_string()));
+                    tokio::spawn(async move {
+                        let _ = save_ocr_result(&db, fn_clone.as_deref(), &mime, preset_str.as_deref(), &resp_clone).await;
+                    });
+
+                    let result = OcrBatchItemResult {
+                        filename: filename.clone(),
+                        response: Some(response),
+                        error: None,
+                    };
+                    let done_event = Event::default()
+                        .event("batch_file_done")
+                        .data(serde_json::to_string(&json!({"file_index": idx, "result": &result})).unwrap_or_default());
+                    let _ = tx.send(Ok(done_event)).await;
+                    results.push(result);
+                }
+                Err(e) => {
+                    tracing::error!("Batch OCR file {idx} failed: {e}");
+                    let result = OcrBatchItemResult {
+                        filename: filename.clone(),
+                        response: None,
+                        error: Some(e.clone()),
+                    };
+                    let err_event = Event::default()
+                        .event("batch_file_error")
+                        .data(json!({"file_index": idx, "filename": &filename, "error": e}).to_string());
+                    let _ = tx.send(Ok(err_event)).await;
+                    results.push(result);
+                }
+            }
+        }
+
+        // batch/complete
+        let complete = Event::default()
+            .event("batch_complete")
+            .data(json!({
+                "total_files": files_total,
+                "successful": results.iter().filter(|r| r.response.is_some()).count(),
+                "failed": results.iter().filter(|r| r.error.is_some()).count(),
+                "total_time_ms": started.elapsed().as_millis() as u64,
+            }).to_string());
+        let _ = tx.send(Ok(complete)).await;
+    });
+
+    let stream = ReceiverStream::new(rx);
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+}
+
+// ── OCR History endpoints ────────────────────────────────────────────────────
+
+pub async fn ocr_history(
+    State(state): State<AppState>,
+    Query(params): Query<OcrHistoryParams>,
+) -> Result<Json<PaginatedOcrHistory>, (StatusCode, Json<Value>)> {
+    let limit = params.limit.unwrap_or(50).min(200);
+    let offset = params.offset.unwrap_or(0);
+
+    let (items, total) = if let Some(search) = &params.search {
+        let pattern = format!("%{search}%");
+        let items: Vec<OcrHistoryEntry> = sqlx::query_as::<_, OcrHistoryEntry>(
+            concat!(
+                "SELECT id::TEXT as id, filename, mime_type, preset, total_pages, provider, ",
+                "processing_time_ms, detected_preset, created_at ",
+                "FROM ", "ch_ocr_history",
+                " WHERE filename ILIKE $1 OR preset ILIKE $1 OR detected_preset ILIKE $1 ",
+                "ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+            ),
+        )
+        .bind(&pattern)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+        let total: (i64,) = sqlx::query_as::<_, (i64,)>(
+            concat!(
+                "SELECT COUNT(*) FROM ", "ch_ocr_history",
+                " WHERE filename ILIKE $1 OR preset ILIKE $1 OR detected_preset ILIKE $1"
+            ),
+        )
+        .bind(&pattern)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+        (items, total.0)
+    } else {
+        let items: Vec<OcrHistoryEntry> = sqlx::query_as::<_, OcrHistoryEntry>(
+            concat!(
+                "SELECT id::TEXT as id, filename, mime_type, preset, total_pages, provider, ",
+                "processing_time_ms, detected_preset, created_at ",
+                "FROM ", "ch_ocr_history",
+                " ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+            ),
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+        let total: (i64,) = sqlx::query_as::<_, (i64,)>(
+            concat!("SELECT COUNT(*) FROM ", "ch_ocr_history"),
+        )
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+        (items, total.0)
+    };
+
+    Ok(Json(PaginatedOcrHistory { items, total, limit, offset }))
+}
+
+pub async fn ocr_history_item(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<OcrHistoryFull>, (StatusCode, Json<Value>)> {
+    let entry: OcrHistoryFull = sqlx::query_as::<_, OcrHistoryFull>(
+        concat!(
+            "SELECT id::TEXT as id, filename, mime_type, preset, text, pages_json, total_pages, ",
+            "confidence, provider, processing_time_ms, detected_preset, structured_data, created_at ",
+            "FROM ", "ch_ocr_history", " WHERE id::TEXT = $1"
+        ),
+    )
+    .bind(&id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?
+    .ok_or_else(|| (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))))?;
+
+    Ok(Json(entry))
+}
+
+pub async fn ocr_history_delete(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
+    let result = sqlx::query(
+        concat!("DELETE FROM ", "ch_ocr_history", " WHERE id::TEXT = $1"),
+    )
+    .bind(&id)
+    .execute(&state.db)
+    .await
+    .map_err(|e: sqlx::Error| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+    if result.rows_affected() == 0 {
+        return Err((StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))));
+    }
+
+    Ok(Json(json!({"deleted": true})))
+}
+
 // ── OCR extraction (tries Claude first, falls back to Gemini) ────────────────
 
-async fn ocr_extract(state: &AppState, body: &OcrRequest) -> Result<(String, String, Option<f64>), String> {
-    let base_prompt = body.prompt.as_deref().unwrap_or(OCR_PROMPT);
-    let effective_prompt = build_ocr_prompt(
-        base_prompt,
-        body.language.as_deref(),
-        body.preset.as_deref(),
-    );
-
+async fn ocr_extract(
+    state: &AppState,
+    data_b64: &str,
+    mime_type: &str,
+    prompt: &str,
+) -> Result<(String, String, Option<f64>), String> {
     // Try Claude Vision API first
     let api_key = {
         let rt = state.runtime.read().await;
@@ -260,9 +672,7 @@ async fn ocr_extract(state: &AppState, body: &OcrRequest) -> Result<(String, Str
     };
 
     if let Some(key) = api_key {
-        match ocr_with_claude(&state.http_client, &key, &body.data_base64, &body.mime_type, &effective_prompt)
-            .await
-        {
+        match ocr_with_claude(&state.http_client, &key, data_b64, mime_type, prompt).await {
             Ok((text, confidence)) => return Ok((text, "claude".to_string(), confidence)),
             Err(e) => {
                 tracing::warn!("Claude OCR failed, trying Gemini fallback: {e}");
@@ -276,9 +686,9 @@ async fn ocr_extract(state: &AppState, body: &OcrRequest) -> Result<(String, Str
             &state.http_client,
             &credential,
             is_oauth,
-            &body.data_base64,
-            &body.mime_type,
-            &effective_prompt,
+            data_b64,
+            mime_type,
+            prompt,
         )
         .await?;
         return Ok((text, "gemini".to_string(), confidence));
@@ -383,9 +793,6 @@ async fn ocr_with_claude(
 
 // ── Gemini Vision OCR (fallback) ─────────────────────────────────────────────
 
-const GEMINI_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/models";
-const GEMINI_OCR_MODEL: &str = "gemini-3-flash-preview";
-
 async fn ocr_with_gemini(
     client: &reqwest::Client,
     credential: &str,
@@ -411,7 +818,7 @@ async fn ocr_with_gemini(
             ]
         }],
         "generationConfig": {
-            "temperature": 1.0,
+            "temperature": 1.0, // Gemini 3: ALWAYS 1.0 — lower values cause looping/degradation
             "maxOutputTokens": 16384
         }
     });
@@ -460,6 +867,107 @@ async fn ocr_with_gemini(
     Ok((text, confidence))
 }
 
+// ── Structured data extraction ───────────────────────────────────────────────
+
+/// Extract structured data from OCR text. Uses Gemini (text-only, simpler) since
+/// this is a second-pass analysis that doesn't need vision capabilities.
+async fn extract_structured_data(
+    state: &AppState,
+    ocr_text: &str,
+) -> Result<Value, String> {
+    let (credential, is_oauth) = crate::oauth_google::get_google_credential(state)
+        .await
+        .ok_or_else(|| "No Google API credential configured for structured extraction".to_string())?;
+
+    let url = format!("{GEMINI_API_BASE}/{GEMINI_OCR_MODEL}:generateContent");
+
+    let prompt = format!("{STRUCTURED_EXTRACTION_PROMPT}\n\nOCR TEXT:\n{ocr_text}");
+
+    let request_body = json!({
+        "contents": [{
+            "parts": [{ "text": prompt }]
+        }],
+        "generationConfig": {
+            "temperature": 1.0, // Gemini 3: ALWAYS 1.0 — lower values cause looping/degradation
+            "maxOutputTokens": 4096
+        }
+    });
+
+    let builder = state.http_client.post(&url).json(&request_body);
+    let builder = crate::oauth_google::apply_google_auth(builder, &credential, is_oauth);
+
+    let response = builder
+        .send()
+        .await
+        .map_err(|e| format!("Structured extraction request failed: {e}"))?;
+
+    let status = response.status();
+    let body: Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse structured extraction response: {e}"))?;
+
+    if !status.is_success() {
+        return Err("Structured extraction API error".to_string());
+    }
+
+    let raw_text = body["candidates"][0]["content"]["parts"]
+        .as_array()
+        .and_then(|parts| parts.iter().filter_map(|p| p["text"].as_str()).next())
+        .unwrap_or("");
+
+    // Try to parse JSON directly, or extract from markdown code block
+    let trimmed = raw_text.trim();
+    let json_str = if trimmed.starts_with("```") {
+        trimmed
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim()
+    } else {
+        trimmed
+    };
+
+    serde_json::from_str(json_str)
+        .map_err(|e| format!("Failed to parse structured data JSON: {e}"))
+}
+
+// ── Save to history ──────────────────────────────────────────────────────────
+
+async fn save_ocr_result(
+    db: &sqlx::PgPool,
+    filename: Option<&str>,
+    mime_type: &str,
+    preset: Option<&str>,
+    response: &OcrResponse,
+) -> Result<(), sqlx::Error> {
+    let pages_json = serde_json::to_value(&response.pages).unwrap_or_else(|_| json!([]));
+
+    sqlx::query(
+        concat!(
+            "INSERT INTO ", "ch_ocr_history",
+            " (filename, mime_type, preset, text, pages_json, total_pages, confidence, ",
+            "provider, processing_time_ms, detected_preset, structured_data) ",
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+        ),
+    )
+    .bind(filename)
+    .bind(mime_type)
+    .bind(preset)
+    .bind(&response.text)
+    .bind(&pages_json)
+    .bind(response.total_pages as i32)
+    .bind(response.confidence)
+    .bind(&response.provider)
+    .bind(response.processing_time_ms as i64)
+    .bind(response.detected_preset.as_deref())
+    .bind(&response.structured_data)
+    .execute(db)
+    .await?;
+
+    Ok(())
+}
+
 // ── Public helpers for agent tool fallback ────────────────────────────────────
 
 /// OCR a PDF document. Used by `read_pdf` tool as fallback when `pdf-extract`
@@ -469,15 +977,7 @@ pub async fn ocr_pdf_text(
     data_b64: &str,
     _page_range: Option<&str>,
 ) -> Result<String, String> {
-    let body = OcrRequest {
-        data_base64: data_b64.to_string(),
-        mime_type: "application/pdf".to_string(),
-        prompt: None,
-        page_range: None,
-        language: None,
-        preset: None,
-    };
-    let (text, provider, _confidence) = ocr_extract(state, &body).await?;
+    let (text, provider, _confidence) = ocr_extract(state, data_b64, "application/pdf", OCR_PROMPT).await?;
     tracing::info!("OCR PDF fallback completed via {provider}");
     Ok(text)
 }
@@ -488,15 +988,7 @@ pub async fn ocr_image_text(
     data_b64: &str,
     mime_type: &str,
 ) -> Result<String, String> {
-    let body = OcrRequest {
-        data_base64: data_b64.to_string(),
-        mime_type: mime_type.to_string(),
-        prompt: None,
-        page_range: None,
-        language: None,
-        preset: None,
-    };
-    let (text, provider, _confidence) = ocr_extract(state, &body).await?;
+    let (text, provider, _confidence) = ocr_extract(state, data_b64, mime_type, OCR_PROMPT).await?;
     tracing::info!("OCR image extraction completed via {provider}");
     Ok(text)
 }

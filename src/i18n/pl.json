@@ -112,7 +112,9 @@
       "backend": "Backend",
       "audit": "Audyt",
       "flyio": "Fly.io",
-      "activity": "Aktywność"
+      "activity": "Aktywność",
+      "usage": "Użycie",
+      "leaderboard": "Ranking"
     }
   },
   "settings": {
