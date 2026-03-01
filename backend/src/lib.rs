@@ -99,6 +99,10 @@ async fn request_id_middleware(
         model_registry::pin_model,
         model_registry::unpin_model,
         model_registry::list_pins,
+        // Prompt history
+        handlers::list_prompt_history,
+        handlers::add_prompt_history,
+        handlers::clear_prompt_history,
     ),
     components(schemas(
         // Core models
@@ -128,6 +132,8 @@ async fn request_id_middleware(
         model_registry::ModelInfo,
         model_registry::ResolvedModels,
         model_registry::PinModelRequest,
+        // Prompt history
+        models::AddPromptRequest,
     )),
     tags(
         (name = "health", description = "Health & readiness endpoints"),
@@ -282,6 +288,13 @@ pub fn create_router(state: AppState) -> Router {
         )
         .route("/api/mcp/tools", get(mcp::config::list_all_tools_handler))
         .route("/mcp", post(mcp::server::mcp_handler))
+        // Prompt history
+        .route(
+            "/api/prompt-history",
+            get(handlers::list_prompt_history)
+                .post(handlers::add_prompt_history)
+                .delete(handlers::clear_prompt_history),
+        )
         .layer(GovernorLayer::new(rl_default));
 
     // ── Merge all protected routes with auth layer ──────────────────

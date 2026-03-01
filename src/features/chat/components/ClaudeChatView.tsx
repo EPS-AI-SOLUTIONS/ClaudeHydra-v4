@@ -25,6 +25,7 @@ import { copyToClipboard } from '@/shared/utils/clipboard';
 import { cn } from '@/shared/utils/cn';
 import { formatDateTime, formatTime } from '@/shared/utils/locale';
 import { useViewStore } from '@/stores/viewStore';
+import { usePromptHistory } from '../hooks/usePromptHistory';
 import { type Attachment, ChatInput } from './ChatInput';
 import { type ChatMessage, MessageBubble } from './MessageBubble';
 import { SearchOverlay } from './SearchOverlay';
@@ -594,9 +595,9 @@ export function ClaudeChatView() {
     [activeSessionId, setSessionWorkingDirectory],
   );
 
-  // ----- Prompt history for arrow-key navigation ---------------------------
+  // ----- Prompt history for arrow-key navigation (global, SQL-backed) ------
 
-  const promptHistory = useMemo(() => messages.filter((m) => m.role === 'user').map((m) => m.content), [messages]);
+  const { promptHistory, addPrompt } = usePromptHistory();
 
   // ----- Send message with streaming (extended for tool events) ------------
 
@@ -644,6 +645,7 @@ export function ClaudeChatView() {
       }
 
       updateSessionMessages(sessionId, (prev) => [...prev, userMessage]);
+      addPrompt(text);
       setSessionLoading(sessionId, true);
 
       // Create placeholder assistant message
@@ -816,6 +818,7 @@ export function ClaudeChatView() {
       generateTitleWithSync,
       updateSessionMessages,
       setSessionLoading,
+      addPrompt,
       i18n.language,
     ],
   );
