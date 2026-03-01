@@ -10,6 +10,7 @@ import { FileText, Loader2, Paperclip, Send, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
   type ChangeEvent,
+  type ClipboardEvent,
   type DragEvent,
   forwardRef,
   type KeyboardEvent,
@@ -268,6 +269,24 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [handleSend, input, promptHistory, historyIndex],
     );
 
+    // ----- Paste handler (images from clipboard) ---------------------------
+
+    const handlePaste = useCallback(
+      (e: ClipboardEvent<HTMLTextAreaElement>) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of Array.from(items)) {
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) void processFile(file);
+            return;
+          }
+        }
+      },
+      [processFile],
+    );
+
     // ----- Auto-resize textarea ------------------------------------------
 
     const handleChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -375,6 +394,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               value={input}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               placeholder={placeholder}
               disabled={disabled}
               rows={1}

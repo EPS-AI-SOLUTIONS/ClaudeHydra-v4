@@ -484,10 +484,18 @@ pub async fn rotate_key(
 )]
 pub async fn list_agents(State(state): State<AppState>) -> impl axum::response::IntoResponse {
     // #6 — Cache agent list for 60 seconds
+    let agents = state.agents.read().await;
     (
         [(axum::http::header::CACHE_CONTROL, "public, max-age=60")],
-        Json(serde_json::to_value(&state.agents).unwrap_or_else(|_| json!({"error": "serialization failed"}))),
+        Json(serde_json::to_value(&*agents).unwrap_or_else(|_| json!({"error": "serialization failed"}))),
     )
+}
+
+/// POST /api/agents/refresh — Hot-reload agents from definitions.
+pub async fn refresh_agents(State(state): State<AppState>) -> Json<Value> {
+    state.refresh_agents().await;
+    let agents = state.agents.read().await;
+    Json(json!({ "status": "ok", "count": agents.len() }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -644,9 +652,39 @@ struct ChatContext {
     max_tokens: u32,
     working_directory: String,
     session_id: Option<uuid::Uuid>,
+    system_prompt: String,
+}
+
+/// Build system prompt server-side (prevents client-side manipulation).
+fn build_system_prompt(working_directory: &str, language: &str) -> String {
+    let lang_name = if language == "pl" { "Polish" } else { "English" };
+    let mut lines = vec![
+        "You are a Witcher-themed AI agent in the ClaudeHydra v4 Swarm Control Center.".to_string(),
+        "The swarm consists of 12 agents organized in 3 tiers:".to_string(),
+        "- Commander (Geralt, Yennefer, Vesemir) → Claude Opus 4.6".to_string(),
+        "- Coordinator (Triss, Jaskier, Ciri, Dijkstra) → Claude Sonnet 4.5".to_string(),
+        "- Executor (Lambert, Eskel, Regis, Zoltan, Philippa) → Claude Haiku 4.5".to_string(),
+        String::new(),
+        "You assist the user with software engineering tasks.".to_string(),
+        "You have access to local file tools (read_file, list_directory, write_file, search_in_files).".to_string(),
+        "Use them proactively when the user asks about files or code.".to_string(),
+        "Respond concisely and helpfully. Use markdown formatting when appropriate.".to_string(),
+        format!("Write ALL text in **{}** (except code, file paths, and identifiers).", lang_name),
+    ];
+    if !working_directory.is_empty() {
+        lines.extend([
+            String::new(),
+            "## Working Directory".to_string(),
+            format!("**Current working directory**: `{}`", working_directory),
+            "You can use relative paths (e.g. `src/main.rs`) — they resolve against this directory.".to_string(),
+            "You do NOT need to specify absolute paths unless referencing files outside this folder.".to_string(),
+        ]);
+    }
+    lines.join("\n")
 }
 
 /// Resolves model, max_tokens, session WD (session → global fallback).
+/// Uses a single DB query (LEFT JOIN) to fetch both session WD and global WD.
 async fn resolve_chat_context(state: &AppState, req: &ChatRequest) -> ChatContext {
     let default_model = crate::model_registry::get_model_id(state, "coordinator").await;
     let model = req.model.clone().unwrap_or(default_model);
@@ -657,37 +695,72 @@ async fn resolve_chat_context(state: &AppState, req: &ChatRequest) -> ChatContex
         .as_deref()
         .and_then(|s| uuid::Uuid::parse_str(s).ok());
 
-    let working_directory = if let Some(ref sid) = session_uuid {
-        let session_wd: String = sqlx::query_scalar(
-            "SELECT working_directory FROM ch_sessions WHERE id = $1",
+    // Single query: fetch session WD, global WD, and language in one roundtrip
+    let (working_directory, language) = if let Some(ref sid) = session_uuid {
+        let row: Option<(String, String, String)> = sqlx::query_as(
+            "SELECT COALESCE(s.working_directory, '') AS session_wd, \
+             COALESCE(g.working_directory, '') AS global_wd, \
+             COALESCE(g.language, 'en') AS language \
+             FROM ch_sessions s \
+             CROSS JOIN ch_settings g \
+             WHERE s.id = $1 AND g.id = 1",
         )
         .bind(sid)
         .fetch_optional(&state.db)
         .await
         .ok()
-        .flatten()
-        .unwrap_or_default();
-        if !session_wd.is_empty() {
-            session_wd
-        } else {
-            sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
-                .fetch_one(&state.db)
-                .await
-                .unwrap_or_default()
+        .flatten();
+        match row {
+            Some((session_wd, global_wd, lang)) => {
+                let wd = if !session_wd.is_empty() { session_wd } else { global_wd };
+                (wd, lang)
+            }
+            None => (String::new(), "en".to_string()),
         }
     } else {
-        sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
-            .fetch_one(&state.db)
-            .await
-            .unwrap_or_default()
+        let row: Option<(String, String)> = sqlx::query_as(
+            "SELECT COALESCE(working_directory, ''), COALESCE(language, 'en') FROM ch_settings WHERE id = 1",
+        )
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten();
+        row.unwrap_or_default()
     };
+
+    let system_prompt = build_system_prompt(&working_directory, &language);
 
     ChatContext {
         model,
         max_tokens,
         working_directory,
         session_id: session_uuid,
+        system_prompt,
     }
+}
+
+/// Filter out old client-side system prompt injection pattern.
+/// The frontend used to send system prompt as first user+assistant message pair.
+/// Now the backend handles it via the `system` API field, so strip those messages.
+fn filter_client_system_prompt(messages: &[ChatMessage]) -> Vec<Value> {
+    let mut result = Vec::new();
+    let mut skip_count = 0;
+
+    // Detect old pattern: first user message contains "Witcher-themed AI agent"
+    // and second is the "Understood" assistant response
+    if messages.len() >= 2
+        && messages[0].role == "user"
+        && messages[0].content.contains("Witcher-themed AI agent")
+        && messages[1].role == "assistant"
+        && messages[1].content.contains("Understood")
+    {
+        skip_count = 2;
+    }
+
+    for msg in messages.iter().skip(skip_count) {
+        result.push(json!({ "role": msg.role, "content": msg.content }));
+    }
+    result
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -723,16 +796,15 @@ pub async fn claude_chat_stream(
     );
     let model = ctx.model;
     let max_tokens = ctx.max_tokens;
+    let system_prompt = ctx.system_prompt;
 
-    let messages: Vec<Value> = req
-        .messages
-        .iter()
-        .map(|m| json!({ "role": m.role, "content": m.content }))
-        .collect();
+    // Filter out any client-side system prompt injection (first 2 messages are the old pattern)
+    let messages: Vec<Value> = filter_client_system_prompt(&req.messages);
 
     let mut body = json!({
         "model": model,
         "max_tokens": max_tokens,
+        "system": system_prompt,
         "messages": messages,
         "stream": true,
     });
@@ -878,13 +950,10 @@ async fn claude_chat_stream_with_tools(
     let model = ctx.model;
     let max_tokens = ctx.max_tokens;
     let wd = ctx.working_directory;
+    let system_prompt = ctx.system_prompt;
 
-    // Build initial messages
-    let initial_messages: Vec<Value> = req
-        .messages
-        .iter()
-        .map(|m| json!({ "role": m.role, "content": m.content }))
-        .collect();
+    // Build initial messages — filter out old client-side system prompt injection
+    let initial_messages: Vec<Value> = filter_client_system_prompt(&req.messages);
 
     // Build tool definitions (includes MCP tools from connected servers)
     let tool_defs: Vec<Value> = state
@@ -930,6 +999,7 @@ async fn claude_chat_stream_with_tools(
             let mut body = json!({
                 "model": &model,
                 "max_tokens": max_tokens,
+                "system": &system_prompt,
                 "messages": &conversation,
                 "tools": &tool_defs,
                 "stream": true,

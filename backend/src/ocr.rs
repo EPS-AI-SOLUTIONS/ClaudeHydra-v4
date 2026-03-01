@@ -384,7 +384,7 @@ async fn ocr_with_claude(
 // ── Gemini Vision OCR (fallback) ─────────────────────────────────────────────
 
 const GEMINI_API_BASE: &str = "https://generativelanguage.googleapis.com/v1beta/models";
-const GEMINI_OCR_MODEL: &str = "gemini-2.5-flash";
+const GEMINI_OCR_MODEL: &str = "gemini-3-flash-preview";
 
 async fn ocr_with_gemini(
     client: &reqwest::Client,

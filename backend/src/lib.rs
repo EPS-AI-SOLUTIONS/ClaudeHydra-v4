@@ -234,6 +234,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/logs/flyio", get(logs::flyio_logs))
         .route("/api/logs/activity", get(logs::activity_logs))
         .route("/api/agents", get(handlers::list_agents))
+        .route("/api/agents/refresh", post(handlers::refresh_agents))
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
         .route("/api/models/refresh", post(model_registry::refresh_models))

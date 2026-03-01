@@ -40,6 +40,7 @@ pub struct ResolvedModels {
     pub commander: Option<ModelInfo>,   // opus
     pub coordinator: Option<ModelInfo>, // sonnet
     pub executor: Option<ModelInfo>,    // haiku
+    pub flash: Option<ModelInfo>,       // gemini flash (fast tasks)
 }
 
 // ── Pin request ──────────────────────────────────────────────────────────────
@@ -338,10 +339,15 @@ pub async fn resolve_models(state: &AppState) -> ResolvedModels {
     let executor = select_best(&anthropic, &["haiku"], &["20"])
         .or_else(|| select_best(&anthropic, &["haiku"], &[]));
 
+    // Flash: Gemini flash model for fast tasks (classification, etc.)
+    let google = cache.models.get("google").cloned().unwrap_or_default();
+    let flash = select_best(&google, &["flash"], &[]);
+
     ResolvedModels {
         commander,
         coordinator,
         executor,
+        flash,
     }
 }
 

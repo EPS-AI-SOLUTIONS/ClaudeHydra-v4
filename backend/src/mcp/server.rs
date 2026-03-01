@@ -198,7 +198,8 @@ async fn handle_resources_read(state: &AppState, params: &Value) -> Result<Value
 
     match uri {
         "claudehydra://agents" => {
-            let agents_json = serde_json::to_value(&state.agents)
+            let agents = state.agents.read().await;
+            let agents_json = serde_json::to_value(&*agents)
                 .unwrap_or_else(|_| json!([]));
             Ok(json!({
                 "contents": [{

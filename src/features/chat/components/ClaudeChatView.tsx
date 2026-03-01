@@ -556,21 +556,7 @@ export function ClaudeChatView() {
     }
   }, []);
 
-  // ----- Paste handler (global) --------------------------------------------
-
-  useEffect(() => {
-    const handlePaste = async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of Array.from(items)) {
-        if (item.kind === 'file') {
-          e.preventDefault();
-        }
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, []);
+  // Paste handling moved to ChatInput component (image paste support)
 
   // ----- Model selection adapter -------------------------------------------
 

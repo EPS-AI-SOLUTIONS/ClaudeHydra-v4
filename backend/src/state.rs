@@ -92,6 +92,8 @@ pub struct CircuitBreaker {
     /// `None` = circuit is closed (healthy).
     /// `Some(instant)` = tripped at this wall-clock instant.
     tripped_at: RwLock<Option<Instant>>,
+    /// `true` = circuit is half-open (one probe request allowed).
+    half_open: AtomicBool,
 }
 
 const FAILURE_THRESHOLD: u32 = 3;
@@ -102,45 +104,74 @@ impl CircuitBreaker {
         Self {
             consecutive_failures: AtomicU32::new(0),
             tripped_at: RwLock::new(None),
+            half_open: AtomicBool::new(false),
         }
     }
 
     /// Returns `true` if the circuit is closed (allow the request).
     /// Returns `false` if tripped and the cooldown has NOT elapsed yet.
-    /// If the cooldown HAS elapsed, resets the circuit to half-open (allows one request).
+    /// After cooldown: transitions to HALF_OPEN and allows exactly ONE probe request.
     pub async fn allow_request(&self) -> bool {
         let guard = self.tripped_at.read().await;
-        if let Some(tripped) = *guard {
-            if tripped.elapsed().as_secs() < COOLDOWN_SECS {
-                return false;
+        match *guard {
+            None => {
+                // Circuit is closed — but check if half-open (probe in progress)
+                if self.half_open.load(Ordering::Acquire) {
+                    return false; // Another request is already probing
+                }
+                true
             }
-            // Cooldown elapsed — drop read lock, acquire write, reset to half-open
-            drop(guard);
-            let mut wg = self.tripped_at.write().await;
-            // Double-check under write lock (another task may have reset it)
-            if let Some(t) = *wg {
-                if t.elapsed().as_secs() >= COOLDOWN_SECS {
-                    *wg = None;
-                    self.consecutive_failures.store(0, Ordering::Relaxed);
-                    tracing::info!("circuit_breaker: cooldown elapsed, resetting to half-open");
+            Some(tripped) => {
+                if tripped.elapsed().as_secs() < COOLDOWN_SECS {
+                    return false;
+                }
+                drop(guard);
+                // Cooldown elapsed — CAS to become the single probe request
+                if self
+                    .half_open
+                    .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                    .is_ok()
+                {
+                    tracing::info!(
+                        "circuit_breaker: cooldown elapsed, entering HALF_OPEN — allowing probe request"
+                    );
+                    true
+                } else {
+                    false // Another task already became the probe
                 }
             }
         }
-        true
     }
 
     /// Record a successful request — resets the failure counter and closes the circuit.
     pub async fn record_success(&self) {
+        let was_half_open = self.half_open.swap(false, Ordering::Release);
         let prev = self.consecutive_failures.swap(0, Ordering::Relaxed);
-        if prev > 0 {
+        if was_half_open || prev > 0 {
             let mut wg = self.tripped_at.write().await;
             *wg = None;
-            tracing::info!("circuit_breaker: success recorded, circuit closed (was {} failures)", prev);
+            tracing::info!(
+                "circuit_breaker: success recorded, circuit CLOSED (was {} failures, half_open={})",
+                prev,
+                was_half_open
+            );
         }
     }
 
     /// Record a failed request. Trips the circuit after `FAILURE_THRESHOLD` consecutive failures.
+    /// If in HALF_OPEN state, re-trips immediately.
     pub async fn record_failure(&self) {
+        let was_half_open = self.half_open.swap(false, Ordering::Release);
+        if was_half_open {
+            // Probe failed — re-trip immediately with fresh cooldown
+            let mut wg = self.tripped_at.write().await;
+            *wg = Some(Instant::now());
+            tracing::error!(
+                "circuit_breaker: HALF_OPEN probe failed — re-tripped for {}s",
+                COOLDOWN_SECS
+            );
+            return;
+        }
         let count = self.consecutive_failures.fetch_add(1, Ordering::Relaxed) + 1;
         tracing::warn!("circuit_breaker: failure #{}", count);
         if count >= FAILURE_THRESHOLD {
@@ -194,7 +225,7 @@ impl Default for SystemSnapshot {
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
-    pub agents: Vec<WitcherAgent>,
+    pub agents: Arc<RwLock<Vec<WitcherAgent>>>,
     pub runtime: Arc<RwLock<RuntimeState>>,
     pub model_cache: Arc<RwLock<ModelCache>>,
     pub start_time: Instant,
@@ -235,6 +266,16 @@ impl AppState {
         self.ready.store(true, Ordering::Relaxed);
         tracing::info!("Backend marked as READY");
     }
+
+    /// Refresh agents list from the hardcoded definitions.
+    /// In the future, this could reload from DB.
+    pub async fn refresh_agents(&self) {
+        let new_agents = init_witcher_agents();
+        let count = new_agents.len();
+        let mut lock = self.agents.write().await;
+        *lock = new_agents;
+        tracing::info!("Agents refreshed — {} agents loaded", count);
+    }
 }
 
 impl AppState {
@@ -254,11 +295,10 @@ impl AppState {
             tracing::info!("AUTH_SECRET not set — authentication disabled (dev mode)");
         }
 
-        let agents = init_witcher_agents();
+        let agents = Arc::new(RwLock::new(init_witcher_agents()));
 
         tracing::info!(
-            "AppState initialised — {} agents, keys: {:?}",
-            agents.len(),
+            "AppState initialised — keys: {:?}",
             api_keys.keys().collect::<Vec<_>>()
         );
 
@@ -306,7 +346,7 @@ impl AppState {
     /// gracefully handle DB errors, e.g. `.ok()?`).
     #[doc(hidden)]
     pub fn new_test() -> Self {
-        let agents = init_witcher_agents();
+        let agents = Arc::new(RwLock::new(init_witcher_agents()));
 
         let http_client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(5))
