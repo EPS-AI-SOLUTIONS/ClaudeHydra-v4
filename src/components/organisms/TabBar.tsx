@@ -10,6 +10,7 @@ import { Pin, Plus, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
 import { type ChatTab, useViewStore } from '@/stores/viewStore';
@@ -211,7 +212,7 @@ export const TabBar = memo(() => {
   const switchTab = useViewStore((s) => s.switchTab);
   const closeTab = useViewStore((s) => s.closeTab);
   const togglePinTab = useViewStore((s) => s.togglePinTab);
-  const createSession = useViewStore((s) => s.createSession);
+  const { createSessionWithSync } = useSessionSync();
   const reorderTabs = useViewStore((s) => s.reorderTabs);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
@@ -332,7 +333,7 @@ export const TabBar = memo(() => {
 
       <button
         type="button"
-        onClick={() => createSession()}
+        onClick={() => createSessionWithSync()}
         className={cn(
           'shrink-0 p-2 mb-1 rounded-xl transition-all',
           theme.isLight

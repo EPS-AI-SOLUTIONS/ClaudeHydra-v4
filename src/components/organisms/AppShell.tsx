@@ -13,7 +13,7 @@
  * Unified with GeminiHydra-v15 AppShell pattern for StatusFooter props.
  */
 
-import { type ReactNode, useEffect, useMemo } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { RuneRain, ThemedBackground } from '@/components/atoms';
 import { CommandPalette } from '@/components/molecules/CommandPalette';
 import { Sidebar } from '@/components/organisms/Sidebar';
@@ -21,6 +21,7 @@ import type { StatusFooterProps } from '@/components/organisms/StatusFooter';
 import { StatusFooter } from '@/components/organisms/StatusFooter';
 import { TabBar } from '@/components/organisms/TabBar';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useHealthStatus, useSystemStatsQuery } from '@/features/health/hooks/useHealth';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { cn } from '@/shared/utils/cn';
@@ -97,17 +98,23 @@ function AppShellInner({ children }: AppShellProps) {
     isDark ? 'bg-black/40 border-white/10 shadow-2xl' : 'bg-white/40 border-white/20 shadow-lg',
   );
 
+  const { createSessionWithSync } = useSessionSync();
+
   // Ctrl+T: create new tab (chat view only)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 't' && useViewStore.getState().currentView === 'chat') {
         e.preventDefault();
-        useViewStore.getState().createSession();
+        createSessionWithSync();
       }
-    };
+    },
+    [createSessionWithSync],
+  );
+
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleKeyDown]);
 
   return (
     <div

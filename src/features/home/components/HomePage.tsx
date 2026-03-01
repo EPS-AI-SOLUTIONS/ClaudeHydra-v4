@@ -13,6 +13,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Button } from '@/components/atoms';
+import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { HealthDashboard } from '@/features/health/components/HealthDashboard';
 import { OAuthBanner } from '@/features/settings/components/OAuthBanner';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
@@ -150,9 +151,9 @@ export const HomePage = memo(() => {
 
   const chatSessions = useViewStore((s) => s.chatSessions);
   const setView = useViewStore((s) => s.setView);
-  const createSession = useViewStore((s) => s.createSession);
   const selectSession = useViewStore((s) => s.selectSession);
   const openTab = useViewStore((s) => s.openTab);
+  const { createSessionWithSync } = useSessionSync();
 
   const recentSessions = useMemo(
     () => [...chatSessions].sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_RECENT_SESSIONS),
@@ -226,7 +227,7 @@ export const HomePage = memo(() => {
               variant="primary"
               size="md"
               leftIcon={<Plus size={16} />}
-              onClick={() => createSession()}
+              onClick={() => createSessionWithSync()}
               className="w-full"
               data-testid="btn-new-chat"
             >
