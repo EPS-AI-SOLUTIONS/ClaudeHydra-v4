@@ -2,6 +2,7 @@
   "nav": {
     "home": "Start",
     "chat": "Czat",
+    "logs": "Logi",
     "settings": "Ustawienia"
   },
   "sidebar": {
@@ -92,6 +93,26 @@
       "claudeApi": "Claude API",
       "mcpIntegration": "Integracja MCP",
       "streamingChat": "Czat Strumieniowy"
+    }
+  },
+  "logs": {
+    "title": "Logi",
+    "searchPlaceholder": "Szukaj logow...",
+    "searchAudit": "Szukaj logow audytu...",
+    "levelFilter": "Filtruj po poziomie",
+    "actionFilter": "Filtruj po akcji...",
+    "allLevels": "Wszystkie poziomy",
+    "autoRefreshOn": "Na zywo",
+    "autoRefreshOff": "Wstrzymane",
+    "empty": "Brak wpisow logu",
+    "flyioApp": "Nazwa aplikacji Fly.io",
+    "prev": "Poprzednia",
+    "next": "Nastepna",
+    "tabs": {
+      "backend": "Backend",
+      "audit": "Audyt",
+      "flyio": "Fly.io",
+      "activity": "Aktywnosc"
     }
   },
   "settings": {

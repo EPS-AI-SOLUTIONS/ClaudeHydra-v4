@@ -8,6 +8,39 @@ import { toast } from 'sonner';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/api/client';
 import type { Session, SessionSummary, SessionsList } from '@/shared/api/schemas';
 
+/** Shape returned by GET /api/sessions/:id */
+export interface SessionDetail {
+  id: string;
+  title: string;
+  created_at: string;
+  working_directory?: string;
+  messages: Array<{
+    id: string;
+    role: string;
+    content: string;
+    model?: string | null;
+    agent?: string | null;
+    timestamp: string;
+    tool_interactions?: Array<{
+      tool_use_id: string;
+      tool_name: string;
+      tool_input: Record<string, unknown>;
+      result?: string;
+      is_error?: boolean;
+    }> | null;
+  }>;
+}
+
+/** GET /api/sessions/:id — full session with messages + tool_interactions */
+export function useSessionDetailQuery(sessionId: string | null) {
+  return useQuery<SessionDetail>({
+    queryKey: ['session-detail', sessionId],
+    queryFn: () => apiGet<SessionDetail>(`/api/sessions/${sessionId}`),
+    enabled: !!sessionId,
+    staleTime: 60_000,
+  });
+}
+
 /** GET /api/sessions — backend returns { sessions: [...], has_more, next_cursor } */
 export function useSessionsQuery() {
   return useQuery<SessionsList>({

@@ -5,8 +5,52 @@ use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::model_registry;
-use claudehydra_backend::state::AppState;
+use claudehydra_backend::state::{AppState, LogEntry, LogRingBuffer};
 use claudehydra_backend::watchdog;
+
+// ── Log buffer tracing layer ────────────────────────────────────────
+struct LogBufferLayer {
+    buffer: std::sync::Arc<LogRingBuffer>,
+}
+
+impl<S: tracing::Subscriber> tracing_subscriber::Layer<S> for LogBufferLayer {
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        let meta = event.metadata();
+        let mut visitor = MessageVisitor(String::new());
+        event.record(&mut visitor);
+
+        self.buffer.push(LogEntry {
+            timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            level: meta.level().to_string(),
+            target: meta.target().to_string(),
+            message: visitor.0,
+        });
+    }
+}
+
+struct MessageVisitor(String);
+
+impl tracing::field::Visit for MessageVisitor {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        if field.name() == "message" {
+            self.0 = format!("{:?}", value);
+        } else if self.0.is_empty() {
+            self.0 = format!("{}={:?}", field.name(), value);
+        }
+    }
+
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        if field.name() == "message" {
+            self.0 = value.to_string();
+        } else if self.0.is_empty() {
+            self.0 = format!("{}={}", field.name(), value);
+        }
+    }
+}
 
 fn build_app(state: AppState) -> axum::Router {
     // CORS — allow Vite dev server + Vercel production
@@ -98,7 +142,8 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .await
         .expect("Migrations failed");
 
-    let state = AppState::new(pool);
+    let log_buffer = std::sync::Arc::new(LogRingBuffer::new(1000));
+    let state = AppState::new(pool, log_buffer);
 
     // ── Spawn system monitor (CPU/memory stats, refreshed every 5s) ──
     claudehydra_backend::system_monitor::spawn(state.system_monitor.clone());
@@ -112,20 +157,27 @@ async fn main() -> shuttle_axum::ShuttleAxum {
 #[cfg(not(feature = "shuttle"))]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    use tracing_subscriber::prelude::*;
     use tracing_subscriber::EnvFilter;
 
     enable_ansi();
 
+    // Create log ring buffer BEFORE subscriber so the Layer can capture events
+    let log_buffer = std::sync::Arc::new(LogRingBuffer::new(1000));
+    let buffer_layer = LogBufferLayer { buffer: log_buffer.clone() };
+
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
     if std::env::var("RUST_LOG_FORMAT").as_deref() == Ok("json") {
-        tracing_subscriber::fmt()
-            .with_env_filter(env_filter)
-            .json()
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer().json())
+            .with(buffer_layer)
             .init();
     } else {
-        tracing_subscriber::fmt()
-            .with_env_filter(env_filter)
-            .with_ansi(true)
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer().with_ansi(true))
+            .with(buffer_layer)
             .init();
     }
 
@@ -145,7 +197,7 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!("Migration skipped (schema likely exists): {}", e);
     }
 
-    let state = AppState::new(pool);
+    let state = AppState::new(pool, log_buffer);
 
     // ── Spawn system monitor (CPU/memory stats, refreshed every 5s) ──
     claudehydra_backend::system_monitor::spawn(state.system_monitor.clone());

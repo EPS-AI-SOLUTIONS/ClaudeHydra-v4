@@ -635,6 +635,62 @@ pub async fn claude_chat(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Shared Chat Context Resolution
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Shared preprocessing for both tools and no-tools streaming paths.
+struct ChatContext {
+    model: String,
+    max_tokens: u32,
+    working_directory: String,
+    session_id: Option<uuid::Uuid>,
+}
+
+/// Resolves model, max_tokens, session WD (session → global fallback).
+async fn resolve_chat_context(state: &AppState, req: &ChatRequest) -> ChatContext {
+    let default_model = crate::model_registry::get_model_id(state, "coordinator").await;
+    let model = req.model.clone().unwrap_or(default_model);
+    let max_tokens = req.max_tokens.unwrap_or(4096);
+
+    let session_uuid = req
+        .session_id
+        .as_deref()
+        .and_then(|s| uuid::Uuid::parse_str(s).ok());
+
+    let working_directory = if let Some(ref sid) = session_uuid {
+        let session_wd: String = sqlx::query_scalar(
+            "SELECT working_directory FROM ch_sessions WHERE id = $1",
+        )
+        .bind(sid)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+        if !session_wd.is_empty() {
+            session_wd
+        } else {
+            sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
+                .fetch_one(&state.db)
+                .await
+                .unwrap_or_default()
+        }
+    } else {
+        sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or_default()
+    };
+
+    ChatContext {
+        model,
+        max_tokens,
+        working_directory,
+        session_id: session_uuid,
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Claude Streaming  (SSE from Anthropic → NDJSON to frontend)
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -659,9 +715,14 @@ pub async fn claude_chat_stream(
         return claude_chat_stream_with_tools(state, req).await;
     }
 
-    let default_model = crate::model_registry::get_model_id(&state, "coordinator").await;
-    let model = req.model.clone().unwrap_or(default_model);
-    let max_tokens = req.max_tokens.unwrap_or(4096);
+    let ctx = resolve_chat_context(&state, &req).await;
+    tracing::info!(
+        session_id = ?ctx.session_id,
+        wd = %ctx.working_directory,
+        "chat stream (no-tools)"
+    );
+    let model = ctx.model;
+    let max_tokens = ctx.max_tokens;
 
     let messages: Vec<Value> = req
         .messages
@@ -813,9 +874,10 @@ async fn claude_chat_stream_with_tools(
     state: AppState,
     req: ChatRequest,
 ) -> Result<Response, (StatusCode, Json<Value>)> {
-    let default_model = crate::model_registry::get_model_id(&state, "coordinator").await;
-    let model = req.model.clone().unwrap_or(default_model);
-    let max_tokens = req.max_tokens.unwrap_or(4096);
+    let ctx = resolve_chat_context(&state, &req).await;
+    let model = ctx.model;
+    let max_tokens = ctx.max_tokens;
+    let wd = ctx.working_directory;
 
     // Build initial messages
     let initial_messages: Vec<Value> = req
@@ -843,39 +905,6 @@ async fn claude_chat_stream_with_tools(
     let (tx, rx) = tokio::sync::mpsc::channel::<String>(256);
 
     let state_clone = state.clone();
-
-    // Read working_directory: prefer session-specific, fallback to global
-    let wd: String = if let Some(ref sid) = req.session_id {
-        if let Ok(session_uuid) = uuid::Uuid::parse_str(sid) {
-            let session_wd: String = sqlx::query_scalar(
-                "SELECT working_directory FROM ch_sessions WHERE id = $1",
-            )
-            .bind(session_uuid)
-            .fetch_optional(&state.db)
-            .await
-            .ok()
-            .flatten()
-            .unwrap_or_default();
-            if !session_wd.is_empty() {
-                session_wd
-            } else {
-                sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
-                    .fetch_one(&state.db)
-                    .await
-                    .unwrap_or_default()
-            }
-        } else {
-            sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
-                .fetch_one(&state.db)
-                .await
-                .unwrap_or_default()
-        }
-    } else {
-        sqlx::query_scalar("SELECT working_directory FROM ch_settings WHERE id = 1")
-            .fetch_one(&state.db)
-            .await
-            .unwrap_or_default()
-    };
 
     tokio::spawn(async move {
         let mut conversation: Vec<Value> = initial_messages;

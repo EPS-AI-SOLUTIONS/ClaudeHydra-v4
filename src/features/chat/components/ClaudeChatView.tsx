@@ -18,6 +18,8 @@ import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSel
 import { useAutoScroll } from '@/features/chat/hooks/useAutoScroll';
 import { type ClaudeModel, FALLBACK_CLAUDE_MODELS, useClaudeModels } from '@/features/chat/hooks/useClaudeModels';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
+import type { SessionDetail } from '@/features/chat/hooks/useSessions';
+import { apiGet } from '@/shared/api/client';
 import { env } from '@/shared/config/env';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
@@ -478,14 +480,54 @@ export function ClaudeChatView() {
   // ----- Session switch: save & restore messages ---------------------------
 
   useEffect(() => {
-    if (activeSessionId) {
-      const cached = sessionMessagesRef.current[activeSessionId] ?? [];
-      setMessages(cached);
-      setIsLoading(loadingSessionsRef.current.has(activeSessionId));
-    } else {
+    if (!activeSessionId) {
       setMessages([]);
       setIsLoading(false);
+      return;
     }
+
+    const cached = sessionMessagesRef.current[activeSessionId] ?? [];
+    if (cached.length > 0) {
+      setMessages(cached);
+      setIsLoading(loadingSessionsRef.current.has(activeSessionId));
+      return;
+    }
+
+    // Lazy-load from DB when sessionMessagesRef is empty (e.g. after page refresh)
+    let cancelled = false;
+    setIsLoading(true);
+    apiGet<SessionDetail>(`/api/sessions/${activeSessionId}`)
+      .then((detail) => {
+        if (cancelled) return;
+        const mapped: ChatMessage[] = detail.messages.map((m) => ({
+          id: m.id,
+          role: m.role as ChatMessage['role'],
+          content: m.content,
+          model: m.model ?? undefined,
+          timestamp: new Date(m.timestamp),
+          toolInteractions: m.tool_interactions?.map((ti) => ({
+            id: ti.tool_use_id,
+            toolName: ti.tool_name,
+            toolInput: ti.tool_input,
+            result: ti.result,
+            isError: ti.is_error,
+            status: 'completed' as const,
+          })),
+        }));
+        sessionMessagesRef.current[activeSessionId] = mapped;
+        setMessages(mapped);
+      })
+      .catch(() => {
+        // Best-effort: session may not exist in DB yet (local-only)
+        if (!cancelled) setMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeSessionId]);
 
   // ----- Check Claude API connectivity on mount ----------------------------
@@ -648,6 +690,9 @@ export function ClaudeChatView() {
       addPrompt(text);
       setSessionLoading(sessionId, true);
 
+      // Persist user message to DB immediately (crash-safe — Issue 2 fix)
+      addMessageWithSync(sessionId, 'user', content, selectedModel);
+
       // Create placeholder assistant message
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -678,9 +723,18 @@ export function ClaudeChatView() {
             content: 'Understood. I am ready to assist as a Witcher agent in the ClaudeHydra swarm.',
           },
         ];
-        // Use messages captured before the new user/assistant were added
-        for (const m of previousMessages) {
-          chatHistory.push({ role: m.role, content: m.content });
+        // Sliding window: last 20 messages, compress older ones to 500 chars (GH parity)
+        const HISTORY_LIMIT = 20;
+        const COMPRESS_KEEP_FULL = 6;
+        const windowedMessages = previousMessages.slice(-HISTORY_LIMIT);
+        for (let i = 0; i < windowedMessages.length; i++) {
+          const m = windowedMessages[i]!;
+          const isOld = i < windowedMessages.length - COMPRESS_KEEP_FULL;
+          const msgContent =
+            isOld && m.content.length > 500
+              ? m.content.slice(0, 500) + '... [truncated for context efficiency]'
+              : m.content;
+          chatHistory.push({ role: m.role, content: msgContent });
         }
         chatHistory.push({ role: 'user', content });
 
@@ -759,8 +813,7 @@ export function ClaudeChatView() {
             if (event.done) {
               setSessionLoading(sessionId, false);
               delete abortControllersRef.current[sessionId];
-              // Persist to DB
-              addMessageWithSync(sessionId, 'user', content, selectedModel);
+              // Persist assistant response to DB (user message already saved before streaming)
               if (responseBuffer) {
                 addMessageWithSync(sessionId, 'assistant', responseBuffer, event.model ?? selectedModel);
               }

@@ -19,7 +19,7 @@ export type { ChatSession, ChatTab } from '@/shared/types/store';
 // Types
 // ---------------------------------------------------------------------------
 
-export type ViewId = 'home' | 'chat' | 'agents' | 'settings';
+export type ViewId = 'home' | 'chat' | 'agents' | 'settings' | 'logs';
 
 interface ViewState {
   currentView: ViewId;

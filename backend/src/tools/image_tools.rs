@@ -13,10 +13,24 @@ const MAX_IMAGE_SIZE: u64 = 5 * 1024 * 1024;
 /// Allowed image extensions.
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "gif"];
 
+/// OCR prompt for text extraction mode.
+const OCR_PROMPT: &str = "\
+Extract ALL text from this image exactly as written. Preserve:\n\
+- Line breaks and paragraph structure\n\
+- Formatting (headers, lists, tables)\n\
+- Special characters and numbers\n\
+- Reading order (left-to-right, top-to-bottom)\n\
+\n\
+If the text is handwritten, transcribe it as accurately as possible.\n\
+If there are tables, format them using markdown table syntax.\n\
+Return ONLY the extracted text, no descriptions or commentary.";
+
 /// Analyze an image using Claude Vision API.
+/// When `extract_text` is true, uses OCR prompt instead of description prompt.
 pub async fn tool_analyze_image(
     path: &str,
     prompt: Option<&str>,
+    extract_text: Option<bool>,
     http_client: &reqwest::Client,
     api_keys: &HashMap<String, String>,
 ) -> Result<(String, bool), String> {
@@ -62,9 +76,13 @@ pub async fn tool_analyze_image(
         _ => "application/octet-stream",
     };
 
-    let analysis_prompt = prompt.unwrap_or(
-        "Describe this image in detail. Include any text, objects, people, colors, layout, and notable features.",
-    );
+    let analysis_prompt = if extract_text.unwrap_or(false) {
+        prompt.unwrap_or(OCR_PROMPT)
+    } else {
+        prompt.unwrap_or(
+            "Describe this image in detail. Include any text, objects, people, colors, layout, and notable features.",
+        )
+    };
 
     // Get API key
     let api_key = api_keys
@@ -124,9 +142,10 @@ pub async fn tool_analyze_image(
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("image");
+    let label = if extract_text.unwrap_or(false) { "OCR" } else { "Image Analysis" };
     let output = format!(
-        "### Image Analysis: {} ({}, {} bytes)\n\n{}",
-        filename, media_type, metadata.len(), text
+        "### {}: {} ({}, {} bytes)\n\n{}",
+        label, filename, media_type, metadata.len(), text
     );
 
     Ok((output, false))

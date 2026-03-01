@@ -1,11 +1,13 @@
 pub mod audit;
 pub mod auth;
 pub mod handlers;
+pub mod logs;
 pub mod mcp;
 pub mod model_registry;
 pub mod models;
 pub mod oauth;
 pub mod oauth_google;
+pub mod ocr;
 pub mod oauth_github;
 pub mod oauth_vercel;
 pub mod service_tokens;
@@ -226,6 +228,11 @@ pub fn create_router(state: AppState) -> Router {
             "/api/tokens/{service}",
             delete(service_tokens::delete_token),
         )
+        // Logs — centralized log endpoints for LogsView
+        .route("/api/logs/backend", get(logs::backend_logs))
+        .route("/api/logs/audit", get(logs::audit_logs))
+        .route("/api/logs/flyio", get(logs::flyio_logs))
+        .route("/api/logs/activity", get(logs::activity_logs))
         .route("/api/agents", get(handlers::list_agents))
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
@@ -288,6 +295,9 @@ pub fn create_router(state: AppState) -> Router {
         )
         .route("/api/mcp/tools", get(mcp::config::list_all_tools_handler))
         .route("/mcp", post(mcp::server::mcp_handler))
+        // OCR — text extraction from images and PDFs
+        .route("/api/ocr", post(ocr::ocr))
+        .route("/api/ocr/stream", post(ocr::ocr_stream))
         // Prompt history
         .route(
             "/api/prompt-history",

@@ -5,6 +5,7 @@ pub mod git_tools;
 pub mod image_tools;
 pub mod pdf_tools;
 pub mod vercel_tools;
+pub mod web_tools;
 pub mod zip_tools;
 
 use std::collections::HashMap;
@@ -254,7 +255,8 @@ impl ToolExecutor {
             ToolDefinition {
                 name: "analyze_image".to_string(),
                 description: "Analyze an image file using AI vision. Describes contents, text, \
-                    objects, colors, and notable features. Supports PNG, JPEG, WebP, GIF.".to_string(),
+                    objects, colors, and notable features. Supports PNG, JPEG, WebP, GIF. \
+                    Set extract_text=true to perform OCR (extract text from the image).".to_string(),
                 input_schema: json!({
                     "type": "object",
                     "properties": {
@@ -265,6 +267,28 @@ impl ToolExecutor {
                         "prompt": {
                             "type": "string",
                             "description": "Optional custom analysis prompt (default: detailed description)"
+                        },
+                        "extract_text": {
+                            "type": "boolean",
+                            "description": "When true, extract text (OCR) from the image instead of describing it"
+                        }
+                    },
+                    "required": ["path"]
+                }),
+            },
+            ToolDefinition {
+                name: "ocr_document".to_string(),
+                description: "Extract text from an image or PDF using AI Vision OCR. Returns text \
+                    with preserved formatting: tables as markdown (| pipes + --- separators), \
+                    headers, lists, paragraphs. Ideal for invoices, reports, forms, tables, \
+                    receipts, scanned documents. Supports PNG, JPEG, WebP, GIF, PDF (max 22 MB)."
+                    .to_string(),
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Path to the image or PDF file"
                         }
                     },
                     "required": ["path"]
@@ -365,10 +389,11 @@ impl ToolExecutor {
             },
         ];
 
-        // Append GitHub, Vercel, and Fly.io tool definitions
+        // Append GitHub, Vercel, Fly.io, and Web tool definitions
         defs.extend(github_tools::tool_definitions());
         defs.extend(vercel_tools::tool_definitions());
         defs.extend(fly_tools::tool_definitions());
+        defs.extend(web_tools::tool_definitions());
 
         defs
     }
@@ -396,6 +421,37 @@ impl ToolExecutor {
         // Fly.io tools
         if tool_name.starts_with("fly_") {
             return fly_tools::execute(tool_name, input, state).await;
+        }
+        // read_pdf — needs AppState for OCR fallback
+        if tool_name == "read_pdf" {
+            let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            let page_range = input.get("page_range").and_then(|v| v.as_str());
+            return match pdf_tools::tool_read_pdf(path, page_range, Some(state)).await {
+                Ok(text) => (text, false),
+                Err(e) => (e, true),
+            };
+        }
+        // ocr_document — dedicated OCR with markdown table preservation
+        if tool_name == "ocr_document" {
+            let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            return match ocr_document(path, state).await {
+                Ok(text) => (text, false),
+                Err(e) => (e, true),
+            };
+        }
+        // analyze_image — needs extract_text parameter
+        if tool_name == "analyze_image" {
+            let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            let prompt = input.get("prompt").and_then(|v| v.as_str());
+            let extract_text = input.get("extract_text").and_then(|v| v.as_bool());
+            return match image_tools::tool_analyze_image(path, prompt, extract_text, &self.http_client, &self.api_keys).await {
+                Ok(result) => result,
+                Err(e) => (e, true),
+            };
+        }
+        // Web tools — fetching and crawling web pages
+        if tool_name == "fetch_webpage" || tool_name == "crawl_website" {
+            return web_tools::execute(tool_name, input, state).await;
         }
         // Fall back to existing execute for local tools
         self.execute(tool_name, input).await
@@ -451,7 +507,8 @@ impl ToolExecutor {
             "read_pdf" => {
                 let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let page_range = input.get("page_range").and_then(|v| v.as_str());
-                match pdf_tools::tool_read_pdf(path, page_range).await {
+                // No state available — OCR fallback disabled
+                match pdf_tools::tool_read_pdf(path, page_range, None).await {
                     Ok(text) => (text, false),
                     Err(e) => (e, true),
                 }
@@ -473,7 +530,8 @@ impl ToolExecutor {
             "analyze_image" => {
                 let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let prompt = input.get("prompt").and_then(|v| v.as_str());
-                match image_tools::tool_analyze_image(path, prompt, &self.http_client, &self.api_keys).await {
+                // No state — extract_text defaults to None (description mode)
+                match image_tools::tool_analyze_image(path, prompt, None, &self.http_client, &self.api_keys).await {
                     Ok(result) => result,
                     Err(e) => (e, true),
                 }
@@ -521,4 +579,68 @@ impl ToolExecutor {
             _ => (format!("Unknown tool: {}", tool_name), true),
         }
     }
+}
+
+// ── OCR Document tool ─────────────────────────────────────────────────────
+
+const OCR_DOCUMENT_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp", "gif", "pdf"];
+
+async fn ocr_document(path: &str, state: &AppState) -> Result<String, String> {
+    let file_path = std::path::Path::new(path);
+
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let ext = file_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+
+    if !OCR_DOCUMENT_EXTENSIONS.contains(&ext.as_str()) {
+        return Err(format!(
+            "Unsupported file type: .{}. Supported: {:?}",
+            ext, OCR_DOCUMENT_EXTENSIONS
+        ));
+    }
+
+    let metadata = tokio::fs::metadata(file_path)
+        .await
+        .map_err(|e| format!("Cannot read metadata: {}", e))?;
+    if metadata.len() > 30_000_000 {
+        return Err(format!(
+            "File too large: {} bytes (max 22 MB decoded)",
+            metadata.len()
+        ));
+    }
+
+    let bytes = tokio::fs::read(file_path)
+        .await
+        .map_err(|e| format!("Cannot read file: {}", e))?;
+    let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+
+    let mime_type = match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "pdf" => "application/pdf",
+        _ => "application/octet-stream",
+    };
+
+    let text = if ext == "pdf" {
+        crate::ocr::ocr_pdf_text(state, &b64, None).await?
+    } else {
+        crate::ocr::ocr_image_text(state, &b64, mime_type).await?
+    };
+
+    let filename = file_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("document");
+    Ok(format!(
+        "### OCR: {} ({}, {} bytes)\n\n{}",
+        filename, mime_type, metadata.len(), text
+    ))
 }

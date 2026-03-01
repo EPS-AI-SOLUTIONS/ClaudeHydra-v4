@@ -6,7 +6,7 @@
 
 ## Architecture
 - Pure Vite SPA — React 19 + Zustand 5
-- Views: home, chat, agents, history, settings
+- Views: home, chat, agents, history, settings, logs
 - ViewRouter in `src/main.tsx` with AnimatePresence transitions
 - Sidebar: `src/components/organisms/Sidebar.tsx` (flat nav, session manager with rename/delete)
 
@@ -37,9 +37,9 @@
 - Stack: Rust + Axum 0.8 + SQLx + PostgreSQL 17
 - Route syntax: `{id}` (NOT `:id` — axum 0.8 breaking change)
 - Entry point: `backend/src/lib.rs` → `create_router()` builds all API routes
-- Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState), `models.rs`, `tools/` (mod.rs + fs_tools.rs + pdf_tools.rs + zip_tools.rs + image_tools.rs + git_tools.rs + github_tools.rs + vercel_tools.rs + fly_tools.rs), `model_registry.rs` (dynamic model discovery), `oauth.rs` (Anthropic OAuth PKCE), `oauth_google.rs` (Google OAuth PKCE + API key), `oauth_github.rs` (GitHub OAuth), `oauth_vercel.rs` (Vercel OAuth), `service_tokens.rs` (Fly.io PAT), `mcp/` (client.rs + server.rs + config.rs)
+- Key modules: `handlers.rs` (system prompt + tool defs), `state.rs` (AppState + LogRingBuffer), `models.rs`, `logs.rs` (4 log endpoints — backend/audit/flyio/activity), `tools/` (mod.rs + fs_tools.rs + pdf_tools.rs + zip_tools.rs + image_tools.rs + git_tools.rs + github_tools.rs + vercel_tools.rs + fly_tools.rs), `model_registry.rs` (dynamic model discovery), `oauth.rs` (Anthropic OAuth PKCE), `oauth_google.rs` (Google OAuth PKCE + API key), `oauth_github.rs` (GitHub OAuth), `oauth_vercel.rs` (Vercel OAuth), `service_tokens.rs` (Fly.io PAT), `mcp/` (client.rs + server.rs + config.rs)
 - DB: `claudehydra` on localhost:5433 (user: claude, pass: claude_local)
-- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins, ch_oauth_tokens, ch_google_auth, ch_oauth_github, ch_oauth_vercel, ch_service_tokens, ch_mcp_servers, ch_mcp_discovered_tools
+- Tables: ch_settings, ch_sessions, ch_messages, ch_tool_interactions, ch_model_pins, ch_oauth_tokens, ch_google_auth, ch_oauth_github, ch_oauth_vercel, ch_service_tokens, ch_mcp_servers, ch_mcp_discovered_tools, ch_audit_log
 
 ## Backend Local Dev
 - Wymaga Docker Desktop (PostgreSQL container)
@@ -129,11 +129,20 @@
 - Deleted 2 empty .gitkeep files (chat/workers, shared/workers)
 - Schema types made private: ProviderInfo, ClaudeModels (removed from exports in schemas.ts)
 
+## Logs View (F21)
+- Frontend: `src/features/logs/` — `LogsView.tsx` (4 tabs: Backend/Audit/Fly.io/Activity) + `useLogs.ts` (TanStack Query hooks, 5s polling)
+- Backend: `logs.rs` — 4 endpoints (`/api/logs/backend`, `/api/logs/audit`, `/api/logs/flyio`, `/api/logs/activity`)
+- `LogRingBuffer` in `state.rs` — in-memory ring buffer (capacity 1000) with `std::sync::Mutex`
+- `LogBufferLayer` in `main.rs` — custom tracing Layer capturing events into ring buffer
+- Fly.io logs: PAT from `service_tokens` (DB) with `FLY_API_TOKEN` env var fallback
+- Sidebar: `ScrollText` icon, i18n keys `nav.logs`, `logs.*`
+- View type: `| 'logs'` in `src/stores/viewStore.ts`
+
 ## Workspace CLAUDE.md (canonical reference)
 - Full Jaskier ecosystem docs: `C:\Users\BIURODOM\Desktop\ClaudeDesktop\CLAUDE.md`
 - Covers: shared patterns, cross-project conventions, backend safety rules, OAuth details, MCP, working directory, fly.io infra
 - This file is a project-scoped summary; workspace CLAUDE.md is the source of truth
-- Last synced: 2026-02-28 (F20)
+- Last synced: 2026-03-01 (F21)
 
 ## Knowledge Base (SQLite)
 - Plik: `C:\Users\BIURODOM\Desktop\ClaudeDesktop\jaskier_knowledge.db`
