@@ -68,7 +68,12 @@
       "scrapeWebpage": "Pobierz i podsumuj stronę internetową",
       "ocrDocument": "Wyodrębnij tekst z obrazu lub PDF (OCR)",
       "searchFiles": "Wyszukaj wzorzec w plikach projektu"
-    }
+    },
+    "toolsRunning": "{{count}} w toku",
+    "toolsDone": "{{count}} gotowe",
+    "iteration": "Iteracja {{number}}/{{max}}",
+    "connecting": "Łączenie...",
+    "reconnecting": "Ponowne łączenie..."
   },
   "tools": {
     "input": "Wejście",

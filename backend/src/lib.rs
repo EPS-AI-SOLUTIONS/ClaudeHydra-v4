@@ -329,8 +329,13 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/health/ready", get(handlers::readiness))
         .route("/api/v1/auth/mode", get(handlers::auth_mode));
 
+    // ── WebSocket route (auth via ?token query param, outside middleware) ─
+    let ws_routes = Router::new()
+        .route("/ws/chat", get(handlers::ws_chat));
+
     public
         .merge(protected)
+        .merge(ws_routes)
         .merge(metrics)
         .merge(v1_public)
         // Swagger UI — no auth required

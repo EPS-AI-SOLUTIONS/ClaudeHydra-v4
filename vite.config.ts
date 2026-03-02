@@ -35,6 +35,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: backendUrl.startsWith('https'),
         },
+        '/ws': {
+          target: backendUrl,
+          changeOrigin: true,
+          ws: true,
+        },
         '/partner-api': {
           target: partnerBackendUrl,
           changeOrigin: true,
@@ -49,6 +54,11 @@ export default defineConfig(({ mode }) => {
           target: backendUrl,
           changeOrigin: true,
           secure: backendUrl.startsWith('https'),
+        },
+        '/ws': {
+          target: backendUrl,
+          changeOrigin: true,
+          ws: true,
         },
         '/partner-api': {
           target: partnerBackendUrl,

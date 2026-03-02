@@ -68,7 +68,12 @@
       "scrapeWebpage": "Fetch and summarize a webpage",
       "ocrDocument": "Extract text from an image or PDF (OCR)",
       "searchFiles": "Search for a pattern across project files"
-    }
+    },
+    "toolsRunning": "{{count}} running",
+    "toolsDone": "{{count}} done",
+    "iteration": "Iteration {{number}}/{{max}}",
+    "connecting": "Connecting...",
+    "reconnecting": "Reconnecting..."
   },
   "tools": {
     "input": "Input",

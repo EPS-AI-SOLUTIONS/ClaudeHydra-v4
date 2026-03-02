@@ -47,6 +47,22 @@ pub async fn require_auth(
     }
 }
 
+/// Validate auth for WebSocket upgrade requests.
+/// Checks `?token=<secret>` query parameter since WebSocket doesn't support
+/// custom headers during the upgrade handshake.
+pub fn validate_ws_token(query: &str, auth_secret: Option<&str>) -> bool {
+    let secret = match auth_secret {
+        Some(s) => s,
+        None => return true, // Dev mode — no auth
+    };
+
+    // Parse ?token=xxx from query string
+    query
+        .split('&')
+        .filter_map(|pair| pair.split_once('='))
+        .any(|(key, value)| key == "token" && bool::from(value.as_bytes().ct_eq(secret.as_bytes())))
+}
+
 /// Pure function: extract and validate a Bearer token from an Authorization header value.
 /// Returns true if the token matches the expected secret.
 /// Used internally by `require_auth` middleware.

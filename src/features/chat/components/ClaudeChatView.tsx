@@ -11,6 +11,7 @@ import { ArrowDown, Code2, FileSearch, FileText, GitBranch, Globe, MessageSquare
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { EmptyState } from '@/components/molecules/EmptyState';
 import type { ModelOption } from '@/components/molecules/ModelSelector';
 import { type PromptSuggestion, PromptSuggestions } from '@/components/molecules/PromptSuggestions';
@@ -20,14 +21,16 @@ import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useCompletionFeedback } from '@/shared/hooks/useCompletionFeedback';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
+import { useWebSocketChat } from '@/shared/hooks/useWebSocketChat';
 import { cn } from '@/shared/utils/cn';
 import { useViewStore } from '@/stores/viewStore';
 import { claudeHealthCheck, DEFAULT_MODEL } from '../api/claudeStream';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useChatStreaming } from '../hooks/useChatStreaming';
 import { usePromptHistory } from '../hooks/usePromptHistory';
+import { type AgentActivity, AgentActivityPanel, EMPTY_ACTIVITY } from './AgentActivityPanel';
 import { ChatHeader } from './ChatHeader';
-import { ChatInput, type ChatInputHandle } from './ChatInput';
+import { type Attachment, ChatInput, type ChatInputHandle } from './ChatInput';
 import { type ChatMessage, MessageBubble } from './MessageBubble';
 import { SearchOverlay } from './SearchOverlay';
 
@@ -378,9 +381,234 @@ export function ClaudeChatView() {
 
   const { triggerCompletion, flashActive } = useCompletionFeedback();
 
-  // ----- Streaming hook (extracted from inline handleSend) -----------------
+  // ----- WebSocket streaming (primary) + NDJSON (fallback) -----------------
 
-  const { handleSend } = useChatStreaming({
+  const [agentActivity, setAgentActivity] = useState<AgentActivity>(EMPTY_ACTIVITY);
+  const tokenBatchRef = useRef('');
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushTokenBatch = useCallback(() => {
+    const batch = tokenBatchRef.current;
+    if (!batch) return;
+    tokenBatchRef.current = '';
+    const sid = useViewStore.getState().activeSessionId;
+    if (!sid) return;
+    messageState.updateSessionMessages(sid, (prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.streaming) {
+        return [...prev.slice(0, -1), { ...last, content: last.content + batch }];
+      }
+      return prev;
+    });
+  }, [messageState]);
+
+  const ws = useWebSocketChat({
+    onStart: (msg) => {
+      setAgentActivity({ agent: null, model: msg.model, confidence: null, planSteps: [], tools: [], isActive: true });
+    },
+    onToken: (content) => {
+      tokenBatchRef.current += content;
+      if (!flushTimerRef.current) {
+        flushTimerRef.current = setTimeout(() => {
+          flushTimerRef.current = null;
+          flushTokenBatch();
+        }, 50);
+      }
+    },
+    onToolCall: (msg) => {
+      setAgentActivity((prev) => ({
+        ...prev,
+        tools: [
+          ...prev.tools,
+          {
+            name: msg.name,
+            args: msg.args,
+            iteration: msg.iteration,
+            status: 'running' as const,
+            startedAt: Date.now(),
+          },
+        ],
+      }));
+      const sid = useViewStore.getState().activeSessionId;
+      if (sid) {
+        messageState.updateSessionMessages(sid, (prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.streaming) {
+            return [
+              ...prev.slice(0, -1),
+              {
+                ...last,
+                toolInteractions: [
+                  ...(last.toolInteractions ?? []),
+                  {
+                    id: `ws-${msg.iteration}-${msg.name}`,
+                    toolName: msg.name,
+                    toolInput: msg.args,
+                    status: 'running' as const,
+                  },
+                ],
+              },
+            ];
+          }
+          return prev;
+        });
+      }
+    },
+    onToolResult: (msg) => {
+      setAgentActivity((prev) => ({
+        ...prev,
+        tools: prev.tools.map((t) =>
+          t.name === msg.name && t.status === 'running'
+            ? {
+                ...t,
+                status: msg.success ? ('success' as const) : ('error' as const),
+                summary: msg.summary,
+                completedAt: Date.now(),
+              }
+            : t,
+        ),
+      }));
+      const sid = useViewStore.getState().activeSessionId;
+      if (sid) {
+        messageState.updateSessionMessages(sid, (prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.streaming && last.toolInteractions) {
+            const updated = last.toolInteractions.map((ti) =>
+              ti.toolName === msg.name && ti.status === 'running'
+                ? {
+                    ...ti,
+                    result: msg.summary,
+                    isError: !msg.success,
+                    status: msg.success ? ('completed' as const) : ('error' as const),
+                  }
+                : ti,
+            );
+            return [...prev.slice(0, -1), { ...last, toolInteractions: updated }];
+          }
+          return prev;
+        });
+      }
+    },
+    onToolProgress: () => {},
+    onIteration: () => {},
+    onComplete: () => {
+      flushTokenBatch();
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      setAgentActivity((prev) => ({ ...prev, isActive: false }));
+      const sid = useViewStore.getState().activeSessionId;
+      if (sid) {
+        messageState.updateSessionMessages(sid, (prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.streaming) return [...prev.slice(0, -1), { ...last, streaming: false }];
+          return prev;
+        });
+        messageState.setSessionLoading(sid, false);
+        const currentMsgs = messageState.sessionMessagesRef.current[sid];
+        const lastMsg = currentMsgs?.[currentMsgs.length - 1];
+        if (lastMsg?.role === 'assistant' && lastMsg.content) {
+          addMessageWithSync(sid, 'assistant', lastMsg.content, selectedModel);
+        }
+        triggerCompletion();
+      }
+    },
+    onError: (message) => {
+      flushTokenBatch();
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      setAgentActivity((prev) => ({ ...prev, isActive: false }));
+      const sid = useViewStore.getState().activeSessionId;
+      if (sid) {
+        messageState.updateSessionMessages(sid, (prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.streaming)
+            return [...prev.slice(0, -1), { ...last, content: `Error: ${message}`, streaming: false }];
+          return prev;
+        });
+        messageState.setSessionLoading(sid, false);
+      }
+      toast.error(message);
+    },
+  });
+
+  const wsHandleSend = useCallback(
+    async (text: string, attachments: Attachment[]) => {
+      if (!isOnline) {
+        toast.error('You are offline. Cannot send messages.');
+        return;
+      }
+      const sessionId = useViewStore.getState().activeSessionId;
+      if (!selectedModel || !sessionId) return;
+      if (messageState.loadingSessionsRef.current.has(sessionId)) return;
+
+      let content = text;
+      for (const att of attachments) {
+        if (att.type === 'file') content += `\n\n--- File: ${att.name} ---\n${att.content}`;
+      }
+
+      const previousMessages = [...(messageState.sessionMessagesRef.current[sessionId] ?? [])];
+      if (previousMessages.length === 0) {
+        const autoTitle = text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
+        renameSessionWithSync(sessionId, autoTitle || 'New Chat');
+      }
+
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content,
+        attachments: attachments.map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          content: a.content,
+          mimeType: a.mimeType,
+        })),
+        timestamp: new Date(),
+      };
+      messageState.updateSessionMessages(sessionId, (prev) => [...prev, userMessage]);
+      addPrompt(text);
+      messageState.setSessionLoading(sessionId, true);
+      addMessageWithSync(sessionId, 'user', content, selectedModel);
+
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        toolInteractions: [],
+        timestamp: new Date(),
+        model: selectedModel,
+        streaming: true,
+      };
+      messageState.updateSessionMessages(sessionId, (prev) => [...prev, assistantMessage]);
+
+      setAgentActivity(EMPTY_ACTIVITY);
+      ws.sendExecute(text, selectedModel, toolsEnabled, sessionId);
+
+      if (previousMessages.length === 0) {
+        setTimeout(() => {
+          generateTitleWithSync(sessionId).catch(() => {});
+        }, 2000);
+      }
+    },
+    [
+      ws,
+      selectedModel,
+      toolsEnabled,
+      isOnline,
+      messageState,
+      addMessageWithSync,
+      renameSessionWithSync,
+      generateTitleWithSync,
+      addPrompt,
+    ],
+  );
+
+  // NDJSON fallback streaming
+  const { handleSend: ndjsonHandleSend } = useChatStreaming({
     selectedModel,
     toolsEnabled,
     messageState,
@@ -390,6 +618,10 @@ export function ClaudeChatView() {
     addPrompt,
     onComplete: triggerCompletion,
   });
+
+  // Route: WS when connected, NDJSON fallback
+  const handleSend = ws.status === 'connected' ? wsHandleSend : ndjsonHandleSend;
+  const effectiveLoading = isLoading || ws.isStreaming;
 
   // ----- Render -------------------------------------------------------------
 
@@ -433,7 +665,7 @@ export function ClaudeChatView() {
       />
 
       {/* Streaming indicator bar */}
-      {isLoading && (
+      {effectiveLoading && (
         <motion.div
           data-testid="chat-streaming-bar"
           initial={{ scaleX: 0 }}
@@ -442,13 +674,22 @@ export function ClaudeChatView() {
         />
       )}
 
+      {/* Agent Activity Panel — visible during WS streaming */}
+      <AnimatePresence>
+        {(agentActivity.isActive || agentActivity.tools.length > 0) && (
+          <div className="mt-2">
+            <AgentActivityPanel activity={agentActivity} />
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Chat input — #25 disabled when offline */}
       <div className="mt-3">
         <ChatInput
           ref={chatInputRef}
           onSend={handleSend}
           disabled={!claudeConnected || !selectedModel || !isOnline}
-          isLoading={isLoading}
+          isLoading={effectiveLoading}
           placeholder={
             !isOnline
               ? t('chat.offlinePlaceholder', 'You are offline')
