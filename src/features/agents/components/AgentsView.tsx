@@ -15,8 +15,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card } from '@/components/atoms';
-import { EmptyState } from '@/components/molecules/EmptyState';
 import { StatusIndicator, type StatusState } from '@/components/molecules';
+import { EmptyState } from '@/components/molecules/EmptyState';
 import { cn } from '@/shared/utils/cn';
 
 // ---------------------------------------------------------------------------

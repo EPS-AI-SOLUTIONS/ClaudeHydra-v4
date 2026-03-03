@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { Input } from '@/components/atoms/Input';
 
 describe('Input', () => {
@@ -69,12 +69,7 @@ describe('Input', () => {
   // -------------------------------------------------------------------------
 
   it('renders rightElement when provided', () => {
-    render(
-      <Input
-        placeholder="Search"
-        rightElement={<button data-testid="clear-btn">X</button>}
-      />,
-    );
+    render(<Input placeholder="Search" rightElement={<button data-testid="clear-btn">X</button>} />);
     expect(screen.getByTestId('clear-btn')).toBeInTheDocument();
   });
 
@@ -83,12 +78,7 @@ describe('Input', () => {
   // -------------------------------------------------------------------------
 
   it('renders icon when provided', () => {
-    render(
-      <Input
-        placeholder="Search"
-        icon={<span data-testid="search-icon">S</span>}
-      />,
-    );
+    render(<Input placeholder="Search" icon={<span data-testid="search-icon">S</span>} />);
     expect(screen.getByTestId('search-icon')).toBeInTheDocument();
   });
 

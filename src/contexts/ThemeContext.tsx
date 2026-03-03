@@ -54,7 +54,11 @@ interface ThemeProviderProps {
   storageKey?: string;
 }
 
-export function ThemeProvider({ children, defaultTheme = 'dark', storageKey = 'claude-hydra-theme' }: ThemeProviderProps) {
+export function ThemeProvider({
+  children,
+  defaultTheme = 'dark',
+  storageKey = 'claude-hydra-theme',
+}: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === 'undefined') return defaultTheme;
     return (localStorage.getItem(storageKey) as Theme) || defaultTheme;

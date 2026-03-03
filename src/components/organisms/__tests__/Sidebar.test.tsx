@@ -42,8 +42,8 @@ const mockSetView = vi.fn();
 const mockSelectSession = vi.fn();
 
 vi.mock('@/stores/viewStore', () => ({
-  useViewStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
+  useViewStore: vi.fn((selector) => {
+    const state = {
       currentView: 'chat',
       setView: mockSetView,
       selectSession: mockSelectSession,
@@ -52,8 +52,14 @@ vi.mock('@/stores/viewStore', () => ({
         { id: 'session-2', title: 'Test Session 2', created_at: '2026-01-02T00:00:00Z', message_count: 5 },
       ],
       activeSessionId: 'session-1',
-      collapsed: false,
-    }),
+      sidebarCollapsed: false,
+      setSidebarCollapsed: vi.fn(),
+      toggleSidebar: vi.fn(),
+      mobileDrawerOpen: false,
+      setMobileDrawerOpen: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 vi.mock('@/shared/hooks/useViewTheme', () => ({

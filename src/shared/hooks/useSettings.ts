@@ -14,4 +14,3 @@ export function useSettingsQuery() {
     queryFn: () => apiGet<Settings>('/api/settings'),
   });
 }
-

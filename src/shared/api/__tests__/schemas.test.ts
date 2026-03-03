@@ -209,6 +209,8 @@ describe('settingsSchema', () => {
     expect(settingsSchema.parse(validSettings)).toEqual({
       ...validSettings,
       welcome_message: '',
+      max_iterations: 10,
+      working_directory: '',
     });
   });
 

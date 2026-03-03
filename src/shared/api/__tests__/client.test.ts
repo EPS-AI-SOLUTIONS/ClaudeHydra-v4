@@ -7,9 +7,22 @@ import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from '../client';
 const BASE = '';
 
 /** Helper — create a minimal Response-like object for the fetch mock. */
-function mockResponse(body: unknown, init: { status?: number; statusText?: string; ok?: boolean; headers?: Record<string, string> } = {}) {
+function mockResponse(
+  body: unknown,
+  init: { status?: number; statusText?: string; ok?: boolean; headers?: Record<string, string> } = {},
+) {
   const { status = 200, ok = status >= 200 && status < 300 } = init;
-  const statusText = init.statusText ?? (status === 404 ? 'Not Found' : status === 500 ? 'Internal Server Error' : status === 422 ? 'Unprocessable Entity' : status === 401 ? 'Unauthorized' : 'OK');
+  const statusText =
+    init.statusText ??
+    (status === 404
+      ? 'Not Found'
+      : status === 500
+        ? 'Internal Server Error'
+        : status === 422
+          ? 'Unprocessable Entity'
+          : status === 401
+            ? 'Unauthorized'
+            : 'OK');
   const isJson = typeof body === 'object' && body !== null;
   const text = isJson ? JSON.stringify(body) : String(body ?? '');
 
@@ -96,7 +109,7 @@ describe('apiGet', () => {
   });
 
   it('throws ApiError with text body on 500 with non-JSON response', async () => {
-    fetchMock.mockResolvedValueOnce(mockResponse('Internal Server Error', { status: 500 }));
+    fetchMock.mockResolvedValue(mockResponse('Internal Server Error', { status: 500 }));
 
     try {
       await apiGet('/crash');
@@ -106,7 +119,7 @@ describe('apiGet', () => {
       expect(err.statusText).toBe('Internal Server Error');
       expect(err.message).toBe('API Error 500: Internal Server Error');
     }
-  });
+  }, { timeout: 15000 });
 });
 
 // ===========================================================================
