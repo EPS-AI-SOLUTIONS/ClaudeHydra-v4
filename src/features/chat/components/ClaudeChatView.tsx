@@ -461,12 +461,13 @@ export function ClaudeChatView() {
         const text = msg.summary.trim();
         const isJson = text.startsWith('[') || text.startsWith('{');
         const isTable = text.includes('|---') || text.includes('| ---');
+        const isSql = /^(SELECT|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP|WITH)\s+/i.test(text);
         
-        if (isJson || isTable || text.length > 800) {
+        if (isJson || isTable || isSql || text.length > 800) {
           useViewStore.getState().setActiveArtifact({
             id: "tool-res-$($msg.iteration)-$($msg.name)",
             code: text,
-            language: isJson ? 'json' : isTable ? 'markdown' : 'text',
+            language: isJson ? 'json' : isTable ? 'markdown' : isSql ? 'sql' : 'text',
             title: "Result: $($msg.name)"
           });
         }
@@ -731,5 +732,6 @@ export function ClaudeChatView() {
 }
 
 export default ClaudeChatView;
+
 
 
