@@ -456,6 +456,22 @@ export function ClaudeChatView() {
       }
     },
     onToolResult: (msg) => {
+      // Auto-open tool results in Artifact Panel if they look like data (JSON/Tables) or are very long
+      if (msg.success && msg.summary) {
+        const text = msg.summary.trim();
+        const isJson = text.startsWith('[') || text.startsWith('{');
+        const isTable = text.includes('|---') || text.includes('| ---');
+        
+        if (isJson || isTable || text.length > 800) {
+          useViewStore.getState().setActiveArtifact({
+            id: "tool-res-$($msg.iteration)-$($msg.name)",
+            code: text,
+            language: isJson ? 'json' : isTable ? 'markdown' : 'text',
+            title: "Result: $($msg.name)"
+          });
+        }
+      }
+
       setAgentActivity((prev) => ({
         ...prev,
         tools: prev.tools.map((t) =>
@@ -715,4 +731,5 @@ export function ClaudeChatView() {
 }
 
 export default ClaudeChatView;
+
 
