@@ -13,7 +13,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      react(),
+      react({
+        babel: {
+          plugins: [['babel-plugin-react-compiler', { target: '19' }]],
+        },
+      }),
       tailwindcss(),
       // #38 — Bundle size tracking: always generate stats.html on build, auto-open in analyze mode
       ...(mode === 'production'
@@ -77,6 +81,7 @@ export default defineConfig(({ mode }) => {
             'vendor-i18n': ['i18next', 'react-i18next'],
             'vendor-query': ['@tanstack/react-query'],
             'vendor-ui': ['sonner', 'tailwind-merge', 'clsx', 'dompurify'],
+            'vendor-zod': ['zod'],
           },
         },
       },

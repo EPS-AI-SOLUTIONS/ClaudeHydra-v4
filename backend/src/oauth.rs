@@ -432,11 +432,15 @@ async fn get_token_row(state: &AppState) -> Option<OAuthTokenRow> {
     .ok()?
 }
 
-fn random_base64url(len: usize) -> String {
+pub(crate) fn random_base64url(len: usize) -> String {
     let buf: Vec<u8> = (0..len).map(|_| rand::random::<u8>()).collect();
     URL_SAFE_NO_PAD.encode(&buf)
 }
 
-fn sha256_base64url(input: &str) -> String {
+pub(crate) fn sha256_base64url(input: &str) -> String {
     URL_SAFE_NO_PAD.encode(Sha256::digest(input.as_bytes()))
+}
+
+pub(crate) fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }

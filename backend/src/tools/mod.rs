@@ -295,6 +295,27 @@ impl ToolExecutor {
                 }),
             },
             ToolDefinition {
+                name: "generate_image".to_string(),
+                description: "Generate or edit an image using AI (Gemini via browser proxy). Provide a source image \
+                    and a text prompt describing the desired changes. The result is saved next to the original file \
+                    as {name}_generated.png. Requires BROWSER_PROXY_URL to be set. Supports PNG, JPEG, WebP (max 20 MB)."
+                    .to_string(),
+                input_schema: json!({
+                    "type": "object",
+                    "properties": {
+                        "image_path": {
+                            "type": "string",
+                            "description": "Absolute or relative path to the source image file (PNG, JPEG, WebP)"
+                        },
+                        "prompt": {
+                            "type": "string",
+                            "description": "Text prompt describing what to generate or how to edit the image. Be specific and detailed."
+                        }
+                    },
+                    "required": ["image_path", "prompt"]
+                }),
+            },
+            ToolDefinition {
                 name: "git_status".to_string(),
                 description: "Show the working tree status of a git repository.".to_string(),
                 input_schema: json!({
@@ -452,6 +473,15 @@ impl ToolExecutor {
         // Web tools — fetching and crawling web pages
         if tool_name == "fetch_webpage" || tool_name == "crawl_website" {
             return web::execute(tool_name, input, state).await;
+        }
+        // Image generation via browser proxy
+        if tool_name == "generate_image" {
+            let image_path = input.get("image_path").and_then(|v| v.as_str()).unwrap_or("");
+            let prompt = input.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
+            return match tool_generate_image(image_path, prompt, &self.http_client).await {
+                Ok(text) => (text, false),
+                Err(e) => (e, true),
+            };
         }
         // Fall back to existing execute for local tools
         self.execute(tool_name, input).await
@@ -642,5 +672,95 @@ async fn ocr_document(path: &str, state: &AppState) -> Result<String, String> {
     Ok(format!(
         "### OCR: {} ({}, {} bytes)\n\n{}",
         filename, mime_type, metadata.len(), text
+    ))
+}
+
+// ── Image generation tool (browser proxy) ─────────────────────────────────
+
+const GENERATE_IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "webp"];
+
+async fn tool_generate_image(
+    path: &str,
+    prompt: &str,
+    client: &reqwest::Client,
+) -> Result<String, String> {
+    if !crate::browser_proxy::is_enabled() {
+        return Err(
+            "Browser proxy not enabled. Set BROWSER_PROXY_URL env var to use generate_image."
+                .to_string(),
+        );
+    }
+
+    let file_path = std::path::Path::new(path);
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let ext = file_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+
+    if !GENERATE_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+        return Err(format!(
+            "Unsupported image type: .{}. Supported: {:?}",
+            ext, GENERATE_IMAGE_EXTENSIONS
+        ));
+    }
+
+    let metadata = tokio::fs::metadata(file_path)
+        .await
+        .map_err(|e| format!("Cannot read metadata: {}", e))?;
+    if metadata.len() > 20_000_000 {
+        return Err(format!(
+            "Image too large: {} bytes (max 20 MB)",
+            metadata.len()
+        ));
+    }
+
+    let bytes = tokio::fs::read(file_path)
+        .await
+        .map_err(|e| format!("Cannot read file: {}", e))?;
+    let image_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+
+    let mime_type = match ext.as_str() {
+        "png" => "image/png",
+        "webp" => "image/webp",
+        _ => "image/jpeg",
+    };
+
+    let result_b64 =
+        crate::browser_proxy::generate_image(client, &image_b64, mime_type, prompt, "agent-tool")
+            .await?;
+
+    // Save result next to the original file
+    let stem = file_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("output");
+    let output_path = file_path.with_file_name(format!("{}_generated.png", stem));
+
+    let decoded = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &result_b64)
+        .map_err(|e| format!("Failed to decode result image: {}", e))?;
+
+    tokio::fs::write(&output_path, &decoded)
+        .await
+        .map_err(|e| format!("Failed to save result image: {}", e))?;
+
+    let filename = file_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("image");
+    Ok(format!(
+        "Image generated successfully!\n\
+         Input: {} ({} bytes)\n\
+         Output: {} ({} bytes)\n\
+         Prompt: {}",
+        filename,
+        metadata.len(),
+        output_path.display(),
+        decoded.len(),
+        prompt
     ))
 }

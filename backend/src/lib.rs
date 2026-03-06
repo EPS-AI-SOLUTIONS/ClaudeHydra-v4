@@ -1,5 +1,6 @@
 pub mod audit;
 pub mod auth;
+pub mod browser_proxy;
 pub mod handlers;
 pub mod logs;
 pub mod mcp;

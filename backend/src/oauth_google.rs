@@ -7,13 +7,10 @@ use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
 use axum::Json;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine;
 use serde::Deserialize;
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 
-use crate::oauth::{decrypt_token, encrypt_token};
+use crate::oauth::{decrypt_token, encrypt_token, random_base64url, sha256_base64url, html_escape};
 use crate::state::AppState;
 
 // ── Google OAuth 2.0 constants ───────────────────────────────────────────
@@ -614,27 +611,11 @@ async fn fetch_user_info(client: &reqwest::Client, access_token: &str) -> (Strin
 }
 
 async fn get_auth_row(state: &AppState) -> Option<GoogleAuthRow> {
-    sqlx::query_as::<_, GoogleAuthRow>(concat!(
-        "SELECT auth_method, access_token, refresh_token, expires_at, api_key_encrypted, user_email, user_name ",
-        "FROM ", "ch_google_auth", " WHERE id = 1",
-    ))
+    sqlx::query_as::<_, GoogleAuthRow>(
+        "SELECT auth_method, access_token, refresh_token, expires_at, api_key_encrypted, user_email, user_name \
+         FROM ch_google_auth WHERE id = 1",
+    )
     .fetch_optional(&state.db)
     .await
     .ok()?
-}
-
-fn random_base64url(len: usize) -> String {
-    let buf: Vec<u8> = (0..len).map(|_| rand::random::<u8>()).collect();
-    URL_SAFE_NO_PAD.encode(&buf)
-}
-
-fn sha256_base64url(input: &str) -> String {
-    URL_SAFE_NO_PAD.encode(Sha256::digest(input.as_bytes()))
-}
-
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
 }
