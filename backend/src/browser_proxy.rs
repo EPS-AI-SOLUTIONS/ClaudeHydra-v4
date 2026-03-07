@@ -141,7 +141,7 @@ pub fn proxy_dir() -> Option<String> {
     std::env::var("BROWSER_PROXY_DIR").ok().filter(|s| !s.is_empty())
 }
 
-#[derive(Clone, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct BrowserProxyStatus {
     pub configured: bool,
     pub reachable: bool,

@@ -206,7 +206,8 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/browser-proxy/login", post(browser_proxy::proxy_login))
         .route("/api/browser-proxy/login/status", get(browser_proxy::proxy_login_status))
         .route("/api/browser-proxy/reinit", post(browser_proxy::proxy_reinit))
-        .route("/api/browser-proxy/logout", delete(browser_proxy::proxy_logout));
+        .route("/api/browser-proxy/logout", delete(browser_proxy::proxy_logout))
+        .route("/api/browser-proxy/history", get(handlers::browser_proxy_history));
 
     // ── Protected: streaming chat — 20 req/min ──────────────────────
     let chat_stream_routes = Router::new()

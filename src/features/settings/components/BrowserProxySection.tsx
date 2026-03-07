@@ -1,29 +1,20 @@
 /** Jaskier Shared Pattern — Browser Proxy Login Section (Settings) */
 
-import {
-  AlertTriangle,
-  CheckCircle,
-  Globe,
-  Loader2,
-  LogIn,
-  LogOut,
-  Power,
-  RefreshCw,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle, Globe, Loader2, LogIn, LogOut, Power, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { Badge, Button } from '@/components/atoms';
-import {
-  useBrowserProxyStatus,
-  useBrowserProxyLogin,
-  useBrowserProxyReinit,
-  useBrowserProxyLogout,
-} from '../hooks/useBrowserProxy';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
 import { cn } from '@/shared/utils/cn';
+import {
+  useBrowserProxyLogin,
+  useBrowserProxyLogout,
+  useBrowserProxyReinit,
+  useBrowserProxyStatus,
+} from '../hooks/useBrowserProxy';
 
 const phaseVariants = {
   initial: { opacity: 0, y: 8 },
@@ -39,7 +30,10 @@ function formatUptime(seconds: number): string {
   return `${h}h ${m}m`;
 }
 
-function formatAge(t: (key: string, opts?: Record<string, unknown>) => string, seconds: number | null | undefined): string {
+function formatAge(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  seconds: number | null | undefined,
+): string {
   if (seconds == null) return t('settings.browserProxy.unknown');
   if (seconds < 60) return t('settings.browserProxy.secondsAgo', { count: seconds });
   if (seconds < 3600) return t('settings.browserProxy.minutesAgo', { count: Math.floor(seconds / 60) });
@@ -120,26 +114,17 @@ export const BrowserProxySection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Globe size={18} className="text-[var(--matrix-accent)]" />
-        <h3
-          className={cn(
-            'text-sm font-semibold font-mono uppercase tracking-wider',
-            theme.text,
-          )}
-        >
+        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
           {t('settings.browserProxy.title')}
         </h3>
       </div>
 
-      <p className={cn('text-xs', theme.textMuted)}>
-        {t('settings.browserProxy.description')}
-      </p>
+      <p className={cn('text-xs', theme.textMuted)}>{t('settings.browserProxy.description')}</p>
 
       {isLoading ? (
         <div className="flex items-center gap-2">
           <Loader2 size={14} className="animate-spin text-[var(--matrix-accent)]" />
-          <span className={cn('text-xs', theme.textMuted)}>
-            {t('settings.browserProxy.checking')}
-          </span>
+          <span className={cn('text-xs', theme.textMuted)}>{t('settings.browserProxy.checking')}</span>
         </div>
       ) : (
         <AnimatePresence mode="wait">
@@ -148,21 +133,21 @@ export const BrowserProxySection = memo(() => {
             <motion.div key="not-configured" {...phaseVariants} className="space-y-2">
               <div className="flex items-center gap-2 text-zinc-500">
                 <Power size={14} />
-                <span className="text-xs font-mono">
-                  {t('settings.browserProxy.notConfigured')}
-                </span>
+                <span className="text-xs font-mono">{t('settings.browserProxy.notConfigured')}</span>
               </div>
               <p className={cn('text-xs', theme.textMuted)}>
-                {t('settings.browserProxy.notConfiguredHint').split('<code>').map((part, i) => {
-                  if (i === 0) return part;
-                  const [code, rest] = part.split('</code>');
-                  return (
-                    <span key={i}>
-                      <code className="text-[var(--matrix-accent)]">{code}</code>
-                      {rest}
-                    </span>
-                  );
-                })}
+                {t('settings.browserProxy.notConfiguredHint')
+                  .split('<code>')
+                  .map((part, i) => {
+                    if (i === 0) return part;
+                    const [code, rest] = part.split('</code>');
+                    return (
+                      <span key={code}>
+                        <code className="text-[var(--matrix-accent)]">{code}</code>
+                        {rest}
+                      </span>
+                    );
+                  })}
               </p>
             </motion.div>
           )}
@@ -172,21 +157,21 @@ export const BrowserProxySection = memo(() => {
             <motion.div key="unreachable" {...phaseVariants} className="space-y-2">
               <div className="flex items-center gap-2 text-red-400">
                 <AlertTriangle size={14} />
-                <span className="text-xs font-mono">
-                  {t('settings.browserProxy.unreachable')}
-                </span>
+                <span className="text-xs font-mono">{t('settings.browserProxy.unreachable')}</span>
               </div>
               <p className={cn('text-xs', theme.textMuted)}>
-                {t('settings.browserProxy.unreachableHint', { url: status?.proxy_url }).split('<code>').map((part, i) => {
-                  if (i === 0) return part;
-                  const [code, rest] = part.split('</code>');
-                  return (
-                    <span key={i}>
-                      <code className="text-[var(--matrix-accent)]">{code}</code>
-                      {rest}
-                    </span>
-                  );
-                })}
+                {t('settings.browserProxy.unreachableHint', { url: status?.proxy_url })
+                  .split('<code>')
+                  .map((part, i) => {
+                    if (i === 0) return part;
+                    const [code, rest] = part.split('</code>');
+                    return (
+                      <span key={code}>
+                        <code className="text-[var(--matrix-accent)]">{code}</code>
+                        {rest}
+                      </span>
+                    );
+                  })}
               </p>
             </motion.div>
           )}
@@ -196,13 +181,9 @@ export const BrowserProxySection = memo(() => {
             <motion.div key="logging-in" {...phaseVariants} className="space-y-3">
               <div className="flex items-center gap-2 text-amber-400">
                 <Loader2 size={14} className="animate-spin" />
-                <span className="text-xs font-mono font-medium">
-                  {t('settings.browserProxy.loggingIn')}
-                </span>
+                <span className="text-xs font-mono font-medium">{t('settings.browserProxy.loggingIn')}</span>
               </div>
-              <p className={cn('text-xs', theme.textMuted)}>
-                {t('settings.browserProxy.loggingInHint')}
-              </p>
+              <p className={cn('text-xs', theme.textMuted)}>{t('settings.browserProxy.loggingInHint')}</p>
               {status?.login?.last_login_error && (
                 <div className="flex items-center gap-2 text-red-400">
                   <AlertTriangle size={14} />
@@ -217,13 +198,9 @@ export const BrowserProxySection = memo(() => {
             <motion.div key="not-logged-in" {...phaseVariants} className="space-y-3">
               <div className="flex items-center gap-2 text-amber-400">
                 <AlertTriangle size={14} />
-                <span className="text-xs font-mono">
-                  {t('settings.browserProxy.notLoggedIn')}
-                </span>
+                <span className="text-xs font-mono">{t('settings.browserProxy.notLoggedIn')}</span>
               </div>
-              <p className={cn('text-xs', theme.textMuted)}>
-                {t('settings.browserProxy.notLoggedInHint')}
-              </p>
+              <p className={cn('text-xs', theme.textMuted)}>{t('settings.browserProxy.notLoggedInHint')}</p>
               {status?.login?.last_login_error && (
                 <div className="flex items-center gap-2 text-red-400 mt-1">
                   <AlertTriangle size={14} />
@@ -246,11 +223,7 @@ export const BrowserProxySection = memo(() => {
           {phase === 'connected' && (
             <motion.div key="connected" {...phaseVariants} className="space-y-3">
               <div className="flex items-center gap-3 flex-wrap">
-                <Badge
-                  variant="accent"
-                  size="sm"
-                  icon={<CheckCircle size={12} />}
-                >
+                <Badge variant="accent" size="sm" icon={<CheckCircle size={12} />}>
                   {ready ? t('settings.browserProxy.ready') : t('settings.browserProxy.loggedIn')}
                 </Badge>
                 <span className={cn('text-xs font-mono', theme.textMuted)}>
@@ -318,13 +291,11 @@ BrowserProxySection.displayName = 'BrowserProxySection';
 
 // -- Small stat item --
 
-const StatItem = memo(
-  ({ label, value, theme }: { label: string; value: string; theme: { textMuted: string } }) => (
-    <div className="rounded-lg bg-[var(--matrix-glass)] px-2.5 py-1.5">
-      <div className={cn('text-[10px] font-mono', theme.textMuted)}>{label}</div>
-      <div className="text-xs font-mono font-medium text-[var(--matrix-accent)]">{value}</div>
-    </div>
-  ),
-);
+const StatItem = memo(({ label, value, theme }: { label: string; value: string; theme: { textMuted: string } }) => (
+  <div className="rounded-lg bg-[var(--matrix-glass)] px-2.5 py-1.5">
+    <div className={cn('text-[10px] font-mono', theme.textMuted)}>{label}</div>
+    <div className="text-xs font-mono font-medium text-[var(--matrix-accent)]">{value}</div>
+  </div>
+));
 
 StatItem.displayName = 'StatItem';

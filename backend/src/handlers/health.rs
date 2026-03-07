@@ -32,6 +32,13 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
     // Check DB connectivity
     let db_ok = sqlx::query("SELECT 1").fetch_one(&state.db).await.is_ok();
 
+    // Browser proxy cached status (if enabled)
+    let browser_proxy = if crate::browser_proxy::is_enabled() {
+        state.browser_proxy_status.try_read().ok().map(|s| s.clone())
+    } else {
+        None
+    };
+
     let resp = HealthResponse {
         status: if db_ok { "healthy".to_string() } else { "degraded".to_string() },
         version: env!("CARGO_PKG_VERSION").to_string(),
@@ -51,6 +58,7 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
                 available: db_ok,
             },
         ],
+        browser_proxy,
     };
 
     Json(serde_json::to_value(resp).unwrap_or_else(|_| json!({"error": "serialization failed"})))
@@ -152,4 +160,29 @@ pub async fn rotate_key(
     .await;
 
     Ok(Json(json!({ "status": "ok", "provider": provider })))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GET /api/browser-proxy/history
+// ═══════════════════════════════════════════════════════════════════════
+
+#[derive(serde::Deserialize)]
+pub struct ProxyHistoryParams {
+    pub limit: Option<usize>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ProxyHistoryResponse {
+    pub events: Vec<crate::browser_proxy::ProxyHealthEvent>,
+    pub total: usize,
+}
+
+pub async fn browser_proxy_history(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<ProxyHistoryParams>,
+) -> Json<ProxyHistoryResponse> {
+    let limit = params.limit.unwrap_or(20).min(50);
+    let events = state.browser_proxy_history.recent(limit);
+    let total = state.browser_proxy_history.len();
+    Json(ProxyHistoryResponse { events, total })
 }

@@ -70,11 +70,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "biome check --write",
-      "biome format --write"
+      "node ./node_modules/@biomejs/biome/bin/biome check --write",
+      "node ./node_modules/@biomejs/biome/bin/biome format --write"
     ],
     "*.css": [
-      "biome format --write"
+      "node ./node_modules/@biomejs/biome/bin/biome format --write"
     ]
   },
   "pnpm": {

@@ -287,6 +287,16 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // ── Browser proxy mode logging ──
+    if claudehydra_backend::browser_proxy::is_enabled() {
+        let auto_restart = claudehydra_backend::browser_proxy::proxy_dir().is_some();
+        tracing::info!(
+            "BROWSER PROXY ENABLED — routing through {} (auto-restart: {})",
+            std::env::var("BROWSER_PROXY_URL").unwrap_or_default(),
+            if auto_restart { "ON" } else { "OFF" }
+        );
+    }
+
     let app = build_app(state);
 
     let port: u16 = std::env::var("PORT")
