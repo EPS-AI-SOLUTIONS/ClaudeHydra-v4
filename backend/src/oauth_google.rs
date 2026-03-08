@@ -496,11 +496,10 @@ pub fn mark_oauth_gemini_valid(state: &AppState) {
 /// Get Google credential skipping OAuth — only DB API key or env var.
 /// Used as fallback when OAuth token is rejected by Google API (401/403).
 pub async fn get_google_api_key_credential(state: &AppState) -> Option<(String, bool)> {
-    if let Some(row) = get_auth_row(state).await {
-        if let Some(pair) = try_db_api_key(&row) {
+    if let Some(row) = get_auth_row(state).await
+        && let Some(pair) = try_db_api_key(&row) {
             return Some(pair);
         }
-    }
     try_env_key()
 }
 
@@ -520,13 +519,11 @@ pub fn apply_google_auth(
 // ── Internal helpers ─────────────────────────────────────────────────────
 
 fn try_db_api_key(row: &GoogleAuthRow) -> Option<(String, bool)> {
-    if !row.api_key_encrypted.is_empty() {
-        if let Some(key) = decrypt_token(&row.api_key_encrypted) {
-            if !key.is_empty() {
+    if !row.api_key_encrypted.is_empty()
+        && let Some(key) = decrypt_token(&row.api_key_encrypted)
+            && !key.is_empty() {
                 return Some((key, false));
             }
-        }
-    }
     None
 }
 

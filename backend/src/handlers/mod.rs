@@ -73,7 +73,7 @@ pub(crate) fn truncate_for_context_with_limit(text: &str, max_chars: usize) -> S
 pub(crate) fn sanitize_json_strings(value: &mut Value) {
     match value {
         Value::String(s) => {
-            *s = s.replace('\0', "").replace('\u{FEFF}', "");
+            *s = s.replace(['\0', '\u{FEFF}'], "");
         }
         Value::Array(arr) => {
             for v in arr {
@@ -101,11 +101,10 @@ async fn get_anthropic_credential(state: &AppState) -> Option<(String, bool)> {
     // 2. Try runtime state (hot-loaded API key)
     {
         let rt = state.runtime.read().await;
-        if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY") {
-            if !key.is_empty() {
+        if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY")
+            && !key.is_empty() {
                 return Some((key.clone(), false));
             }
-        }
     }
     // 3. Try env var
     std::env::var("ANTHROPIC_API_KEY")
@@ -184,11 +183,10 @@ async fn send_to_anthropic_once(
 async fn get_anthropic_api_key_only(state: &AppState) -> Option<(String, bool)> {
     {
         let rt = state.runtime.read().await;
-        if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY") {
-            if !key.is_empty() {
+        if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY")
+            && !key.is_empty() {
                 return Some((key.clone(), false));
             }
-        }
     }
     std::env::var("ANTHROPIC_API_KEY")
         .ok()

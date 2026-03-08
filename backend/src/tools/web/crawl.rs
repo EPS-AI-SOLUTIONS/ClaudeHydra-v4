@@ -107,11 +107,10 @@ pub async fn tool_crawl_website(
             if same_domain && parsed.domain().unwrap_or("") != start_domain {
                 continue;
             }
-            if let Some(ref prefix) = path_prefix {
-                if !parsed.path().starts_with(prefix.as_str()) {
+            if let Some(ref prefix) = path_prefix
+                && !parsed.path().starts_with(prefix.as_str()) {
                     continue;
                 }
-            }
             if !visited.contains(&normalized) {
                 pending.push_back((normalized, 1));
             }
@@ -125,21 +124,17 @@ pub async fn tool_crawl_website(
             return true;
         }
         // Path prefix (#19)
-        if let Some(ref prefix) = path_prefix {
-            if let Ok(parsed) = Url::parse(url) {
-                if !parsed.path().starts_with(prefix.as_str()) {
+        if let Some(ref prefix) = path_prefix
+            && let Ok(parsed) = Url::parse(url)
+                && !parsed.path().starts_with(prefix.as_str()) {
                     return true;
                 }
-            }
-        }
         // robots.txt (#11)
-        if let Some(ref rules) = robots_rules {
-            if let Ok(parsed) = Url::parse(url) {
-                if !fetch::is_path_allowed(parsed.path(), rules) {
+        if let Some(ref rules) = robots_rules
+            && let Ok(parsed) = Url::parse(url)
+                && !fetch::is_path_allowed(parsed.path(), rules) {
                     return true;
                 }
-            }
-        }
         false
     };
 
@@ -220,7 +215,7 @@ pub async fn tool_crawl_website(
                     // Extract and categorize links
                     let raw_links = html::extract_links_from_html(&fr.html, &fr.final_url);
                     let categorized =
-                        html::categorize_links(&raw_links, &start_domain, &fr.final_url.to_string());
+                        html::categorize_links(&raw_links, &start_domain, fr.final_url.as_ref());
 
                     results.push(PageResult {
                         url: fr.final_url.to_string(),
@@ -236,13 +231,11 @@ pub async fn tool_crawl_website(
                                 && !visited.contains(&link.url)
                                 && fetch::is_crawlable_url(&link.url)
                             {
-                                if same_domain {
-                                    if let Ok(parsed) = Url::parse(&link.url) {
-                                        if parsed.domain().unwrap_or("") != start_domain {
+                                if same_domain
+                                    && let Ok(parsed) = Url::parse(&link.url)
+                                        && parsed.domain().unwrap_or("") != start_domain {
                                             continue;
                                         }
-                                    }
-                                }
                                 pending.push_back((link.url.clone(), depth + 1));
                             }
                         }

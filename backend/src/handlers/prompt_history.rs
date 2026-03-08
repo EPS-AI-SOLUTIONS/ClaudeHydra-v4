@@ -60,11 +60,10 @@ pub async fn add_prompt_history(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    if let Some(ref last_content) = last {
-        if last_content == trimmed {
+    if let Some(ref last_content) = last
+        && last_content == trimmed {
             return Ok(StatusCode::OK);
         }
-    }
 
     sqlx::query("INSERT INTO ch_prompt_history (content) VALUES ($1)")
         .bind(trimmed)

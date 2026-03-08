@@ -44,7 +44,7 @@ pub enum McpTransport {
         auth_token: Option<String>,
     },
     Stdio {
-        child: tokio::sync::Mutex<tokio::process::Child>,
+        child: Box<tokio::sync::Mutex<tokio::process::Child>>,
         stdin: tokio::sync::Mutex<tokio::process::ChildStdin>,
         stdout: tokio::sync::Mutex<tokio::io::BufReader<tokio::process::ChildStdout>>,
     },
@@ -191,14 +191,13 @@ impl McpClientManager {
         if let Some(conn) = self.connections.write().await.remove(server_id) {
             tracing::info!("mcp: disconnected from '{}'", conn.server_name);
             // For stdio, kill the child process
-            if let McpTransport::Stdio { child, .. } = &conn.transport {
-                if let Ok(c) = child.lock().await.try_wait() {
+            if let McpTransport::Stdio { child, .. } = &conn.transport
+                && let Ok(c) = child.lock().await.try_wait() {
                     // already exited
                     let _ = c;
                 }
                 // Best-effort: the child is behind an Arc, so it will be dropped when
                 // all references are gone. tokio::process::Child::drop kills the child.
-            }
         }
     }
 
@@ -455,7 +454,7 @@ impl McpClientManager {
         let tools = parse_tools_list(&tools_result)?;
 
         let transport = McpTransport::Stdio {
-            child: tokio::sync::Mutex::new(child),
+            child: Box::new(tokio::sync::Mutex::new(child)),
             stdin: stdin_mutex,
             stdout: stdout_mutex,
         };

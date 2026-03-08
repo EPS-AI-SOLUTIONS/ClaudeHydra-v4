@@ -231,9 +231,9 @@ pub async fn fetch_sitemap_urls(
         for (k, v) in custom_headers {
             req = req.header(k.as_str(), v.as_str());
         }
-        if let Ok(resp) = req.send().await {
-            if resp.status().is_success() {
-                if let Ok(text) = resp.text().await {
+        if let Ok(resp) = req.send().await
+            && resp.status().is_success()
+                && let Ok(text) = resp.text().await {
                     let urls = parse_sitemap_xml(&text);
                     // Check if it's a sitemap index (URLs end in .xml)
                     let is_index = urls.iter().any(|u| u.ends_with(".xml"));
@@ -247,20 +247,16 @@ pub async fn fetch_sitemap_urls(
                             for (k, v) in custom_headers {
                                 sub_req = sub_req.header(k.as_str(), v.as_str());
                             }
-                            if let Ok(sub_resp) = sub_req.send().await {
-                                if sub_resp.status().is_success() {
-                                    if let Ok(sub_text) = sub_resp.text().await {
+                            if let Ok(sub_resp) = sub_req.send().await
+                                && sub_resp.status().is_success()
+                                    && let Ok(sub_text) = sub_resp.text().await {
                                         all_urls.extend(parse_sitemap_xml(&sub_text));
                                     }
-                                }
-                            }
                         }
                     } else {
                         all_urls.extend(urls);
                     }
                 }
-            }
-        }
     }
 
     all_urls
@@ -340,11 +336,10 @@ pub async fn fetch_url_with_retry(
                     .to_string();
 
                 // Content-Length pre-check (#36)
-                if let Some(len) = resp.content_length() {
-                    if len as usize > MAX_PAGE_SIZE {
+                if let Some(len) = resp.content_length()
+                    && len as usize > MAX_PAGE_SIZE {
                         return Err(format!("Response too large: {} bytes (max {})", len, MAX_PAGE_SIZE));
                     }
-                }
 
                 let final_url = Url::parse(resp.url().as_str()).unwrap_or(parsed.clone());
 
@@ -461,7 +456,7 @@ pub async fn tool_fetch_webpage(
     let links = if extract_links {
         let raw_links = super::html::extract_links_from_html(&fetch_result.html, &fetch_result.final_url);
         let domain = fetch_result.final_url.domain().unwrap_or("");
-        Some(super::html::categorize_links(&raw_links, domain, &fetch_result.final_url.to_string()))
+        Some(super::html::categorize_links(&raw_links, domain, fetch_result.final_url.as_ref()))
     } else {
         None
     };

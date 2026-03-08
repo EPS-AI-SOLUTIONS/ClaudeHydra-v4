@@ -2,8 +2,11 @@
 
 use axum::extract::State;
 use axum::http::StatusCode;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::Json;
+use futures_util::stream::Stream;
 use serde_json::{json, Value};
+use std::convert::Infallible;
 
 use crate::state::AppState;
 
@@ -39,6 +42,21 @@ pub async fn refresh_agents(State(state): State<AppState>) -> Json<Value> {
 //  GET /api/agents/delegations — A2A delegation monitoring
 // ═══════════════════════════════════════════════════════════════════════
 
+type A2aTaskRow = (
+    uuid::Uuid,
+    String,
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    i32,
+    Option<i32>,
+    bool,
+    chrono::DateTime<chrono::Utc>,
+    Option<chrono::DateTime<chrono::Utc>>,
+);
+
 #[utoipa::path(
     get,
     path = "/api/agents/delegations",
@@ -48,20 +66,7 @@ pub async fn refresh_agents(State(state): State<AppState>) -> Json<Value> {
 pub async fn list_delegations(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
-    let rows: Vec<(
-        uuid::Uuid,
-        String,
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        i32,
-        Option<i32>,
-        bool,
-        chrono::DateTime<chrono::Utc>,
-        Option<chrono::DateTime<chrono::Utc>>,
-    )> = sqlx::query_as(
+    let rows: Vec<A2aTaskRow> = sqlx::query_as(
         "SELECT id, agent_name, agent_tier, task_prompt, model_used, status, \
          result_preview, call_depth, duration_ms, is_error, created_at, completed_at \
          FROM ch_a2a_tasks ORDER BY created_at DESC LIMIT 50"
@@ -112,4 +117,30 @@ pub async fn list_delegations(
             "avg_duration_ms": avg_ms.map(|v| v as i64),
         }
     })))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GET /api/agents/delegations/stream — A2A real-time SSE stream
+// ═══════════════════════════════════════════════════════════════════════
+
+#[utoipa::path(
+    get,
+    path = "/api/agents/delegations/stream",
+    tag = "agents",
+    responses((status = 200, description = "SSE stream of agent-to-agent delegations"))
+)]
+pub async fn delegations_stream(
+    State(state): State<AppState>,
+) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let mut rx = state.a2a_task_tx.subscribe();
+
+    let stream = async_stream::stream! {
+        while let Ok(msg) = rx.recv().await {
+            if let Ok(event) = Event::default().json_data(msg) {
+                yield Ok(event);
+            }
+        }
+    };
+
+    Sse::new(stream).keep_alive(KeepAlive::new())
 }

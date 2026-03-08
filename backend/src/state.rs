@@ -58,10 +58,10 @@ impl LogRingBuffer {
         buf.iter()
             .rev()
             .filter(|e| {
-                min_level.map_or(true, |lvl| level_ord(&e.level) >= level_ord(lvl))
+                min_level.is_none_or(|lvl| level_ord(&e.level) >= level_ord(lvl))
             })
             .filter(|e| {
-                search.map_or(true, |s| {
+                search.is_none_or(|s| {
                     let s_lower = s.to_lowercase();
                     e.message.to_lowercase().contains(&s_lower)
                         || e.target.to_lowercase().contains(&s_lower)
@@ -103,6 +103,12 @@ pub struct CircuitBreaker {
 
 const FAILURE_THRESHOLD: u32 = 3;
 const COOLDOWN_SECS: u64 = 60;
+
+impl Default for CircuitBreaker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl CircuitBreaker {
     pub fn new() -> Self {
@@ -265,6 +271,8 @@ pub struct AppState {
     pub browser_proxy_status: Arc<RwLock<crate::browser_proxy::BrowserProxyStatus>>,
     /// Ring buffer of proxy health status change events (last 50).
     pub browser_proxy_history: Arc<crate::browser_proxy::ProxyHealthHistory>,
+    /// Broadcast channel for real-time A2A delegation updates.
+    pub a2a_task_tx: tokio::sync::broadcast::Sender<serde_json::Value>,
 }
 
 // ── Shared: readiness helpers ───────────────────────────────────────────────
@@ -330,6 +338,8 @@ impl AppState {
             http_client.clone(),
         ));
 
+        let (a2a_task_tx, _) = tokio::sync::broadcast::channel(100);
+
         Self {
             db,
             agents,
@@ -352,6 +362,7 @@ impl AppState {
             prompt_cache: Arc::new(RwLock::new(HashMap::new())),
             browser_proxy_status: Arc::new(RwLock::new(crate::browser_proxy::BrowserProxyStatus::default())),
             browser_proxy_history: Arc::new(crate::browser_proxy::ProxyHealthHistory::new(50)),
+            a2a_task_tx,
         }
     }
 
@@ -368,6 +379,8 @@ impl AppState {
             .expect("Failed to build HTTP client");
 
         let db = PgPool::connect_lazy("postgres://test@localhost:19999/test").expect("lazy pool");
+
+        let (a2a_task_tx, _) = tokio::sync::broadcast::channel(100);
 
         Self {
             mcp_client: Arc::new(McpClientManager::new(db.clone(), http_client.clone())),
@@ -391,6 +404,7 @@ impl AppState {
             prompt_cache: Arc::new(RwLock::new(HashMap::new())),
             browser_proxy_status: Arc::new(RwLock::new(crate::browser_proxy::BrowserProxyStatus::default())),
             browser_proxy_history: Arc::new(crate::browser_proxy::ProxyHealthHistory::new(50)),
+            a2a_task_tx,
         }
     }
 }

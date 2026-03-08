@@ -110,19 +110,17 @@ async fn google_chat_stream(
                 let line = sse_buffer[..nl].trim().to_string();
                 sse_buffer = sse_buffer[nl + 1..].to_string();
                 if line.is_empty() || line.starts_with(':') { continue; }
-                if let Some(data) = line.strip_prefix("data: ") {
-                    if let Ok(event) = serde_json::from_str::<Value>(data) {
-                        if let Some(text) = event.pointer("/candidates/0/content/parts/0/text").and_then(|t| t.as_str()) {
-                            if !text.is_empty() {
+                if let Some(data) = line.strip_prefix("data: ")
+                    && let Ok(event) = serde_json::from_str::<Value>(data) {
+                        if let Some(text) = event.pointer("/candidates/0/content/parts/0/text").and_then(|t| t.as_str())
+                            && !text.is_empty() {
                                 let ndjson_line = serde_json::to_string(&json!({ "token": text, "done": false })).unwrap_or_default();
                                 yield Ok::<_, std::io::Error>(axum::body::Bytes::from(format!("{}\n", ndjson_line)));
                             }
-                        }
                         if let Some(usage) = event.get("usageMetadata") {
                             total_tokens = usage.get("totalTokenCount").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                         }
                     }
-                }
             }
         }
         let done_line = serde_json::to_string(&json!({ "token": "", "done": true, "model": &model_for_done, "total_tokens": total_tokens })).unwrap_or_default();
@@ -157,10 +155,10 @@ async fn load_session_history(db: &sqlx::PgPool, sid: &uuid::Uuid) -> Vec<Value>
 
     // Compress old messages: truncate everything except the last 6
     for i in 0..messages.len() {
-        if i < messages.len().saturating_sub(6) {
-            if let Some(content) = messages[i].get_mut("content") {
-                if let Some(s) = content.as_str().map(|s| s.to_string()) {
-                    if s.len() > 500 {
+        if i < messages.len().saturating_sub(6)
+            && let Some(content) = messages[i].get_mut("content")
+                && let Some(s) = content.as_str().map(|s| s.to_string())
+                    && s.len() > 500 {
                         let boundary = s
                             .char_indices()
                             .take_while(|(idx, _)| *idx < 500)
@@ -172,9 +170,6 @@ async fn load_session_history(db: &sqlx::PgPool, sid: &uuid::Uuid) -> Vec<Value>
                             &s[..boundary]
                         ));
                     }
-                }
-            }
-        }
     }
 
     messages
@@ -259,12 +254,11 @@ pub async fn claude_chat_stream(
             if *fb_model == model { continue; }
             tracing::warn!("claude_chat_stream: {} returned {}, falling back to {}", model, resp.status(), fb_model);
             body["model"] = json!(fb_model);
-            if let Ok(fb) = send_to_anthropic(&state, &body, 300).await {
-                if fb.status().is_success() {
+            if let Ok(fb) = send_to_anthropic(&state, &body, 300).await
+                && fb.status().is_success() {
                     fallback_resp = Some(fb);
                     break;
                 }
-            }
         }
         fallback_resp.unwrap_or(resp)
     } else {
@@ -722,10 +716,10 @@ async fn claude_chat_stream_with_tools(
                             "stream": false,
                         });
 
-                        if let Ok(fix_resp) = send_to_anthropic(&state_clone, &fix_body, 60).await {
-                            if fix_resp.status().is_success() {
-                                if let Ok(fix_json) = fix_resp.json::<Value>().await {
-                                    if let Some(content) = fix_json.get("content").and_then(|c| c.as_array()) {
+                        if let Ok(fix_resp) = send_to_anthropic(&state_clone, &fix_body, 60).await
+                            && fix_resp.status().is_success()
+                                && let Ok(fix_json) = fix_resp.json::<Value>().await
+                                    && let Some(content) = fix_json.get("content").and_then(|c| c.as_array()) {
                                         for block in content {
                                             let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
                                             if block_type == "tool_use" {
@@ -758,20 +752,15 @@ async fn claude_chat_stream_with_tools(
                                                 })).unwrap_or_default()).await;
 
                                                 let _ = is_error;
-                                            } else if block_type == "text" {
-                                                if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                                                    if !text.is_empty() {
+                                            } else if block_type == "text"
+                                                && let Some(text) = block.get("text").and_then(|t| t.as_str())
+                                                    && !text.is_empty() {
                                                         let _ = tx.send(serde_json::to_string(&json!({
                                                             "token": text, "done": false,
                                                         })).unwrap_or_default()).await;
                                                     }
-                                                }
-                                            }
                                         }
                                     }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -793,8 +782,8 @@ async fn claude_chat_stream_with_tools(
                     "stream": true,
                 });
 
-                if let Ok(synth_resp) = send_to_anthropic(&state_clone, &synth_body, 30).await {
-                    if synth_resp.status().is_success() {
+                if let Ok(synth_resp) = send_to_anthropic(&state_clone, &synth_body, 30).await
+                    && synth_resp.status().is_success() {
                         let mut synth_stream = synth_resp.bytes_stream();
                         let mut synth_buf: Vec<u8> = Vec::new();
                         while let Some(Ok(chunk)) = synth_stream.next().await {
@@ -805,20 +794,17 @@ async fn claude_chat_stream_with_tools(
                                 let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
                                 if let Some(data) = line.strip_prefix("data: ") {
                                     if data == "[DONE]" { continue; }
-                                    if let Ok(ev) = serde_json::from_str::<Value>(data) {
-                                        if let Some(text) = ev.pointer("/delta/text").and_then(|t| t.as_str()) {
-                                            if !text.is_empty() {
+                                    if let Ok(ev) = serde_json::from_str::<Value>(data)
+                                        && let Some(text) = ev.pointer("/delta/text").and_then(|t| t.as_str())
+                                            && !text.is_empty() {
                                                 let _ = tx.send(serde_json::to_string(&json!({
                                                     "token": text, "done": false,
                                                 })).unwrap_or_default()).await;
                                             }
-                                        }
-                                    }
                                 }
                             }
                         }
                     }
-                }
             }
 
             // stop_reason == "end_turn" or other — emit done
@@ -1063,12 +1049,11 @@ async fn execute_streaming_ws(
                 if *fb_model == model { continue; }
                 tracing::warn!("ws: {} returned {}, falling back to {}", model, resp.status(), fb_model);
                 body["model"] = json!(fb_model);
-                if let Ok(fb) = send_to_anthropic(state, &body, 300).await {
-                    if fb.status().is_success() {
+                if let Ok(fb) = send_to_anthropic(state, &body, 300).await
+                    && fb.status().is_success() {
                         fallback_resp = Some(fb);
                         break;
                     }
-                }
             }
             fallback_resp.unwrap_or(resp)
         } else {
@@ -1480,10 +1465,10 @@ async fn execute_streaming_ws(
                         "stream": false,
                     });
 
-                    if let Ok(fix_resp) = send_to_anthropic(state, &fix_body, 60).await {
-                        if fix_resp.status().is_success() {
-                            if let Ok(fix_json) = fix_resp.json::<Value>().await {
-                                if let Some(content) = fix_json.get("content").and_then(|c| c.as_array()) {
+                    if let Ok(fix_resp) = send_to_anthropic(state, &fix_body, 60).await
+                        && fix_resp.status().is_success()
+                            && let Ok(fix_json) = fix_resp.json::<Value>().await
+                                && let Some(content) = fix_json.get("content").and_then(|c| c.as_array()) {
                                     for block in content {
                                         let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
                                         if block_type == "tool_use" {
@@ -1512,18 +1497,13 @@ async fn execute_streaming_ws(
                                                 summary,
                                                 iteration,
                                             }).await;
-                                        } else if block_type == "text" {
-                                            if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                                                if !text.is_empty() {
+                                        } else if block_type == "text"
+                                            && let Some(text) = block.get("text").and_then(|t| t.as_str())
+                                                && !text.is_empty() {
                                                     ws_send(sender, &WsServerMessage::Token { content: text.to_string() }).await;
                                                 }
-                                            }
-                                        }
                                     }
                                 }
-                            }
-                        }
-                    }
                 }
             }
         }

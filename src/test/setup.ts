@@ -1,11 +1,10 @@
 import '@testing-library/jest-dom/vitest';
 
 // Ensure localStorage is available in jsdom environment.
-// Some jsdom + Node.js combinations provide a broken localStorage
-// that the Zustand persist middleware can't use.
-if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.setItem !== 'function') {
-  const store: Record<string, string> = {};
-  globalThis.localStorage = {
+// Suppress Node.js 23 localstorage warnings by overriding directly.
+const store: Record<string, string> = {};
+Object.defineProperty(globalThis, 'localStorage', {
+  value: {
     getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => {
       store[key] = value;
@@ -20,5 +19,7 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
       return Object.keys(store).length;
     },
     key: (index: number) => Object.keys(store)[index] ?? null,
-  };
-}
+  },
+  writable: true,
+  configurable: true,
+});

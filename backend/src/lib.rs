@@ -49,7 +49,7 @@ async fn request_id_middleware(
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
     // Add to current tracing span
-    tracing::Span::current().record("request_id", &request_id.as_str());
+    tracing::Span::current().record("request_id", request_id.as_str());
     tracing::debug!(request_id = %request_id, "request correlation ID assigned");
 
     let mut response = next.run(req).await;
@@ -81,6 +81,7 @@ async fn request_id_middleware(
         // Agents
         handlers::list_agents,
         handlers::list_delegations,
+        handlers::delegations_stream,
         // Chat
         handlers::claude_models,
         handlers::claude_chat,
@@ -242,6 +243,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/agents", get(handlers::list_agents))
         .route("/api/agents/refresh", post(handlers::refresh_agents))
         .route("/api/agents/delegations", get(handlers::list_delegations))
+        .route("/api/agents/delegations/stream", get(handlers::delegations_stream))
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
         .route("/api/models/refresh", post(model_registry::refresh_models))
