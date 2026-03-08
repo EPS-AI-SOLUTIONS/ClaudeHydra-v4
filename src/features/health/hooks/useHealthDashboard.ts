@@ -33,6 +33,8 @@ export interface HealthDashboardData {
   memoryUsedMb: number | null;
   memoryTotalMb: number | null;
   modelCount: number | null;
+  metrics: unknown;
+  audit: unknown;
   loading: boolean;
   error: boolean;
   refetch: () => void;
@@ -63,6 +65,22 @@ export function useHealthDashboard(): HealthDashboardData {
     retry: false, // refetchInterval handles recovery
     enabled: backendOnline, // don't poll when backend is down
   });
+
+  const metricsQuery = useQuery<unknown>({
+    queryKey: ['system', 'metrics'],
+    queryFn: () => apiGetPolling<unknown>('/api/system/metrics'),
+    refetchInterval: 60_000,
+    retry: false,
+    enabled: backendOnline,
+  });
+
+  const auditQuery = useQuery<unknown>({
+    queryKey: ['system', 'audit'],
+    queryFn: () => apiGetPolling<unknown>('/api/system/audit'),
+    refetchInterval: 60_000,
+    retry: false,
+    enabled: backendOnline,
+  });
   const uptimeSeconds = healthQuery.data?.uptime_seconds ?? null;
   const authRequired = authQuery.data?.auth_required ?? null;
   const cpuUsage = statsQuery.data?.cpu_usage ?? null;
@@ -73,12 +91,16 @@ export function useHealthDashboard(): HealthDashboardData {
     : null;
   const loading = healthQuery.isLoading || statsQuery.isLoading;
   const error = healthQuery.isError && statsQuery.isError;
+  const metrics = metricsQuery.data ?? null;
+  const audit = auditQuery.data ?? null;
 
   const refetch = () => {
     void healthQuery.refetch();
     void statsQuery.refetch();
     void authQuery.refetch();
     void modelsQuery.refetch();
+    void metricsQuery.refetch();
+    void auditQuery.refetch();
   };
 
   return {
@@ -89,6 +111,8 @@ export function useHealthDashboard(): HealthDashboardData {
     memoryUsedMb,
     memoryTotalMb,
     modelCount,
+    metrics,
+    audit,
     loading,
     error,
     refetch,
