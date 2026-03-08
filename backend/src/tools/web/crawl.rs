@@ -35,8 +35,7 @@ pub async fn tool_crawl_website(
     let respect_robots = input.get("respect_robots_txt").and_then(|v| v.as_bool()).unwrap_or(true);
     let use_sitemap = input.get("use_sitemap").and_then(|v| v.as_bool()).unwrap_or(true);
     let concurrent = (input.get("concurrent_requests").and_then(|v| v.as_u64()).unwrap_or(3) as usize)
-        .min(MAX_CONCURRENT)
-        .max(1);
+        .clamp(1, MAX_CONCURRENT);
     let delay_ms = input.get("delay_ms").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_CRAWL_DELAY_MS);
     let max_total_secs = (input.get("max_total_seconds").and_then(|v| v.as_u64()).unwrap_or(120))
         .min(MAX_TOTAL_CRAWL_SECS);

@@ -267,6 +267,35 @@ pub struct SystemStats {
     pub platform: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MetricItem {
+    pub label: String,
+    pub value: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unit: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkMetric {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ping: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemMetricsResponse {
+    pub cpu: MetricItem,
+    pub ram: MetricItem,
+    pub network: NetworkMetric,
+}
+
 // ── Tool Use (Anthropic API) ────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

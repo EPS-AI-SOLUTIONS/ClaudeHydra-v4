@@ -217,6 +217,8 @@ pub struct SystemSnapshot {
     pub cpu_usage_percent: f32,
     pub memory_used_mb: f64,
     pub memory_total_mb: f64,
+    pub network_rx_bytes: u64,
+    pub network_tx_bytes: u64,
     pub platform: String,
 }
 
@@ -226,6 +228,8 @@ impl Default for SystemSnapshot {
             cpu_usage_percent: 0.0,
             memory_used_mb: 0.0,
             memory_total_mb: 0.0,
+            network_rx_bytes: 0,
+            network_tx_bytes: 0,
             platform: std::env::consts::OS.to_string(),
         }
     }

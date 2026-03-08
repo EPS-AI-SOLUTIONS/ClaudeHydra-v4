@@ -78,6 +78,7 @@ async fn request_id_middleware(
         handlers::readiness,
         handlers::auth_mode,
         handlers::system_stats,
+        handlers::system_metrics,
         handlers::system_audit,
         // Agents
         handlers::list_agents,
@@ -115,6 +116,9 @@ async fn request_id_middleware(
         models::HealthResponse,
         models::ProviderInfo,
         models::SystemStats,
+        models::SystemMetricsResponse,
+        models::MetricItem,
+        models::NetworkMetric,
         // Agents
         models::WitcherAgent,
         // Chat
@@ -228,6 +232,7 @@ pub fn create_router(state: AppState) -> Router {
     // ── Protected: other routes — 120 req/min ───────────────────────
     let other_routes = Router::new()
         .route("/api/system/stats", get(handlers::system_stats))
+        .route("/api/system/metrics", get(handlers::system_metrics))
         .route("/api/system/audit", get(handlers::system_audit))
         // Admin — hot-reload API keys
         .route("/api/admin/rotate-key", post(handlers::rotate_key))

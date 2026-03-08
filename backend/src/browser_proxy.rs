@@ -154,7 +154,7 @@ pub struct BrowserProxyStatus {
     pub last_pid: Option<u32>,
 }
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct ProxyHealthEvent {
     pub timestamp: String,
     pub event_type: String,

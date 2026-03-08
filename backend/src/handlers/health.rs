@@ -126,6 +126,47 @@ pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  GET /api/system/metrics
+// ═══════════════════════════════════════════════════════════════════════
+
+#[utoipa::path(
+    get,
+    path = "/api/system/metrics",
+    tag = "system",
+    responses((status = 200, description = "System metrics for dashboard", body = SystemMetricsResponse))
+)]
+pub async fn system_metrics(State(state): State<AppState>) -> Json<Value> {
+    let snapshot = state.system_monitor.read().await;
+    
+    // Status can be determined based on connection or simple mock, here we use online
+    // and network I/O to show activity.
+    let status = "online".to_string();
+    let rx_mb = snapshot.network_rx_bytes as f64 / 1_048_576.0;
+    let tx_mb = snapshot.network_tx_bytes as f64 / 1_048_576.0;
+    
+    let metrics = SystemMetricsResponse {
+        cpu: MetricItem {
+            label: "CPU".to_string(),
+            value: (snapshot.cpu_usage_percent * 10.0).round() as f64 / 10.0,
+            max: Some(100.0),
+            unit: Some("%".to_string()),
+        },
+        ram: MetricItem {
+            label: "RAM".to_string(),
+            value: (snapshot.memory_used_mb * 10.0).round() as f64 / 10.0,
+            max: Some((snapshot.memory_total_mb * 10.0).round() as f64 / 10.0),
+            unit: Some("MB".to_string()),
+        },
+        network: NetworkMetric {
+            label: Some(format!("Rx: {:.1} MB | Tx: {:.1} MB", rx_mb, tx_mb)),
+            status,
+            ping: Some(12), // Placeholder ping
+        }
+    };
+    Json(serde_json::to_value(metrics).unwrap_or_else(|_| json!({"error": "serialization failed"})))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  POST /api/admin/rotate-key — hot-reload API key
 // ═══════════════════════════════════════════════════════════════════════
 

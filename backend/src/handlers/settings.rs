@@ -75,9 +75,9 @@ pub async fn update_settings(
     .bind(new_settings.auto_start)
     .bind(&new_settings.welcome_message)
     .bind(&new_settings.working_directory)
-    .bind(new_settings.max_iterations.max(1).min(50))
+    .bind(new_settings.max_iterations.clamp(1, 50))
     .bind(new_settings.temperature.clamp(0.0, 2.0))
-    .bind(new_settings.max_tokens.max(256).min(16384))
+    .bind(new_settings.max_tokens.clamp(256, 16384))
     .execute(&state.db)
     .await
     .map_err(|e| {
