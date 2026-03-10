@@ -112,21 +112,19 @@ async fn exec_list_apps(
 
     // Use GraphQL API for listing apps (Machines API doesn't have a list-all endpoint)
     let query = json!({
-        "query": format!(
-            r#"query {{
-                apps(type: "container", organizationSlug: "{}") {{
-                    nodes {{
+        "query": r#"query($slug: String!) {
+                apps(type: "container", organizationSlug: $slug) {
+                    nodes {
                         id
                         name
                         status
-                        organization {{ slug }}
-                        currentRelease {{ version createdAt }}
+                        organization { slug }
+                        currentRelease { version createdAt }
                         hostname
-                    }}
-                }}
-            }}"#,
-            org_slug
-        )
+                    }
+                }
+            }"#,
+        "variables": { "slug": org_slug }
     });
 
     match fly_graphql(client, token, &query).await {
@@ -229,30 +227,28 @@ async fn exec_get_logs(
 
     // Use GraphQL for logs (no REST endpoint for historical logs)
     let query = json!({
-        "query": format!(
-            r#"query {{
-                app(name: "{}") {{
+        "query": r#"query($name: String!) {
+                app(name: $name) {
                     name
                     status
-                    currentRelease {{ version createdAt status }}
-                    allocations {{
+                    currentRelease { version createdAt status }
+                    allocations {
                         id
                         region
                         status
                         version
                         desiredStatus
-                        recentLogs(limit: 50) {{
+                        recentLogs(limit: 50) {
                             id
                             message
                             timestamp
                             level
                             region
-                        }}
-                    }}
-                }}
-            }}"#,
-            app_name
-        )
+                        }
+                    }
+                }
+            }"#,
+        "variables": { "name": app_name }
     });
 
     match fly_graphql(client, token, &query).await {

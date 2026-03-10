@@ -1331,9 +1331,11 @@ async fn execute_streaming_ws(
 
             // Execute tools in parallel via tokio::spawn
             let mut handles = Vec::new();
+            let mut pending_tool_ids: Vec<String> = Vec::new();
             for tu in &tool_uses {
                 let tool_name = tu.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
                 let tool_id = tu.get("id").and_then(|i| i.as_str()).unwrap_or("").to_string();
+                pending_tool_ids.push(tool_id.clone());
                 let tool_input = tu.get("input").unwrap_or(&json!({})).clone();
                 let executor = state.tool_executor.with_working_directory(&wd);
                 let state_ref = state.clone();
@@ -1365,7 +1367,7 @@ async fn execute_streaming_ws(
             }
 
             // Collect results with heartbeat during long tool execution
-            for mut handle in handles {
+            for (handle_idx, mut handle) in handles.into_iter().enumerate() {
                 let heartbeat_dur = std::time::Duration::from_secs(15);
                 let result = loop {
                     tokio::select! {
@@ -1409,6 +1411,13 @@ async fn execute_streaming_ws(
                     Err(e) => {
                         tracing::error!("Tool task panicked: {}", e);
                         tools_completed += 1;
+                        // Synthetic tool_result to maintain 1:1 tool_use→tool_result mapping
+                        tool_results.push(json!({
+                            "type": "tool_result",
+                            "tool_use_id": &pending_tool_ids[handle_idx],
+                            "content": "Tool execution panicked — internal error",
+                            "is_error": true,
+                        }));
                     }
                 }
             }
