@@ -17,6 +17,9 @@ use tokio::sync::RwLock;
 
 use super::config::{self, McpServerConfig};
 
+/// Maximum allowed MCP response size (10 MB) to prevent OOM from malicious servers.
+const MAX_MCP_RESPONSE_BYTES: usize = 10 * 1024 * 1024;
+
 // ── MCP Tool ─────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -330,7 +333,21 @@ impl McpClientManager {
 
         let resp = req.send().await?;
         let status = resp.status();
-        let text = resp.text().await?;
+
+        // Guard against OOM from oversized responses
+        if let Some(len) = resp.content_length() {
+            if len > MAX_MCP_RESPONSE_BYTES as u64 {
+                return Err(anyhow::anyhow!("MCP response too large: {} bytes", len));
+            }
+        }
+        let bytes = resp.bytes().await?;
+        if bytes.len() > MAX_MCP_RESPONSE_BYTES {
+            return Err(anyhow::anyhow!(
+                "MCP response too large: {} bytes",
+                bytes.len()
+            ));
+        }
+        let text = String::from_utf8_lossy(&bytes);
 
         if !status.is_success() {
             return Err(anyhow::anyhow!(
@@ -527,6 +544,9 @@ impl McpClientManager {
                 if n == 0 {
                     return Err(anyhow::anyhow!("MCP stdio: EOF while reading response"));
                 }
+                if buf.len() > MAX_MCP_RESPONSE_BYTES {
+                    return Err(anyhow::anyhow!("MCP stdio response too large"));
+                }
                 let buf = buf.trim();
                 if buf.is_empty() {
                     continue;
@@ -578,6 +598,15 @@ impl McpClientManager {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+/// Check if a tool name from an MCP server contains only safe characters.
+fn is_valid_tool_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 128
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
 /// Parse tools/list result into Vec<McpTool>.
 fn parse_tools_list(result: &Value) -> Result<Vec<McpTool>, anyhow::Error> {
     let tools_array = result
@@ -603,13 +632,19 @@ fn parse_tools_list(result: &Value) -> Result<Vec<McpTool>, anyhow::Error> {
             .cloned()
             .unwrap_or(json!({"type": "object", "properties": {}}));
 
-        if !name.is_empty() {
-            tools.push(McpTool {
-                name,
-                description,
-                input_schema,
-            });
+        if !is_valid_tool_name(&name) {
+            tracing::warn!(
+                "MCP: skipping tool with invalid name '{}'",
+                truncate(&name, 128)
+            );
+            continue;
         }
+
+        tools.push(McpTool {
+            name,
+            description,
+            input_schema,
+        });
     }
 
     Ok(tools)

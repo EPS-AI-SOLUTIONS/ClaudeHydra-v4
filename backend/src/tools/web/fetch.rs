@@ -7,6 +7,12 @@ use url::Url;
 
 use super::types::*;
 
+const BLOCKED_HEADERS: &[&str] = &[
+    "host", "authorization", "cookie", "proxy-authorization",
+    "x-forwarded-for", "x-real-ip", "transfer-encoding",
+    "content-length", "connection", "upgrade",
+];
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  URL Validation, Normalization & SSRF Prevention (#14, #33, #35)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -93,6 +99,13 @@ fn is_ssrf_target(url: &Url) -> bool {
                     let seg = v6.segments();
                     (seg[0] & 0xfe00) == 0xfc00 || (seg[0] & 0xffc0) == 0xfe80
                 }
+                // IPv4-mapped (::ffff:x.x.x.x)
+                || match v6.to_ipv4_mapped() {
+                    Some(v4) => v4.is_loopback() || v4.is_private() || v4.is_link_local()
+                        || v4.is_broadcast() || v4.is_unspecified()
+                        || (v4.octets()[0] == 169 && v4.octets()[1] == 254),
+                    None => false,
+                }
             }
         };
     }
@@ -130,6 +143,9 @@ pub async fn fetch_robots_txt(
         .header("User-Agent", USER_AGENT)
         .timeout(Duration::from_secs(10));
     for (k, v) in custom_headers {
+        if BLOCKED_HEADERS.contains(&k.to_lowercase().as_str()) {
+            continue;
+        }
         req = req.header(k.as_str(), v.as_str());
     }
     let resp = req.send().await.ok()?;
@@ -237,6 +253,9 @@ pub async fn fetch_sitemap_urls(
             .header("User-Agent", USER_AGENT)
             .timeout(Duration::from_secs(10));
         for (k, v) in custom_headers {
+            if BLOCKED_HEADERS.contains(&k.to_lowercase().as_str()) {
+                continue;
+            }
             req = req.header(k.as_str(), v.as_str());
         }
         if let Ok(resp) = req.send().await
@@ -254,6 +273,9 @@ pub async fn fetch_sitemap_urls(
                         .header("User-Agent", USER_AGENT)
                         .timeout(Duration::from_secs(10));
                     for (k, v) in custom_headers {
+                        if BLOCKED_HEADERS.contains(&k.to_lowercase().as_str()) {
+                            continue;
+                        }
                         sub_req = sub_req.header(k.as_str(), v.as_str());
                     }
                     if let Ok(sub_resp) = sub_req.send().await
@@ -311,6 +333,9 @@ pub async fn fetch_url_with_retry(
             .timeout(FETCH_TIMEOUT);
 
         for (k, v) in custom_headers {
+            if BLOCKED_HEADERS.contains(&k.to_lowercase().as_str()) {
+                continue;
+            }
             req = req.header(k.as_str(), v.as_str());
         }
 
@@ -358,6 +383,14 @@ pub async fn fetch_url_with_retry(
                 }
 
                 let final_url = Url::parse(resp.url().as_str()).unwrap_or(parsed.clone());
+
+                // SSRF: validate final URL after redirects
+                if is_ssrf_target(&final_url) {
+                    return Err(format!(
+                        "Blocked: redirect to private/internal address '{}'",
+                        final_url
+                    ));
+                }
 
                 let bytes = resp
                     .bytes()
