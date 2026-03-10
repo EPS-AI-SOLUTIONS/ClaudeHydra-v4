@@ -727,9 +727,10 @@ pub async fn ocr_history(
         .fetch_all(&state.db)
         .await
         .map_err(|e: sqlx::Error| {
+            tracing::error!("ocr history search query: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "Internal database error"})),
             )
         })?;
 
@@ -742,9 +743,10 @@ pub async fn ocr_history(
         .fetch_one(&state.db)
         .await
         .map_err(|e: sqlx::Error| {
+            tracing::error!("ocr history search count: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "Internal database error"})),
             )
         })?;
 
@@ -762,9 +764,10 @@ pub async fn ocr_history(
         .fetch_all(&state.db)
         .await
         .map_err(|e: sqlx::Error| {
+            tracing::error!("ocr history list query: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
+                Json(json!({"error": "Internal database error"})),
             )
         })?;
 
@@ -773,9 +776,10 @@ pub async fn ocr_history(
                 .fetch_one(&state.db)
                 .await
                 .map_err(|e: sqlx::Error| {
+                    tracing::error!("ocr history list count: {e}");
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(json!({"error": e.to_string()})),
+                        Json(json!({"error": "Internal database error"})),
                     )
                 })?;
 
@@ -805,9 +809,10 @@ pub async fn ocr_history_item(
     .fetch_optional(&state.db)
     .await
     .map_err(|e: sqlx::Error| {
+        tracing::error!("ocr history item query: {e}");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
+            Json(json!({"error": "Internal database error"})),
         )
     })?
     .ok_or_else(|| (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))))?;
@@ -828,9 +833,10 @@ pub async fn ocr_history_delete(
     .execute(&state.db)
     .await
     .map_err(|e: sqlx::Error| {
+        tracing::error!("ocr history delete: {e}");
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
+            Json(json!({"error": "Internal database error"})),
         )
     })?;
 
