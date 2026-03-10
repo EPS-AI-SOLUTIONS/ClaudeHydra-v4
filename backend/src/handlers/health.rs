@@ -161,8 +161,8 @@ pub async fn system_metrics(State(state): State<AppState>) -> Json<Value> {
         },
         ram: MetricItem {
             label: "RAM".to_string(),
-            value: (snapshot.memory_used_mb * 10.0).round() as f64 / 10.0,
-            max: Some((snapshot.memory_total_mb * 10.0).round() as f64 / 10.0),
+            value: (snapshot.memory_used_mb * 10.0).round() / 10.0,
+            max: Some((snapshot.memory_total_mb * 10.0).round() / 10.0),
             unit: Some("MB".to_string()),
         },
         network: NetworkMetric {
