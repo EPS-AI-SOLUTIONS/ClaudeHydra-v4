@@ -338,7 +338,7 @@ pub async fn ocr(
     .await
     .map_err(|e| {
         tracing::error!("OCR failed: {e}");
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e})))
+        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "OCR processing failed"})))
     })?;
 
     let pages = if format == "html" {
@@ -533,7 +533,7 @@ pub async fn ocr_stream(
                 tracing::error!("OCR stream failed: {e}");
                 let err_event = Event::default()
                     .event("error")
-                    .data(json!({"error": e}).to_string());
+                    .data(json!({"error": "OCR processing failed"}).to_string());
                 let _ = tx.send(Ok(err_event)).await;
             }
         }
@@ -671,13 +671,14 @@ pub async fn ocr_batch_stream(
                 }
                 Err(e) => {
                     tracing::error!("Batch OCR file {idx} failed: {e}");
+                    let safe_msg = "OCR processing failed".to_string();
                     let result = OcrBatchItemResult {
                         filename: filename.clone(),
                         response: None,
-                        error: Some(e.clone()),
+                        error: Some(safe_msg.clone()),
                     };
                     let err_event = Event::default().event("batch_file_error").data(
-                        json!({"file_index": idx, "filename": &filename, "error": e}).to_string(),
+                        json!({"file_index": idx, "filename": &filename, "error": safe_msg}).to_string(),
                     );
                     let _ = tx.send(Ok(err_event)).await;
                     results.push(result);

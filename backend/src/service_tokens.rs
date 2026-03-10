@@ -26,7 +26,9 @@ fn validate_service_name(name: &str) -> Result<(), (StatusCode, Json<Value>)> {
     if name.len() > MAX_SERVICE_NAME_LEN {
         return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": format!("service name exceeds maximum length of {} characters", MAX_SERVICE_NAME_LEN) })),
+            Json(
+                json!({ "error": format!("service name exceeds maximum length of {} characters", MAX_SERVICE_NAME_LEN) }),
+            ),
         ));
     }
     if !name
@@ -35,7 +37,9 @@ fn validate_service_name(name: &str) -> Result<(), (StatusCode, Json<Value>)> {
     {
         return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "service name must contain only alphanumeric characters, underscores, and hyphens" })),
+            Json(
+                json!({ "error": "service name must contain only alphanumeric characters, underscores, and hyphens" }),
+            ),
         ));
     }
     Ok(())
@@ -46,7 +50,9 @@ fn validate_token_size(token: &str) -> Result<(), (StatusCode, Json<Value>)> {
     if token.len() > MAX_TOKEN_SIZE {
         return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": format!("token exceeds maximum size of {} bytes", MAX_TOKEN_SIZE) })),
+            Json(
+                json!({ "error": format!("token exceeds maximum size of {} bytes", MAX_TOKEN_SIZE) }),
+            ),
         ));
     }
     Ok(())
@@ -62,10 +68,14 @@ fn require_encryption_key() -> Result<(), (StatusCode, Json<Value>)> {
         .is_some();
 
     if !has_key {
-        tracing::error!("SERVICE_TOKEN_KEY (OAUTH_ENCRYPTION_KEY / AUTH_SECRET) is not configured — refusing to store token in plaintext");
+        tracing::error!(
+            "SERVICE_TOKEN_KEY (OAUTH_ENCRYPTION_KEY / AUTH_SECRET) is not configured — refusing to store token in plaintext"
+        );
         return Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": "Encryption key not configured — cannot store tokens securely" })),
+            Json(
+                json!({ "error": "Encryption key not configured — cannot store tokens securely" }),
+            ),
         ));
     }
     Ok(())
@@ -202,7 +212,10 @@ pub async fn get_service_token(state: &AppState, service: &str) -> Option<String
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
     {
-        tracing::warn!("get_service_token called with invalid service name: {:?}", service);
+        tracing::warn!(
+            "get_service_token called with invalid service name: {:?}",
+            service
+        );
         return None;
     }
 

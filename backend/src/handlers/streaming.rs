@@ -83,9 +83,13 @@ fn sanitize_api_error(raw: &str) -> String {
         // Anthropic: {"error": {"type": "...", "message": "..."}}
         if let Some(err_type) = parsed.pointer("/error/type").and_then(|v| v.as_str()) {
             return match err_type {
-                "overloaded_error" => "AI provider is temporarily overloaded. Please retry.".to_string(),
+                "overloaded_error" => {
+                    "AI provider is temporarily overloaded. Please retry.".to_string()
+                }
                 "rate_limit_error" => "Rate limit exceeded. Please wait and retry.".to_string(),
-                "invalid_request_error" => "Request could not be processed by AI provider.".to_string(),
+                "invalid_request_error" => {
+                    "Request could not be processed by AI provider.".to_string()
+                }
                 "authentication_error" => "AI provider authentication failed.".to_string(),
                 _ => "AI provider request failed.".to_string(),
             };
@@ -95,7 +99,9 @@ fn sanitize_api_error(raw: &str) -> String {
             return match status {
                 "RESOURCE_EXHAUSTED" => "Rate limit exceeded. Please wait and retry.".to_string(),
                 "INVALID_ARGUMENT" => "Request could not be processed by AI provider.".to_string(),
-                "UNAUTHENTICATED" | "PERMISSION_DENIED" => "AI provider authentication failed.".to_string(),
+                "UNAUTHENTICATED" | "PERMISSION_DENIED" => {
+                    "AI provider authentication failed.".to_string()
+                }
                 _ => "AI provider request failed.".to_string(),
             };
         }
@@ -374,7 +380,11 @@ pub async fn claude_chat_stream(
     if !resp.status().is_success() {
         let status = resp.status();
         let err_text = resp.text().await.unwrap_or_default();
-        tracing::error!("Anthropic API error after fallback chain (status={}): {}", status, &truncate_for_context_with_limit(&err_text, 500));
+        tracing::error!(
+            "Anthropic API error after fallback chain (status={}): {}",
+            status,
+            &truncate_for_context_with_limit(&err_text, 500)
+        );
         let safe_error = sanitize_api_error(&err_text);
         return Err((
             StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
@@ -1398,7 +1408,11 @@ async fn execute_streaming_ws(
         if !resp.status().is_success() {
             let status = resp.status();
             let err_text = resp.text().await.unwrap_or_default();
-            tracing::error!("WS: Anthropic API error after fallback (status={}): {}", status, &truncate_for_context_with_limit(&err_text, 500));
+            tracing::error!(
+                "WS: Anthropic API error after fallback (status={}): {}",
+                status,
+                &truncate_for_context_with_limit(&err_text, 500)
+            );
             let safe_error = sanitize_api_error(&err_text);
             ws_send(
                 sender,
@@ -1579,7 +1593,11 @@ async fn execute_streaming_ws(
                     .get("error")
                     .and_then(|e| e.as_str())
                     .unwrap_or("Unknown error");
-                tracing::error!("WS: send_to_anthropic failed (tool loop, iter={}): {}", iteration, raw_msg);
+                tracing::error!(
+                    "WS: send_to_anthropic failed (tool loop, iter={}): {}",
+                    iteration,
+                    raw_msg
+                );
                 ws_send(
                     sender,
                     &WsServerMessage::Error {
@@ -2257,15 +2275,27 @@ pub(crate) async fn execute_agent_call(
                     .get("error")
                     .and_then(|e| e.as_str())
                     .unwrap_or("Unknown error");
-                tracing::error!("Agent delegation '{}' send_to_anthropic failed: {}", agent_display_name, raw_msg);
-                return (format!("[{} error: AI provider request failed]", agent_display_name), true);
+                tracing::error!(
+                    "Agent delegation '{}' send_to_anthropic failed: {}",
+                    agent_display_name,
+                    raw_msg
+                );
+                return (
+                    format!("[{} error: AI provider request failed]", agent_display_name),
+                    true,
+                );
             }
         };
 
         if !resp.status().is_success() {
             let status = resp.status();
             let err = resp.text().await.unwrap_or_default();
-            tracing::error!("Agent delegation '{}' API error (status={}): {}", agent_display_name, status, &truncate_for_context_with_limit(&err, 500));
+            tracing::error!(
+                "Agent delegation '{}' API error (status={}): {}",
+                agent_display_name,
+                status,
+                &truncate_for_context_with_limit(&err, 500)
+            );
             let safe_err = sanitize_api_error(&err);
             return (format!("[{} {}]", agent_display_name, safe_err), true);
         }
@@ -2273,8 +2303,18 @@ pub(crate) async fn execute_agent_call(
         let resp_json: Value = match resp.json().await {
             Ok(v) => v,
             Err(e) => {
-                tracing::error!("Agent delegation '{}' response parse error: {}", agent_display_name, e);
-                return (format!("[{} error: failed to parse AI response]", agent_display_name), true);
+                tracing::error!(
+                    "Agent delegation '{}' response parse error: {}",
+                    agent_display_name,
+                    e
+                );
+                return (
+                    format!(
+                        "[{} error: failed to parse AI response]",
+                        agent_display_name
+                    ),
+                    true,
+                );
             }
         };
 

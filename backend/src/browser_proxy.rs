@@ -113,17 +113,13 @@ pub async fn generate_image(
                 status.as_u16(),
                 preview
             );
-            return Err(format!(
-                "Browser proxy returned HTTP {}",
-                status.as_u16()
-            ));
+            return Err(format!("Browser proxy returned HTTP {}", status.as_u16()));
         }
 
-        let resp_json: serde_json::Value = serde_json::from_str(&resp_text)
-            .map_err(|e| {
-                tracing::error!("browser_proxy[{}]: invalid JSON response: {}", context, e);
-                "Browser proxy returned invalid response".to_string()
-            })?;
+        let resp_json: serde_json::Value = serde_json::from_str(&resp_text).map_err(|e| {
+            tracing::error!("browser_proxy[{}]: invalid JSON response: {}", context, e);
+            "Browser proxy returned invalid response".to_string()
+        })?;
 
         let image_b64 = resp_json["image_base64"]
             .as_str()

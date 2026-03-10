@@ -154,11 +154,9 @@ pub async fn require_api_key_auth(
 
             // Verify against api_keys table using constant-time comparison
             // to prevent timing attacks that could leak token prefixes.
-            let is_valid = match sqlx::query_scalar::<_, String>(
-                "SELECT token FROM api_keys",
-            )
-            .fetch_all(&state.db)
-            .await
+            let is_valid = match sqlx::query_scalar::<_, String>("SELECT token FROM api_keys")
+                .fetch_all(&state.db)
+                .await
             {
                 Ok(keys) => keys
                     .iter()
