@@ -2,7 +2,7 @@
 // Agent tools for Vercel API interactions.
 // Reads token from ch_oauth_vercel table via oauth_vercel module.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::ToolDefinition;
 use crate::oauth_vercel;
@@ -34,8 +34,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "vercel_get_deployment".to_string(),
-            description: "Get details about a specific Vercel deployment by ID or URL."
-                .to_string(),
+            description: "Get details about a specific Vercel deployment by ID or URL.".to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -74,11 +73,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
 //  Tool execution
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn execute(
-    tool_name: &str,
-    input: &Value,
-    state: &AppState,
-) -> (String, bool) {
+pub async fn execute(tool_name: &str, input: &Value, state: &AppState) -> (String, bool) {
     let (token, team_id) = match oauth_vercel::get_vercel_access_token(state).await {
         Some(t) => t,
         None => {
@@ -92,8 +87,12 @@ pub async fn execute(
     let client = &state.http_client;
 
     match tool_name {
-        "vercel_list_projects" => exec_list_projects(client, &token, team_id.as_deref(), input).await,
-        "vercel_get_deployment" => exec_get_deployment(client, &token, team_id.as_deref(), input).await,
+        "vercel_list_projects" => {
+            exec_list_projects(client, &token, team_id.as_deref(), input).await
+        }
+        "vercel_get_deployment" => {
+            exec_get_deployment(client, &token, team_id.as_deref(), input).await
+        }
         "vercel_deploy" => exec_deploy(client, &token, team_id.as_deref(), input).await,
         _ => (format!("Unknown Vercel tool: {}", tool_name), true),
     }
@@ -203,10 +202,7 @@ async fn exec_deploy(
     team_id: Option<&str>,
     input: &Value,
 ) -> (String, bool) {
-    let project = input
-        .get("project")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let project = input.get("project").and_then(|v| v.as_str()).unwrap_or("");
     let target = input
         .get("target")
         .and_then(|v| v.as_str())
@@ -246,11 +242,7 @@ async fn exec_deploy(
 
 // ── HTTP helpers ─────────────────────────────────────────────────────────
 
-async fn vercel_get(
-    client: &reqwest::Client,
-    token: &str,
-    url: &str,
-) -> Result<Value, String> {
+async fn vercel_get(client: &reqwest::Client, token: &str, url: &str) -> Result<Value, String> {
     let resp = client
         .get(url)
         .header("authorization", format!("Bearer {}", token))

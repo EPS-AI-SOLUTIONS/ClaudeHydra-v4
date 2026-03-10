@@ -49,7 +49,10 @@ async fn health_endpoint_returns_json_with_status_field() {
         .unwrap();
 
     let json = body_json(response).await;
-    assert!(json.get("status").is_some(), "Response should have 'status' field");
+    assert!(
+        json.get("status").is_some(),
+        "Response should have 'status' field"
+    );
 }
 
 #[tokio::test]

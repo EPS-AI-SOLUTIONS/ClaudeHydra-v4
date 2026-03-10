@@ -6,7 +6,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::oauth::{decrypt_token, encrypt_token, random_base64url};
 use crate::state::AppState;
@@ -196,14 +196,10 @@ pub async fn github_auth_callback(
 
 /// POST /api/auth/github/logout — delete stored GitHub OAuth token
 pub async fn github_auth_logout(State(state): State<AppState>) -> Json<Value> {
-    sqlx::query(concat!(
-        "DELETE FROM ",
-        "ch_oauth_github",
-        " WHERE id = 1"
-    ))
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query(concat!("DELETE FROM ", "ch_oauth_github", " WHERE id = 1"))
+        .execute(&state.db)
+        .await
+        .ok();
     tracing::info!("GitHub OAuth token deleted");
     Json(json!({ "status": "ok" }))
 }

@@ -3,14 +3,14 @@
 // Table: ch_google_auth (singleton). Default port: 8082.
 // Reuses encrypt_token/decrypt_token from crate::oauth.
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
-use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::oauth::{decrypt_token, encrypt_token, random_base64url, sha256_base64url, html_escape};
+use crate::oauth::{decrypt_token, encrypt_token, html_escape, random_base64url, sha256_base64url};
 use crate::state::AppState;
 
 // ── Google OAuth 2.0 constants ───────────────────────────────────────────
@@ -363,16 +363,15 @@ pub async fn google_save_api_key(
 
     // Encrypt and store
     let encrypted = encrypt_token(key);
-    sqlx::query(
-        concat!(
-            "INSERT INTO ", "ch_google_auth",
-            " (id, auth_method, api_key_encrypted, access_token, refresh_token, updated_at) ",
-            "VALUES (1, 'api_key', $1, '', '', NOW()) ",
-            "ON CONFLICT (id) DO UPDATE SET ",
-            "auth_method = 'api_key', api_key_encrypted = $1, access_token = '', refresh_token = '', ",
-            "expires_at = 0, user_email = '', user_name = '', updated_at = NOW()",
-        ),
-    )
+    sqlx::query(concat!(
+        "INSERT INTO ",
+        "ch_google_auth",
+        " (id, auth_method, api_key_encrypted, access_token, refresh_token, updated_at) ",
+        "VALUES (1, 'api_key', $1, '', '', NOW()) ",
+        "ON CONFLICT (id) DO UPDATE SET ",
+        "auth_method = 'api_key', api_key_encrypted = $1, access_token = '', refresh_token = '', ",
+        "expires_at = 0, user_email = '', user_name = '', updated_at = NOW()",
+    ))
     .bind(&encrypted)
     .execute(&state.db)
     .await
@@ -401,14 +400,10 @@ pub async fn google_save_api_key(
 
 /// DELETE /api/auth/google/apikey — remove stored Google credentials
 pub async fn google_delete_api_key(State(state): State<AppState>) -> Json<Value> {
-    sqlx::query(concat!(
-        "DELETE FROM ",
-        "ch_google_auth",
-        " WHERE id = 1"
-    ))
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query(concat!("DELETE FROM ", "ch_google_auth", " WHERE id = 1"))
+        .execute(&state.db)
+        .await
+        .ok();
 
     // Only remove runtime key if no env var fallback
     if std::env::var("GOOGLE_API_KEY").is_err() && std::env::var("GEMINI_API_KEY").is_err() {
@@ -460,11 +455,11 @@ pub async fn get_google_credential(state: &AppState) -> Option<(String, bool)> {
                 return Some((refreshed, true));
             }
 
-            tracing::warn!("Google OAuth token expired and refresh failed, trying API key fallback");
-        } else if !oauth_valid {
-            tracing::debug!(
-                "Skipping OAuth token — marked invalid for Gemini API, using API key"
+            tracing::warn!(
+                "Google OAuth token expired and refresh failed, trying API key fallback"
             );
+        } else if !oauth_valid {
+            tracing::debug!("Skipping OAuth token — marked invalid for Gemini API, using API key");
         }
 
         // DB API key
@@ -497,9 +492,10 @@ pub fn mark_oauth_gemini_valid(state: &AppState) {
 /// Used as fallback when OAuth token is rejected by Google API (401/403).
 pub async fn get_google_api_key_credential(state: &AppState) -> Option<(String, bool)> {
     if let Some(row) = get_auth_row(state).await
-        && let Some(pair) = try_db_api_key(&row) {
-            return Some(pair);
-        }
+        && let Some(pair) = try_db_api_key(&row)
+    {
+        return Some(pair);
+    }
     try_env_key()
 }
 
@@ -521,9 +517,10 @@ pub fn apply_google_auth(
 fn try_db_api_key(row: &GoogleAuthRow) -> Option<(String, bool)> {
     if !row.api_key_encrypted.is_empty()
         && let Some(key) = decrypt_token(&row.api_key_encrypted)
-            && !key.is_empty() {
-                return Some((key, false));
-            }
+        && !key.is_empty()
+    {
+        return Some((key, false));
+    }
     None
 }
 

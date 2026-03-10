@@ -6,7 +6,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::oauth::{decrypt_token, encrypt_token, random_base64url};
 use crate::state::AppState;
@@ -55,8 +55,8 @@ pub async fn vercel_auth_login(State(state): State<AppState>) -> Json<Value> {
         return Json(json!({ "error": "VERCEL_CLIENT_ID not configured" }));
     }
 
-    let redirect_uri =
-        std::env::var("VERCEL_REDIRECT_URI").unwrap_or_else(|_| "http://localhost:5199/api/auth/vercel/callback".to_string());
+    let redirect_uri = std::env::var("VERCEL_REDIRECT_URI")
+        .unwrap_or_else(|_| "http://localhost:5199/api/auth/vercel/callback".to_string());
 
     // Generate random state
     let oauth_state = random_base64url(32);
@@ -107,8 +107,8 @@ pub async fn vercel_auth_callback(
 
     let client_id = std::env::var("VERCEL_CLIENT_ID").unwrap_or_default();
     let client_secret = std::env::var("VERCEL_CLIENT_SECRET").unwrap_or_default();
-    let redirect_uri =
-        std::env::var("VERCEL_REDIRECT_URI").unwrap_or_else(|_| "http://localhost:5199/api/auth/vercel/callback".to_string());
+    let redirect_uri = std::env::var("VERCEL_REDIRECT_URI")
+        .unwrap_or_else(|_| "http://localhost:5199/api/auth/vercel/callback".to_string());
 
     if client_id.is_empty() || client_secret.is_empty() {
         return Err((
@@ -193,14 +193,10 @@ pub async fn vercel_auth_callback(
 
 /// POST /api/auth/vercel/logout — delete stored Vercel OAuth token
 pub async fn vercel_auth_logout(State(state): State<AppState>) -> Json<Value> {
-    sqlx::query(concat!(
-        "DELETE FROM ",
-        "ch_oauth_vercel",
-        " WHERE id = 1"
-    ))
-    .execute(&state.db)
-    .await
-    .ok();
+    sqlx::query(concat!("DELETE FROM ", "ch_oauth_vercel", " WHERE id = 1"))
+        .execute(&state.db)
+        .await
+        .ok();
     tracing::info!("Vercel OAuth token deleted");
     Json(json!({ "status": "ok" }))
 }

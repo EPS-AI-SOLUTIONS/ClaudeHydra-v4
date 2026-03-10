@@ -2,7 +2,7 @@
 // Agent tools for Fly.io API interactions (read-only).
 // Reads PAT from ch_service_tokens table via service_tokens module.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::ToolDefinition;
 use crate::service_tokens;
@@ -73,11 +73,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
 //  Tool execution
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn execute(
-    tool_name: &str,
-    input: &Value,
-    state: &AppState,
-) -> (String, bool) {
+pub async fn execute(tool_name: &str, input: &Value, state: &AppState) -> (String, bool) {
     let token = match service_tokens::get_service_token(state, SERVICE_NAME).await {
         Some(t) => t,
         None => {
@@ -100,11 +96,7 @@ pub async fn execute(
 
 // ── Individual tool implementations ──────────────────────────────────────
 
-async fn exec_list_apps(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
+async fn exec_list_apps(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
     let org_slug = input
         .get("org_slug")
         .and_then(|v| v.as_str())
@@ -157,15 +149,8 @@ async fn exec_list_apps(
     }
 }
 
-async fn exec_get_status(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
-    let app_name = input
-        .get("app_name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+async fn exec_get_status(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
+    let app_name = input.get("app_name").and_then(|v| v.as_str()).unwrap_or("");
 
     if app_name.is_empty() {
         return ("app_name is required".to_string(), true);
@@ -211,15 +196,8 @@ async fn exec_get_status(
     }
 }
 
-async fn exec_get_logs(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
-    let app_name = input
-        .get("app_name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+async fn exec_get_logs(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
+    let app_name = input.get("app_name").and_then(|v| v.as_str()).unwrap_or("");
 
     if app_name.is_empty() {
         return ("app_name is required".to_string(), true);
@@ -253,9 +231,7 @@ async fn exec_get_logs(
 
     match fly_graphql(client, token, &query).await {
         Ok(body) => {
-            let app_data = body
-                .get("data")
-                .and_then(|d| d.get("app"));
+            let app_data = body.get("data").and_then(|d| d.get("app"));
 
             match app_data {
                 Some(app) => {
@@ -289,11 +265,7 @@ async fn exec_get_logs(
 
 // ── HTTP helpers ─────────────────────────────────────────────────────────
 
-async fn fly_get(
-    client: &reqwest::Client,
-    token: &str,
-    url: &str,
-) -> Result<Value, String> {
+async fn fly_get(client: &reqwest::Client, token: &str, url: &str) -> Result<Value, String> {
     let resp = client
         .get(url)
         .header("authorization", format!("Bearer {}", token))

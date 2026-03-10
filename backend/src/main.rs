@@ -1,7 +1,7 @@
-use http::{header, Method};
+use http::{Method, header};
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::compression::CompressionLayer;
 use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::handlers;
@@ -78,7 +78,9 @@ fn build_app(state: AppState) -> axum::Router {
                 .expect("claudehydra-v4.vercel.app is a valid hardcoded URL"),
             "https://claudehydra-v4-pawelserkowskis-projects.vercel.app"
                 .parse()
-                .expect("claudehydra-v4-pawelserkowskis-projects.vercel.app is a valid hardcoded URL"),
+                .expect(
+                    "claudehydra-v4-pawelserkowskis-projects.vercel.app is a valid hardcoded URL",
+                ),
         ])
         .allow_methods([
             Method::GET,
@@ -180,14 +182,16 @@ async fn main() -> shuttle_axum::ShuttleAxum {
 #[cfg(not(feature = "shuttle"))]
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    use tracing_subscriber::prelude::*;
     use tracing_subscriber::EnvFilter;
+    use tracing_subscriber::prelude::*;
 
     enable_ansi();
 
     // Create log ring buffer BEFORE subscriber so the Layer can capture events
     let log_buffer = std::sync::Arc::new(LogRingBuffer::new(1000));
-    let buffer_layer = LogBufferLayer { buffer: log_buffer.clone() };
+    let buffer_layer = LogBufferLayer {
+        buffer: log_buffer.clone(),
+    };
 
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
     if std::env::var("RUST_LOG_FORMAT").as_deref() == Ok("json") {
@@ -250,11 +254,8 @@ async fn main() -> anyhow::Result<()> {
                 tokio::time::sleep(*delay).await;
             }
 
-            match tokio::time::timeout(
-                sync_timeout,
-                model_registry::startup_sync(&startup_state),
-            )
-            .await
+            match tokio::time::timeout(sync_timeout, model_registry::startup_sync(&startup_state))
+                .await
             {
                 Ok(()) => {
                     tracing::info!(
@@ -331,8 +332,8 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(windows)]
 fn enable_ansi() {
     use windows::Win32::System::Console::{
-        GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-        STD_ERROR_HANDLE, STD_OUTPUT_HANDLE,
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode, GetStdHandle, STD_ERROR_HANDLE,
+        STD_OUTPUT_HANDLE, SetConsoleMode,
     };
     for std_handle in [STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
         unsafe {

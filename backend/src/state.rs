@@ -2,8 +2,8 @@
 // ClaudeHydra v4 - Application state
 
 use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Instant;
 
 use sqlx::PgPool;
@@ -53,13 +53,16 @@ impl LogRingBuffer {
         buf.clear();
     }
 
-    pub fn recent(&self, limit: usize, min_level: Option<&str>, search: Option<&str>) -> Vec<LogEntry> {
+    pub fn recent(
+        &self,
+        limit: usize,
+        min_level: Option<&str>,
+        search: Option<&str>,
+    ) -> Vec<LogEntry> {
         let buf = self.entries.lock().unwrap_or_else(|p| p.into_inner());
         buf.iter()
             .rev()
-            .filter(|e| {
-                min_level.is_none_or(|lvl| level_ord(&e.level) >= level_ord(lvl))
-            })
+            .filter(|e| min_level.is_none_or(|lvl| level_ord(&e.level) >= level_ord(lvl)))
             .filter(|e| {
                 search.is_none_or(|s| {
                     let s_lower = s.to_lowercase();
@@ -191,7 +194,8 @@ impl CircuitBreaker {
                 *wg = Some(Instant::now());
                 tracing::error!(
                     "circuit_breaker: TRIPPED after {} consecutive failures — blocking requests for {}s",
-                    count, COOLDOWN_SECS
+                    count,
+                    COOLDOWN_SECS
                 );
             }
         }
@@ -332,15 +336,9 @@ impl AppState {
             .build()
             .expect("Failed to build HTTP client");
 
-        let tool_executor = Arc::new(ToolExecutor::new(
-            http_client.clone(),
-            api_keys.clone(),
-        ));
+        let tool_executor = Arc::new(ToolExecutor::new(http_client.clone(), api_keys.clone()));
 
-        let mcp_client = Arc::new(McpClientManager::new(
-            db.clone(),
-            http_client.clone(),
-        ));
+        let mcp_client = Arc::new(McpClientManager::new(db.clone(), http_client.clone()));
 
         let (a2a_task_tx, _) = tokio::sync::broadcast::channel(100);
 
@@ -364,7 +362,9 @@ impl AppState {
             oauth_gemini_valid: Arc::new(AtomicBool::new(true)),
             log_buffer,
             prompt_cache: Arc::new(RwLock::new(HashMap::new())),
-            browser_proxy_status: Arc::new(RwLock::new(crate::browser_proxy::BrowserProxyStatus::default())),
+            browser_proxy_status: Arc::new(RwLock::new(
+                crate::browser_proxy::BrowserProxyStatus::default(),
+            )),
             browser_proxy_history: Arc::new(crate::browser_proxy::ProxyHealthHistory::new(50)),
             a2a_task_tx,
         }
@@ -390,7 +390,9 @@ impl AppState {
             mcp_client: Arc::new(McpClientManager::new(db.clone(), http_client.clone())),
             db,
             agents,
-            runtime: Arc::new(RwLock::new(RuntimeState { api_keys: HashMap::new() })),
+            runtime: Arc::new(RwLock::new(RuntimeState {
+                api_keys: HashMap::new(),
+            })),
             model_cache: Arc::new(RwLock::new(ModelCache::new())),
             start_time: Instant::now(),
             http_client: http_client.clone(),
@@ -406,7 +408,9 @@ impl AppState {
             oauth_gemini_valid: Arc::new(AtomicBool::new(true)),
             log_buffer: Arc::new(LogRingBuffer::new(1000)),
             prompt_cache: Arc::new(RwLock::new(HashMap::new())),
-            browser_proxy_status: Arc::new(RwLock::new(crate::browser_proxy::BrowserProxyStatus::default())),
+            browser_proxy_status: Arc::new(RwLock::new(
+                crate::browser_proxy::BrowserProxyStatus::default(),
+            )),
             browser_proxy_history: Arc::new(crate::browser_proxy::ProxyHealthHistory::new(50)),
             a2a_task_tx,
         }
@@ -424,18 +428,78 @@ fn model_for_tier(tier: &str) -> &'static str {
 
 fn init_witcher_agents() -> Vec<WitcherAgent> {
     let defs: &[(&str, &str, &str, &str)] = &[
-        ("Geralt",    "Security",      "Commander",  "Master witcher and security specialist — hunts vulnerabilities like monsters"),
-        ("Yennefer",  "Architecture",  "Commander",  "Powerful sorceress of system architecture — designs elegant magical structures"),
-        ("Vesemir",   "Testing",       "Commander",  "Veteran witcher mentor — rigorously tests and validates all operations"),
-        ("Triss",     "Data",          "Coordinator","Skilled sorceress of data management — weaves information with precision"),
-        ("Jaskier",   "Documentation", "Coordinator","Legendary bard — chronicles every detail with flair and accuracy"),
-        ("Ciri",      "Performance",   "Coordinator","Elder Blood carrier — optimises performance with dimensional speed"),
-        ("Dijkstra",  "Strategy",      "Coordinator","Spymaster strategist — plans operations with cunning intelligence"),
-        ("Lambert",   "DevOps",        "Executor",   "Bold witcher — executes deployments and infrastructure operations"),
-        ("Eskel",     "Backend",       "Executor",   "Steady witcher — builds and maintains robust backend services"),
-        ("Regis",     "Research",      "Executor",   "Scholarly higher vampire — researches and analyses with ancient wisdom"),
-        ("Zoltan",    "Frontend",      "Executor",   "Dwarven warrior — forges powerful and resilient frontend interfaces"),
-        ("Philippa",  "Monitoring",    "Executor",   "All-seeing sorceress — monitors systems with her magical owl familiar"),
+        (
+            "Geralt",
+            "Security",
+            "Commander",
+            "Master witcher and security specialist — hunts vulnerabilities like monsters",
+        ),
+        (
+            "Yennefer",
+            "Architecture",
+            "Commander",
+            "Powerful sorceress of system architecture — designs elegant magical structures",
+        ),
+        (
+            "Vesemir",
+            "Testing",
+            "Commander",
+            "Veteran witcher mentor — rigorously tests and validates all operations",
+        ),
+        (
+            "Triss",
+            "Data",
+            "Coordinator",
+            "Skilled sorceress of data management — weaves information with precision",
+        ),
+        (
+            "Jaskier",
+            "Documentation",
+            "Coordinator",
+            "Legendary bard — chronicles every detail with flair and accuracy",
+        ),
+        (
+            "Ciri",
+            "Performance",
+            "Coordinator",
+            "Elder Blood carrier — optimises performance with dimensional speed",
+        ),
+        (
+            "Dijkstra",
+            "Strategy",
+            "Coordinator",
+            "Spymaster strategist — plans operations with cunning intelligence",
+        ),
+        (
+            "Lambert",
+            "DevOps",
+            "Executor",
+            "Bold witcher — executes deployments and infrastructure operations",
+        ),
+        (
+            "Eskel",
+            "Backend",
+            "Executor",
+            "Steady witcher — builds and maintains robust backend services",
+        ),
+        (
+            "Regis",
+            "Research",
+            "Executor",
+            "Scholarly higher vampire — researches and analyses with ancient wisdom",
+        ),
+        (
+            "Zoltan",
+            "Frontend",
+            "Executor",
+            "Dwarven warrior — forges powerful and resilient frontend interfaces",
+        ),
+        (
+            "Philippa",
+            "Monitoring",
+            "Executor",
+            "All-seeing sorceress — monitors systems with her magical owl familiar",
+        ),
     ];
 
     defs.iter()

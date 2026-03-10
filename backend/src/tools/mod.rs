@@ -1,7 +1,7 @@
 pub mod fly_tools;
 pub mod fs_tools;
-pub mod github_tools;
 pub mod git_tools;
+pub mod github_tools;
 pub mod image_tools;
 pub mod pdf_tools;
 pub mod vercel_tools;
@@ -11,7 +11,7 @@ pub mod zip_tools;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::ToolDefinition;
 use crate::state::AppState;
@@ -41,7 +41,9 @@ const BLOCKED_WRITE_PREFIXES: &[&str] = &[
     "C:\\ProgramData",
 ];
 #[cfg(not(windows))]
-const BLOCKED_WRITE_PREFIXES: &[&str] = &["/etc", "/usr", "/bin", "/sbin", "/var", "/boot", "/proc", "/sys"];
+const BLOCKED_WRITE_PREFIXES: &[&str] = &[
+    "/etc", "/usr", "/bin", "/sbin", "/var", "/boot", "/proc", "/sys",
+];
 
 // ── ToolExecutor ────────────────────────────────────────────────────────
 
@@ -60,13 +62,12 @@ impl Default for ToolExecutor {
 
 impl ToolExecutor {
     pub fn new(http_client: reqwest::Client, api_keys: HashMap<String, String>) -> Self {
-        let dirs_str =
-            std::env::var("ALLOWED_FILE_DIRS").unwrap_or_else(|_| {
-                dirs::desktop_dir()
-                    .unwrap_or_else(|| PathBuf::from("."))
-                    .to_string_lossy()
-                    .to_string()
-            });
+        let dirs_str = std::env::var("ALLOWED_FILE_DIRS").unwrap_or_else(|_| {
+            dirs::desktop_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .to_string_lossy()
+                .to_string()
+        });
 
         let allowed_dirs: Vec<PathBuf> = dirs_str
             .split(';')
@@ -486,7 +487,15 @@ impl ToolExecutor {
             let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
             let prompt = input.get("prompt").and_then(|v| v.as_str());
             let extract_text = input.get("extract_text").and_then(|v| v.as_bool());
-            return match image_tools::tool_analyze_image(path, prompt, extract_text, &self.http_client, &self.api_keys).await {
+            return match image_tools::tool_analyze_image(
+                path,
+                prompt,
+                extract_text,
+                &self.http_client,
+                &self.api_keys,
+            )
+            .await
+            {
                 Ok(result) => result,
                 Err(e) => (e, true),
             };
@@ -497,7 +506,10 @@ impl ToolExecutor {
         }
         // Image generation via browser proxy
         if tool_name == "generate_image" {
-            let image_path = input.get("image_path").and_then(|v| v.as_str()).unwrap_or("");
+            let image_path = input
+                .get("image_path")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             let prompt = input.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
             return match tool_generate_image(image_path, prompt, &self.http_client).await {
                 Ok(text) => (text, false),
@@ -518,13 +530,20 @@ impl ToolExecutor {
         let resolved = state.mcp_client.resolve_tool(prefixed_name).await;
         match resolved {
             Some((server_id, tool_name)) => {
-                match state.mcp_client.call_tool(&server_id, &tool_name, input).await {
+                match state
+                    .mcp_client
+                    .call_tool(&server_id, &tool_name, input)
+                    .await
+                {
                     Ok(result) => (result, false),
                     Err(e) => (e, true),
                 }
             }
             None => (
-                format!("MCP tool '{}' not found on any connected server", prefixed_name),
+                format!(
+                    "MCP tool '{}' not found on any connected server",
+                    prefixed_name
+                ),
                 true,
             ),
         }
@@ -565,14 +584,21 @@ impl ToolExecutor {
                 }
             }
             "list_zip" => {
-                match zip_tools::tool_list_zip(input.get("path").and_then(|v| v.as_str()).unwrap_or("")).await {
+                match zip_tools::tool_list_zip(
+                    input.get("path").and_then(|v| v.as_str()).unwrap_or(""),
+                )
+                .await
+                {
                     Ok(text) => (text, false),
                     Err(e) => (e, true),
                 }
             }
             "extract_zip_file" => {
                 let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                let file_path = input.get("file_path").and_then(|v| v.as_str()).unwrap_or("");
+                let file_path = input
+                    .get("file_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
                 match zip_tools::tool_extract_zip_file(path, file_path).await {
                     Ok(text) => (text, false),
                     Err(e) => (e, true),
@@ -582,28 +608,48 @@ impl ToolExecutor {
                 let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let prompt = input.get("prompt").and_then(|v| v.as_str());
                 // No state — extract_text defaults to None (description mode)
-                match image_tools::tool_analyze_image(path, prompt, None, &self.http_client, &self.api_keys).await {
+                match image_tools::tool_analyze_image(
+                    path,
+                    prompt,
+                    None,
+                    &self.http_client,
+                    &self.api_keys,
+                )
+                .await
+                {
                     Ok(result) => result,
                     Err(e) => (e, true),
                 }
             }
             "git_status" => {
-                let repo = input.get("repo_path").and_then(|v| v.as_str()).unwrap_or(".");
+                let repo = input
+                    .get("repo_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".");
                 match git_tools::tool_git_status(repo).await {
                     Ok(text) => (text, false),
                     Err(e) => (e, true),
                 }
             }
             "git_log" => {
-                let repo = input.get("repo_path").and_then(|v| v.as_str()).unwrap_or(".");
-                let count = input.get("count").and_then(|v| v.as_u64()).map(|n| n as u32);
+                let repo = input
+                    .get("repo_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".");
+                let count = input
+                    .get("count")
+                    .and_then(|v| v.as_u64())
+                    .map(|n| n as u32);
                 match git_tools::tool_git_log(repo, count).await {
                     Ok(text) => (text, false),
                     Err(e) => (e, true),
                 }
             }
             "git_diff" => {
-                let repo = input.get("repo_path").and_then(|v| v.as_str()).unwrap_or(".");
+                let repo = input
+                    .get("repo_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".");
                 let target = input.get("target").and_then(|v| v.as_str());
                 match git_tools::tool_git_diff(repo, target).await {
                     Ok(text) => (text, false),
@@ -611,7 +657,10 @@ impl ToolExecutor {
                 }
             }
             "git_branch" => {
-                let repo = input.get("repo_path").and_then(|v| v.as_str()).unwrap_or(".");
+                let repo = input
+                    .get("repo_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".");
                 let action = input.get("action").and_then(|v| v.as_str());
                 match git_tools::tool_git_branch(repo, action).await {
                     Ok(text) => (text, false),
@@ -619,7 +668,10 @@ impl ToolExecutor {
                 }
             }
             "git_commit" => {
-                let repo = input.get("repo_path").and_then(|v| v.as_str()).unwrap_or(".");
+                let repo = input
+                    .get("repo_path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(".");
                 let message = input.get("message").and_then(|v| v.as_str()).unwrap_or("");
                 let files = input.get("files").and_then(|v| v.as_str());
                 match git_tools::tool_git_commit(repo, message, files).await {
@@ -692,7 +744,10 @@ async fn ocr_document(path: &str, state: &AppState) -> Result<String, String> {
         .unwrap_or("document");
     Ok(format!(
         "### OCR: {} ({}, {} bytes)\n\n{}",
-        filename, mime_type, metadata.len(), text
+        filename,
+        mime_type,
+        metadata.len(),
+        text
     ))
 }
 

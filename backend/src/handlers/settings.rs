@@ -1,9 +1,9 @@
 //! Application settings endpoints (DB-backed).
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::*;
 use crate::state::AppState;
@@ -14,9 +14,7 @@ use crate::state::AppState;
 
 #[utoipa::path(get, path = "/api/settings", tag = "settings",
     responses((status = 200, description = "Current application settings")))]
-pub async fn get_settings(
-    State(state): State<AppState>,
-) -> Result<Json<Value>, StatusCode> {
+pub async fn get_settings(State(state): State<AppState>) -> Result<Json<Value>, StatusCode> {
     let row = sqlx::query_as::<_, SettingsRow>(
         "SELECT theme, language, default_model, auto_start, welcome_message, working_directory, \
          COALESCE(max_iterations, 10) AS max_iterations, \
@@ -43,7 +41,9 @@ pub async fn get_settings(
         max_tokens: row.max_tokens,
     };
 
-    Ok(Json(serde_json::to_value(settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+    Ok(Json(
+        serde_json::to_value(settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -93,7 +93,9 @@ pub async fn update_settings(
     )
     .await;
 
-    Ok(Json(serde_json::to_value(&new_settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+    Ok(Json(
+        serde_json::to_value(&new_settings).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
 }
 
 // ═══════════════════════════════════════════════════════════════════════

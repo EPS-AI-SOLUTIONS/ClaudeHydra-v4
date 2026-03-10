@@ -7,12 +7,12 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::header;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use utoipa::ToSchema;
 
 use crate::state::AppState;
@@ -138,8 +138,7 @@ async fn fetch_google_models(
 ) -> Result<Vec<ModelInfo>, String> {
     let url = "https://generativelanguage.googleapis.com/v1beta/models";
 
-    let parsed_url = reqwest::Url::parse(url)
-        .map_err(|e| format!("Invalid URL: {}", e))?;
+    let parsed_url = reqwest::Url::parse(url).map_err(|e| format!("Invalid URL: {}", e))?;
 
     let resp = crate::oauth_google::apply_google_auth(client.get(parsed_url), api_key, is_oauth)
         .send()
@@ -240,7 +239,10 @@ pub async fn refresh_cache(state: &AppState) -> (HashMap<String, Vec<ModelInfo>>
                                 all_models.insert("google".to_string(), models);
                             }
                             Err(e2) => {
-                                tracing::warn!("model_registry: API key fallback also failed: {}", e2);
+                                tracing::warn!(
+                                    "model_registry: API key fallback also failed: {}",
+                                    e2
+                                );
                                 errors.push(format!("google (oauth): {}", e));
                                 errors.push(format!("google (api_key): {}", e2));
                             }
@@ -353,7 +355,9 @@ pub async fn resolve_models(state: &AppState) -> ResolvedModels {
     let flash = select_best(
         &google,
         &["flash"],
-        &["lite", "latest", "image", "tts", "computer", "robotics", "audio", "thinking"],
+        &[
+            "lite", "latest", "image", "tts", "computer", "robotics", "audio", "thinking",
+        ],
     );
 
     ResolvedModels {
@@ -371,9 +375,23 @@ pub fn classify_complexity(prompt: &str) -> &'static str {
     let words = prompt.split_whitespace().count();
     let lower = prompt.to_lowercase();
     let complex_keywords = [
-        "architect", "refactor", "design pattern", "migration", "security audit",
-        "performance", "optimize", "scale", "infrastructure", "deploy",
-        "```", "fn ", "function ", "class ", "impl ", "async ", "struct ",
+        "architect",
+        "refactor",
+        "design pattern",
+        "migration",
+        "security audit",
+        "performance",
+        "optimize",
+        "scale",
+        "infrastructure",
+        "deploy",
+        "```",
+        "fn ",
+        "function ",
+        "class ",
+        "impl ",
+        "async ",
+        "struct ",
     ];
     let has_complex = complex_keywords.iter().any(|k| lower.contains(k));
 
@@ -390,17 +408,20 @@ pub fn classify_complexity(prompt: &str) -> &'static str {
 /// Priority: 1) DB pin  2) dynamic auto-selection  3) hardcoded fallback.
 pub async fn get_model_id(state: &AppState, use_case: &str) -> String {
     // 1) Check for a pinned model in DB
-    let pinned: Option<String> = sqlx::query_scalar(
-        "SELECT model_id FROM ch_model_pins WHERE use_case = $1",
-    )
-    .bind(use_case)
-    .fetch_optional(&state.db)
-    .await
-    .ok()
-    .flatten();
+    let pinned: Option<String> =
+        sqlx::query_scalar("SELECT model_id FROM ch_model_pins WHERE use_case = $1")
+            .bind(use_case)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
 
     if let Some(ref pin) = pinned {
-        tracing::info!("model_registry: use_case={} → model={} (pinned)", use_case, pin);
+        tracing::info!(
+            "model_registry: use_case={} → model={} (pinned)",
+            use_case,
+            pin
+        );
         return pin.clone();
     }
 
@@ -421,7 +442,11 @@ pub async fn get_model_id(state: &AppState, use_case: &str) -> String {
         "model_registry: use_case={} → model={}{}",
         use_case,
         id,
-        if model.is_some() { " (auto)" } else { " (fallback)" }
+        if model.is_some() {
+            " (auto)"
+        } else {
+            " (fallback)"
+        }
     );
 
     id.to_string()
@@ -436,12 +461,11 @@ pub async fn model_for_tier(state: &AppState, tier: &str) -> String {
 
 /// Read all pins from DB as a HashMap.
 async fn get_pins_map(state: &AppState) -> HashMap<String, String> {
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT use_case, model_id FROM ch_model_pins",
-    )
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT use_case, model_id FROM ch_model_pins")
+            .fetch_all(&state.db)
+            .await
+            .unwrap_or_default();
 
     rows.into_iter().collect()
 }
@@ -455,7 +479,11 @@ pub async fn startup_sync(state: &AppState) {
 
     let (models, startup_errors) = refresh_cache(state).await;
     let total: usize = models.values().map(|v| v.len()).sum();
-    tracing::info!("model_registry: {} models cached from {} providers", total, models.len());
+    tracing::info!(
+        "model_registry: {} models cached from {} providers",
+        total,
+        models.len()
+    );
     for err in &startup_errors {
         tracing::warn!("model_registry: startup fetch error: {}", err);
     }
@@ -483,10 +511,26 @@ pub async fn startup_sync(state: &AppState) {
 
     tracing::info!(
         "model_registry: resolved → commander={}, coordinator={}, executor={}, flash={}",
-        resolved.commander.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
-        resolved.coordinator.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
-        resolved.executor.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
-        resolved.flash.as_ref().map(|m| m.id.as_str()).unwrap_or("(none)"),
+        resolved
+            .commander
+            .as_ref()
+            .map(|m| m.id.as_str())
+            .unwrap_or("(none)"),
+        resolved
+            .coordinator
+            .as_ref()
+            .map(|m| m.id.as_str())
+            .unwrap_or("(none)"),
+        resolved
+            .executor
+            .as_ref()
+            .map(|m| m.id.as_str())
+            .unwrap_or("(none)"),
+        resolved
+            .flash
+            .as_ref()
+            .map(|m| m.id.as_str())
+            .unwrap_or("(none)"),
     );
 }
 
@@ -567,7 +611,9 @@ pub async fn pin_model(
     let valid = ["commander", "coordinator", "executor", "flash"];
 
     if !valid.contains(&normalized.as_str()) {
-        return Json(json!({ "error": format!("Invalid use_case '{}'. Valid: commander, coordinator, executor, flash", body.use_case) }));
+        return Json(
+            json!({ "error": format!("Invalid use_case '{}'. Valid: commander, coordinator, executor, flash", body.use_case) }),
+        );
     }
 
     let result = sqlx::query(
@@ -582,7 +628,11 @@ pub async fn pin_model(
 
     match result {
         Ok(_) => {
-            tracing::info!("model_registry: pinned use_case={} → model={}", normalized, body.model_id);
+            tracing::info!(
+                "model_registry: pinned use_case={} → model={}",
+                normalized,
+                body.model_id
+            );
             // #40 Audit log
             crate::audit::log_audit(
                 &state.db,
@@ -705,7 +755,9 @@ mod tests {
         let best = select_best(&models, &[], &[]);
         // Both opus and sonnet have version 6000, but opus sorts first alphabetically
         // Actually they have identical version_key — sort is stable so first in sorted order wins
-        let best_id = best.expect("select_best should find a model from non-empty list").id;
+        let best_id = best
+            .expect("select_best should find a model from non-empty list")
+            .id;
         assert!(
             best_id == "claude-sonnet-4-6" || best_id == "claude-opus-4-6",
             "Expected opus or sonnet, got: {}",
@@ -722,7 +774,10 @@ mod tests {
         ];
 
         let best = select_best(&models, &["opus"], &[]);
-        assert_eq!(best.expect("opus filter should match claude-opus-4-6").id, "claude-opus-4-6");
+        assert_eq!(
+            best.expect("opus filter should match claude-opus-4-6").id,
+            "claude-opus-4-6"
+        );
     }
 
     #[test]
@@ -735,7 +790,11 @@ mod tests {
         ];
 
         let best = select_best(&models, &["sonnet"], &[]);
-        assert_eq!(best.expect("sonnet filter should match claude-sonnet-4-6").id, "claude-sonnet-4-6");
+        assert_eq!(
+            best.expect("sonnet filter should match claude-sonnet-4-6")
+                .id,
+            "claude-sonnet-4-6"
+        );
     }
 
     #[test]
@@ -746,7 +805,11 @@ mod tests {
         ];
 
         let best = select_best(&models, &["haiku"], &[]);
-        assert_eq!(best.expect("haiku filter should match claude-haiku-4-5-20251001").id, "claude-haiku-4-5-20251001");
+        assert_eq!(
+            best.expect("haiku filter should match claude-haiku-4-5-20251001")
+                .id,
+            "claude-haiku-4-5-20251001"
+        );
     }
 
     #[test]
@@ -758,14 +821,16 @@ mod tests {
 
         // Excluding "20" removes dated variants
         let best = select_best(&models, &["sonnet"], &["20"]);
-        assert_eq!(best.expect("sonnet filter excluding dated should match claude-sonnet-4-6").id, "claude-sonnet-4-6");
+        assert_eq!(
+            best.expect("sonnet filter excluding dated should match claude-sonnet-4-6")
+                .id,
+            "claude-sonnet-4-6"
+        );
     }
 
     #[test]
     fn select_best_no_match() {
-        let models = vec![
-            model("claude-sonnet-4-6", "anthropic"),
-        ];
+        let models = vec![model("claude-sonnet-4-6", "anthropic")];
 
         let best = select_best(&models, &["nonexistent"], &[]);
         assert!(best.is_none());

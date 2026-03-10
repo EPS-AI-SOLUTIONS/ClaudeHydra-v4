@@ -6,13 +6,13 @@
 // Key sourced from OAUTH_ENCRYPTION_KEY or AUTH_SECRET env var.
 // Graceful degradation: plaintext if no key is configured.
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
-use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
 use base64::Engine;
+use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::state::AppState;
@@ -34,8 +34,7 @@ const TOKEN_EXPIRY_BUFFER_SECS: i64 = 300; // 5 minutes
 const ENCRYPTED_PREFIX: &str = "enc:";
 
 /// Beta features header required for OAuth MAX Plan requests.
-pub const ANTHROPIC_BETA: &str =
-    "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14";
+pub const ANTHROPIC_BETA: &str = "oauth-2025-04-20,claude-code-20250219,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14";
 
 /// Required system prompt for MAX Plan (must be first element).
 pub const REQUIRED_SYSTEM_PROMPT: &str =
@@ -85,10 +84,10 @@ pub(crate) fn encrypt_token(plaintext: &str) -> String {
     };
 
     use aes_gcm::aead::{Aead, KeyInit, OsRng};
-    use aes_gcm::{Aes256Gcm, AeadCore};
+    use aes_gcm::{AeadCore, Aes256Gcm};
 
-    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-        .expect("AES-256-GCM key is exactly 32 bytes");
+    let cipher =
+        Aes256Gcm::new_from_slice(&key_bytes).expect("AES-256-GCM key is exactly 32 bytes");
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
     match cipher.encrypt(&nonce, plaintext.as_bytes()) {
@@ -126,8 +125,8 @@ pub(crate) fn decrypt_token(stored: &str) -> Option<String> {
 
     let (nonce_bytes, ciphertext) = combined.split_at(12);
     let nonce = Nonce::from_slice(nonce_bytes);
-    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-        .expect("AES-256-GCM key is exactly 32 bytes");
+    let cipher =
+        Aes256Gcm::new_from_slice(&key_bytes).expect("AES-256-GCM key is exactly 32 bytes");
 
     match cipher.decrypt(nonce, ciphertext) {
         Ok(plaintext) => String::from_utf8(plaintext).ok(),
@@ -173,8 +172,8 @@ pub async fn auth_login(State(state): State<AppState>) -> Json<Value> {
         });
     }
 
-    let mut auth_url = url::Url::parse(AUTHORIZE_URL)
-        .expect("AUTHORIZE_URL is a valid hardcoded URL");
+    let mut auth_url =
+        url::Url::parse(AUTHORIZE_URL).expect("AUTHORIZE_URL is a valid hardcoded URL");
     auth_url
         .query_pairs_mut()
         .append_pair("code", "true")
@@ -212,7 +211,7 @@ pub async fn auth_callback(
                 return Err((
                     StatusCode::BAD_REQUEST,
                     Json(json!({ "error": "Invalid or expired OAuth state" })),
-                ))
+                ));
             }
         }
     };
@@ -265,19 +264,17 @@ pub async fn auth_callback(
 
     // #10 Encrypt tokens before DB storage
     let encrypted_access = encrypt_token(&token_resp.access_token);
-    let encrypted_refresh = encrypt_token(
-        token_resp.refresh_token.as_deref().unwrap_or(""),
-    );
+    let encrypted_refresh = encrypt_token(token_resp.refresh_token.as_deref().unwrap_or(""));
 
     // Upsert tokens in DB
-    sqlx::query(
-        concat!(
-            "INSERT INTO ", "ch_oauth_tokens", " (id, access_token, refresh_token, expires_at, scope, updated_at) ",
-            "VALUES (1, $1, $2, $3, $4, NOW()) ",
-            "ON CONFLICT (id) DO UPDATE SET ",
-            "access_token = $1, refresh_token = $2, expires_at = $3, scope = $4, updated_at = NOW()",
-        ),
-    )
+    sqlx::query(concat!(
+        "INSERT INTO ",
+        "ch_oauth_tokens",
+        " (id, access_token, refresh_token, expires_at, scope, updated_at) ",
+        "VALUES (1, $1, $2, $3, $4, NOW()) ",
+        "ON CONFLICT (id) DO UPDATE SET ",
+        "access_token = $1, refresh_token = $2, expires_at = $3, scope = $4, updated_at = NOW()",
+    ))
     .bind(&encrypted_access)
     .bind(&encrypted_refresh)
     .bind(expires_at)
@@ -366,12 +363,12 @@ pub async fn get_valid_access_token(state: &AppState) -> Option<String> {
     let encrypted_access = encrypt_token(&token_resp.access_token);
     let encrypted_refresh = encrypt_token(&new_refresh);
 
-    sqlx::query(
-        concat!(
-            "UPDATE ", "ch_oauth_tokens", " SET access_token = $1, refresh_token = $2, ",
-            "expires_at = $3, updated_at = NOW() WHERE id = 1",
-        ),
-    )
+    sqlx::query(concat!(
+        "UPDATE ",
+        "ch_oauth_tokens",
+        " SET access_token = $1, refresh_token = $2, ",
+        "expires_at = $3, updated_at = NOW() WHERE id = 1",
+    ))
     .bind(&encrypted_access)
     .bind(&encrypted_refresh)
     .bind(expires_at)
@@ -399,9 +396,10 @@ pub fn ensure_system_prompt(body: &mut Value) {
         Some(Value::Array(arr)) => {
             // Check if already first element
             if let Some(first) = arr.first()
-                && first.get("text").and_then(|t| t.as_str()) == Some(REQUIRED_SYSTEM_PROMPT) {
-                    return;
-                }
+                && first.get("text").and_then(|t| t.as_str()) == Some(REQUIRED_SYSTEM_PROMPT)
+            {
+                return;
+            }
             let mut new_arr = vec![required_block];
             new_arr.extend(arr.iter().cloned());
             body["system"] = Value::Array(new_arr);
@@ -424,9 +422,11 @@ pub fn ensure_system_prompt(body: &mut Value) {
 // ── Helpers ────────────────────────────────────────────────────────────
 
 async fn get_token_row(state: &AppState) -> Option<OAuthTokenRow> {
-    sqlx::query_as::<_, OAuthTokenRow>(
-        concat!("SELECT access_token, refresh_token, expires_at, scope FROM ", "ch_oauth_tokens", " WHERE id = 1"),
-    )
+    sqlx::query_as::<_, OAuthTokenRow>(concat!(
+        "SELECT access_token, refresh_token, expires_at, scope FROM ",
+        "ch_oauth_tokens",
+        " WHERE id = 1"
+    ))
     .fetch_optional(&state.db)
     .await
     .ok()?
@@ -442,5 +442,8 @@ pub(crate) fn sha256_base64url(input: &str) -> String {
 }
 
 pub(crate) fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }

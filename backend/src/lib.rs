@@ -7,21 +7,21 @@ pub mod mcp;
 pub mod model_registry;
 pub mod models;
 pub mod oauth;
-pub mod oauth_google;
-pub mod ocr;
 pub mod oauth_github;
+pub mod oauth_google;
 pub mod oauth_vercel;
+pub mod ocr;
 pub mod service_tokens;
 pub mod state;
 pub mod system_monitor;
 pub mod tools;
 pub mod watchdog;
 
+use axum::Router;
 use axum::extract::{DefaultBodyLimit, State};
 use axum::middleware;
 use axum::routing::{delete, get, patch, post};
-use axum::Router;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -193,28 +193,82 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/auth/logout", post(oauth::auth_logout))
         .route("/api/auth/mode", get(handlers::auth_mode))
         // Google OAuth (public — must be accessible to complete auth flow)
-        .route("/api/auth/google/status", get(oauth_google::google_auth_status))
-        .route("/api/auth/google/login", post(oauth_google::google_auth_login))
-        .route("/api/auth/google/redirect", get(oauth_google::google_redirect))
-        .route("/api/auth/google/logout", post(oauth_google::google_auth_logout))
-        .route("/api/auth/google/apikey", post(oauth_google::google_save_api_key).delete(oauth_google::google_delete_api_key))
+        .route(
+            "/api/auth/google/status",
+            get(oauth_google::google_auth_status),
+        )
+        .route(
+            "/api/auth/google/login",
+            post(oauth_google::google_auth_login),
+        )
+        .route(
+            "/api/auth/google/redirect",
+            get(oauth_google::google_redirect),
+        )
+        .route(
+            "/api/auth/google/logout",
+            post(oauth_google::google_auth_logout),
+        )
+        .route(
+            "/api/auth/google/apikey",
+            post(oauth_google::google_save_api_key).delete(oauth_google::google_delete_api_key),
+        )
         // GitHub OAuth (public — must be accessible to complete auth flow)
-        .route("/api/auth/github/status", get(oauth_github::github_auth_status))
-        .route("/api/auth/github/login", post(oauth_github::github_auth_login))
-        .route("/api/auth/github/callback", post(oauth_github::github_auth_callback))
-        .route("/api/auth/github/logout", post(oauth_github::github_auth_logout))
+        .route(
+            "/api/auth/github/status",
+            get(oauth_github::github_auth_status),
+        )
+        .route(
+            "/api/auth/github/login",
+            post(oauth_github::github_auth_login),
+        )
+        .route(
+            "/api/auth/github/callback",
+            post(oauth_github::github_auth_callback),
+        )
+        .route(
+            "/api/auth/github/logout",
+            post(oauth_github::github_auth_logout),
+        )
         // Vercel OAuth (public — must be accessible to complete auth flow)
-        .route("/api/auth/vercel/status", get(oauth_vercel::vercel_auth_status))
-        .route("/api/auth/vercel/login", post(oauth_vercel::vercel_auth_login))
-        .route("/api/auth/vercel/callback", post(oauth_vercel::vercel_auth_callback))
-        .route("/api/auth/vercel/logout", post(oauth_vercel::vercel_auth_logout))
+        .route(
+            "/api/auth/vercel/status",
+            get(oauth_vercel::vercel_auth_status),
+        )
+        .route(
+            "/api/auth/vercel/login",
+            post(oauth_vercel::vercel_auth_login),
+        )
+        .route(
+            "/api/auth/vercel/callback",
+            post(oauth_vercel::vercel_auth_callback),
+        )
+        .route(
+            "/api/auth/vercel/logout",
+            post(oauth_vercel::vercel_auth_logout),
+        )
         // Browser proxy management (public — no auth, proxy handles its own state)
-        .route("/api/browser-proxy/status", get(browser_proxy::proxy_status))
+        .route(
+            "/api/browser-proxy/status",
+            get(browser_proxy::proxy_status),
+        )
         .route("/api/browser-proxy/login", post(browser_proxy::proxy_login))
-        .route("/api/browser-proxy/login/status", get(browser_proxy::proxy_login_status))
-        .route("/api/browser-proxy/reinit", post(browser_proxy::proxy_reinit))
-        .route("/api/browser-proxy/logout", delete(browser_proxy::proxy_logout))
-        .route("/api/browser-proxy/history", get(handlers::browser_proxy_history));
+        .route(
+            "/api/browser-proxy/login/status",
+            get(browser_proxy::proxy_login_status),
+        )
+        .route(
+            "/api/browser-proxy/reinit",
+            post(browser_proxy::proxy_reinit),
+        )
+        .route(
+            "/api/browser-proxy/logout",
+            delete(browser_proxy::proxy_logout),
+        )
+        .route(
+            "/api/browser-proxy/history",
+            get(handlers::browser_proxy_history),
+        );
 
     // ── Protected: streaming chat — 20 req/min ──────────────────────
     let chat_stream_routes = Router::new()
@@ -244,11 +298,17 @@ pub fn create_router(state: AppState) -> Router {
             delete(service_tokens::delete_token),
         )
         // Logs — backend log ring buffer
-        .route("/api/logs/backend", get(logs::backend_logs).delete(logs::clear_backend_logs))
+        .route(
+            "/api/logs/backend",
+            get(logs::backend_logs).delete(logs::clear_backend_logs),
+        )
         .route("/api/agents", get(handlers::list_agents))
         .route("/api/agents/refresh", post(handlers::refresh_agents))
         .route("/api/agents/delegations", get(handlers::list_delegations))
-        .route("/api/agents/delegations/stream", get(handlers::delegations_stream))
+        .route(
+            "/api/agents/delegations/stream",
+            get(handlers::delegations_stream),
+        )
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
         .route("/api/models/refresh", post(model_registry::refresh_models))
@@ -362,8 +422,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/v1/auth/mode", get(handlers::auth_mode));
 
     // ── WebSocket route (auth via ?token query param, outside middleware) ─
-    let ws_routes = Router::new()
-        .route("/ws/chat", get(handlers::ws_chat));
+    let ws_routes = Router::new().route("/ws/chat", get(handlers::ws_chat));
 
     public
         .merge(protected)
@@ -396,67 +455,182 @@ pub fn create_test_router(state: AppState) -> Router {
         .route("/api/auth/callback", post(oauth::auth_callback))
         .route("/api/auth/logout", post(oauth::auth_logout))
         .route("/api/auth/mode", get(handlers::auth_mode))
-        .route("/api/auth/google/status", get(oauth_google::google_auth_status))
-        .route("/api/auth/google/login", post(oauth_google::google_auth_login))
-        .route("/api/auth/google/redirect", get(oauth_google::google_redirect))
-        .route("/api/auth/google/logout", post(oauth_google::google_auth_logout))
-        .route("/api/auth/google/apikey", post(oauth_google::google_save_api_key).delete(oauth_google::google_delete_api_key))
-        .route("/api/auth/github/status", get(oauth_github::github_auth_status))
-        .route("/api/auth/github/login", post(oauth_github::github_auth_login))
-        .route("/api/auth/github/callback", post(oauth_github::github_auth_callback))
-        .route("/api/auth/github/logout", post(oauth_github::github_auth_logout))
-        .route("/api/auth/vercel/status", get(oauth_vercel::vercel_auth_status))
-        .route("/api/auth/vercel/login", post(oauth_vercel::vercel_auth_login))
-        .route("/api/auth/vercel/callback", post(oauth_vercel::vercel_auth_callback))
-        .route("/api/auth/vercel/logout", post(oauth_vercel::vercel_auth_logout))
-        .route("/api/browser-proxy/status", get(browser_proxy::proxy_status))
+        .route(
+            "/api/auth/google/status",
+            get(oauth_google::google_auth_status),
+        )
+        .route(
+            "/api/auth/google/login",
+            post(oauth_google::google_auth_login),
+        )
+        .route(
+            "/api/auth/google/redirect",
+            get(oauth_google::google_redirect),
+        )
+        .route(
+            "/api/auth/google/logout",
+            post(oauth_google::google_auth_logout),
+        )
+        .route(
+            "/api/auth/google/apikey",
+            post(oauth_google::google_save_api_key).delete(oauth_google::google_delete_api_key),
+        )
+        .route(
+            "/api/auth/github/status",
+            get(oauth_github::github_auth_status),
+        )
+        .route(
+            "/api/auth/github/login",
+            post(oauth_github::github_auth_login),
+        )
+        .route(
+            "/api/auth/github/callback",
+            post(oauth_github::github_auth_callback),
+        )
+        .route(
+            "/api/auth/github/logout",
+            post(oauth_github::github_auth_logout),
+        )
+        .route(
+            "/api/auth/vercel/status",
+            get(oauth_vercel::vercel_auth_status),
+        )
+        .route(
+            "/api/auth/vercel/login",
+            post(oauth_vercel::vercel_auth_login),
+        )
+        .route(
+            "/api/auth/vercel/callback",
+            post(oauth_vercel::vercel_auth_callback),
+        )
+        .route(
+            "/api/auth/vercel/logout",
+            post(oauth_vercel::vercel_auth_logout),
+        )
+        .route(
+            "/api/browser-proxy/status",
+            get(browser_proxy::proxy_status),
+        )
         .route("/api/browser-proxy/login", post(browser_proxy::proxy_login))
-        .route("/api/browser-proxy/login/status", get(browser_proxy::proxy_login_status))
-        .route("/api/browser-proxy/reinit", post(browser_proxy::proxy_reinit))
-        .route("/api/browser-proxy/logout", delete(browser_proxy::proxy_logout))
-        .route("/api/browser-proxy/history", get(handlers::browser_proxy_history));
+        .route(
+            "/api/browser-proxy/login/status",
+            get(browser_proxy::proxy_login_status),
+        )
+        .route(
+            "/api/browser-proxy/reinit",
+            post(browser_proxy::proxy_reinit),
+        )
+        .route(
+            "/api/browser-proxy/logout",
+            delete(browser_proxy::proxy_logout),
+        )
+        .route(
+            "/api/browser-proxy/history",
+            get(handlers::browser_proxy_history),
+        );
 
     // ── Protected routes (auth middleware, NO rate limiter) ───────────
     let protected = Router::new()
-        .route("/api/claude/chat/stream", post(handlers::claude_chat_stream))
+        .route(
+            "/api/claude/chat/stream",
+            post(handlers::claude_chat_stream),
+        )
         .route("/api/claude/chat", post(handlers::claude_chat))
         .route("/api/system/stats", get(handlers::system_stats))
         .route("/api/admin/rotate-key", post(handlers::rotate_key))
-        .route("/api/tokens", get(service_tokens::list_tokens).post(service_tokens::store_token))
-        .route("/api/tokens/{service}", delete(service_tokens::delete_token))
-        .route("/api/logs/backend", get(logs::backend_logs).delete(logs::clear_backend_logs))
+        .route(
+            "/api/tokens",
+            get(service_tokens::list_tokens).post(service_tokens::store_token),
+        )
+        .route(
+            "/api/tokens/{service}",
+            delete(service_tokens::delete_token),
+        )
+        .route(
+            "/api/logs/backend",
+            get(logs::backend_logs).delete(logs::clear_backend_logs),
+        )
         .route("/api/agents", get(handlers::list_agents))
         .route("/api/agents/refresh", post(handlers::refresh_agents))
         .route("/api/agents/delegations", get(handlers::list_delegations))
-        .route("/api/agents/delegations/stream", get(handlers::delegations_stream))
+        .route(
+            "/api/agents/delegations/stream",
+            get(handlers::delegations_stream),
+        )
         .route("/api/claude/models", get(handlers::claude_models))
         .route("/api/models", get(model_registry::list_models))
         .route("/api/models/refresh", post(model_registry::refresh_models))
         .route("/api/models/pin", post(model_registry::pin_model))
-        .route("/api/models/pin/{use_case}", delete(model_registry::unpin_model))
+        .route(
+            "/api/models/pin/{use_case}",
+            delete(model_registry::unpin_model),
+        )
         .route("/api/models/pins", get(model_registry::list_pins))
-        .route("/api/settings", get(handlers::get_settings).post(handlers::update_settings))
+        .route(
+            "/api/settings",
+            get(handlers::get_settings).post(handlers::update_settings),
+        )
         .route("/api/settings/api-key", post(handlers::set_api_key))
-        .route("/api/sessions", get(handlers::list_sessions).post(handlers::create_session))
-        .route("/api/sessions/{id}", get(handlers::get_session).patch(handlers::update_session).delete(handlers::delete_session))
-        .route("/api/sessions/{id}/working-directory", patch(handlers::update_session_working_directory))
+        .route(
+            "/api/sessions",
+            get(handlers::list_sessions).post(handlers::create_session),
+        )
+        .route(
+            "/api/sessions/{id}",
+            get(handlers::get_session)
+                .patch(handlers::update_session)
+                .delete(handlers::delete_session),
+        )
+        .route(
+            "/api/sessions/{id}/working-directory",
+            patch(handlers::update_session_working_directory),
+        )
         .route("/api/files/list", post(handlers::list_files))
         .route("/api/files/browse", post(handlers::browse_directory))
-        .route("/api/sessions/{id}/messages", post(handlers::add_session_message))
-        .route("/api/sessions/{id}/generate-title", post(handlers::generate_session_title))
-        .route("/api/mcp/servers", get(mcp::config::list_servers_handler).post(mcp::config::create_server_handler))
-        .route("/api/mcp/servers/{id}", patch(mcp::config::update_server_handler).delete(mcp::config::delete_server_handler))
-        .route("/api/mcp/servers/{id}/connect", post(mcp::config::connect_server_handler))
-        .route("/api/mcp/servers/{id}/disconnect", post(mcp::config::disconnect_server_handler))
-        .route("/api/mcp/servers/{id}/tools", get(mcp::config::list_server_tools_handler))
+        .route(
+            "/api/sessions/{id}/messages",
+            post(handlers::add_session_message),
+        )
+        .route(
+            "/api/sessions/{id}/generate-title",
+            post(handlers::generate_session_title),
+        )
+        .route(
+            "/api/mcp/servers",
+            get(mcp::config::list_servers_handler).post(mcp::config::create_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}",
+            patch(mcp::config::update_server_handler).delete(mcp::config::delete_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}/connect",
+            post(mcp::config::connect_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}/disconnect",
+            post(mcp::config::disconnect_server_handler),
+        )
+        .route(
+            "/api/mcp/servers/{id}/tools",
+            get(mcp::config::list_server_tools_handler),
+        )
         .route("/api/mcp/tools", get(mcp::config::list_all_tools_handler))
         .route("/mcp", post(mcp::server::mcp_handler))
         .route("/api/ocr", post(ocr::ocr))
         .route("/api/ocr/stream", post(ocr::ocr_stream))
         .route("/api/ocr/batch/stream", post(ocr::ocr_batch_stream))
         .route("/api/ocr/history", get(ocr::ocr_history))
-        .route("/api/ocr/history/{id}", get(ocr::ocr_history_item).delete(ocr::ocr_history_delete))
-        .route("/api/prompt-history", get(handlers::list_prompt_history).post(handlers::add_prompt_history).delete(handlers::clear_prompt_history))
+        .route(
+            "/api/ocr/history/{id}",
+            get(ocr::ocr_history_item).delete(ocr::ocr_history_delete),
+        )
+        .route(
+            "/api/prompt-history",
+            get(handlers::list_prompt_history)
+                .post(handlers::add_prompt_history)
+                .delete(handlers::clear_prompt_history),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth::require_auth,
@@ -477,8 +651,7 @@ pub fn create_test_router(state: AppState) -> Router {
         .route("/api/v1/health/ready", get(handlers::readiness))
         .route("/api/v1/auth/mode", get(handlers::auth_mode));
 
-    let ws_routes = Router::new()
-        .route("/ws/chat", get(handlers::ws_chat));
+    let ws_routes = Router::new().route("/ws/chat", get(handlers::ws_chat));
 
     public
         .merge(protected)
@@ -504,21 +677,20 @@ async fn metrics_handler(State(state): State<AppState>) -> String {
          COUNT(*) FILTER (WHERE status = 'completed'), \
          COUNT(*) FILTER (WHERE is_error = TRUE), \
          AVG(duration_ms)::float8 \
-         FROM ch_a2a_tasks"
+         FROM ch_a2a_tasks",
     )
     .fetch_optional(&state.db)
     .await
     .ok()
     .flatten();
 
-    let (a2a_total, a2a_completed, a2a_errors, a2a_avg_ms) =
-        a2a_stats.unwrap_or((0, 0, 0, None));
+    let (a2a_total, a2a_completed, a2a_errors, a2a_avg_ms) = a2a_stats.unwrap_or((0, 0, 0, None));
 
     // Per-agent duration metrics
     let per_agent: Vec<(String, f64, i64)> = sqlx::query_as(
         "SELECT agent_name, AVG(duration_ms)::float8, COUNT(*) \
          FROM ch_a2a_tasks WHERE duration_ms IS NOT NULL \
-         GROUP BY agent_name ORDER BY agent_name"
+         GROUP BY agent_name ORDER BY agent_name",
     )
     .fetch_all(&state.db)
     .await
@@ -528,7 +700,7 @@ async fn metrics_handler(State(state): State<AppState>) -> String {
     if !per_agent.is_empty() {
         agent_lines.push_str(
             "# HELP a2a_delegation_duration_by_agent Average delegation duration per agent in ms\n\
-             # TYPE a2a_delegation_duration_by_agent gauge\n"
+             # TYPE a2a_delegation_duration_by_agent gauge\n",
         );
         for (agent, avg_ms, count) in &per_agent {
             agent_lines.push_str(&format!(

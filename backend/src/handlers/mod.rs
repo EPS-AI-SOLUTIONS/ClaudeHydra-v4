@@ -40,9 +40,9 @@ pub(crate) const MAX_TITLE_LENGTH: usize = 500;
 
 // ── Shared helpers ────────────────────────────────────────────────────────
 
-use axum::http::StatusCode;
 use axum::Json;
-use serde_json::{json, Value};
+use axum::http::StatusCode;
+use serde_json::{Value, json};
 
 use crate::state::AppState;
 
@@ -102,9 +102,10 @@ async fn get_anthropic_credential(state: &AppState) -> Option<(String, bool)> {
     {
         let rt = state.runtime.read().await;
         if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY")
-            && !key.is_empty() {
-                return Some((key.clone(), false));
-            }
+            && !key.is_empty()
+        {
+            return Some((key.clone(), false));
+        }
     }
     // 3. Try env var
     std::env::var("ANTHROPIC_API_KEY")
@@ -184,9 +185,10 @@ async fn get_anthropic_api_key_only(state: &AppState) -> Option<(String, bool)> 
     {
         let rt = state.runtime.read().await;
         if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY")
-            && !key.is_empty() {
-                return Some((key.clone(), false));
-            }
+            && !key.is_empty()
+        {
+            return Some((key.clone(), false));
+        }
     }
     std::env::var("ANTHROPIC_API_KEY")
         .ok()

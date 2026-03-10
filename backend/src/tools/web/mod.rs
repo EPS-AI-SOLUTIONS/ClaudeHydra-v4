@@ -17,7 +17,7 @@ pub mod types;
 
 use std::collections::HashSet;
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use url::Url;
 
 use crate::models::ToolDefinition;
@@ -38,7 +38,8 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
                 (title, description, language, OpenGraph, JSON-LD, canonical URL), and \
                 categorized links (internal/external/resource). Supports custom headers, \
                 retry with backoff, and SSRF protection. Use for reading articles, docs, \
-                blog posts, or any web content.".to_string(),
+                blog posts, or any web content."
+                .to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -83,7 +84,8 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
                 Supports path prefix filtering, exclude patterns, configurable concurrency, \
                 rate limiting, and total time limit. Returns aggregated content with link index. \
                 Use for reading documentation sites, multi-page articles, or mapping website \
-                structure.".to_string(),
+                structure."
+                .to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -201,40 +203,66 @@ pub fn format_fetch_text(
             out.push_str(&format!("- **{}**: {}\n", prop, val));
         }
         if !meta.json_ld.is_empty() {
-            out.push_str(&format!("- **JSON-LD**: {} structured data blocks\n", meta.json_ld.len()));
+            out.push_str(&format!(
+                "- **JSON-LD**: {} structured data blocks\n",
+                meta.json_ld.len()
+            ));
         }
     }
 
     if let Some(links) = links {
-        let internal: Vec<_> = links.iter().filter(|l| l.link_type == LinkType::Internal).collect();
-        let external: Vec<_> = links.iter().filter(|l| l.link_type == LinkType::External).collect();
-        let resources: Vec<_> = links.iter().filter(|l| l.link_type == LinkType::Resource).collect();
+        let internal: Vec<_> = links
+            .iter()
+            .filter(|l| l.link_type == LinkType::Internal)
+            .collect();
+        let external: Vec<_> = links
+            .iter()
+            .filter(|l| l.link_type == LinkType::External)
+            .collect();
+        let resources: Vec<_> = links
+            .iter()
+            .filter(|l| l.link_type == LinkType::Resource)
+            .collect();
 
         if !links.is_empty() {
             out.push_str("\n---\n### Links Found\n");
             out.push_str(&format!(
                 "Internal: {} | External: {} | Resources: {}\n\n",
-                internal.len(), external.len(), resources.len()
+                internal.len(),
+                external.len(),
+                resources.len()
             ));
 
             if !internal.is_empty() {
                 out.push_str("**Internal:**\n");
                 for (i, l) in internal.iter().enumerate() {
-                    let label = if l.anchor.is_empty() { &l.url } else { &l.anchor };
+                    let label = if l.anchor.is_empty() {
+                        &l.url
+                    } else {
+                        &l.anchor
+                    };
                     out.push_str(&format!("{}. [{}]({})\n", i + 1, label, l.url));
                 }
             }
             if !external.is_empty() {
                 out.push_str("\n**External:**\n");
                 for (i, l) in external.iter().enumerate() {
-                    let label = if l.anchor.is_empty() { &l.url } else { &l.anchor };
+                    let label = if l.anchor.is_empty() {
+                        &l.url
+                    } else {
+                        &l.anchor
+                    };
                     out.push_str(&format!("{}. [{}]({})\n", i + 1, label, l.url));
                 }
             }
             if !resources.is_empty() {
                 out.push_str("\n**Resources:**\n");
                 for (i, l) in resources.iter().enumerate() {
-                    let label = if l.anchor.is_empty() { &l.url } else { &l.anchor };
+                    let label = if l.anchor.is_empty() {
+                        &l.url
+                    } else {
+                        &l.anchor
+                    };
                     out.push_str(&format!("{}. [{}]({})\n", i + 1, label, l.url));
                 }
             }
@@ -322,8 +350,14 @@ pub fn format_crawl_text(
             }
             out.push_str(&format!(
                 "Links: {} internal, {} external\n",
-                page.links.iter().filter(|l| l.link_type == LinkType::Internal).count(),
-                page.links.iter().filter(|l| l.link_type == LinkType::External).count(),
+                page.links
+                    .iter()
+                    .filter(|l| l.link_type == LinkType::Internal)
+                    .count(),
+                page.links
+                    .iter()
+                    .filter(|l| l.link_type == LinkType::External)
+                    .count(),
             ));
         }
         out.push_str(&format!("{}\n\n", page.text));
@@ -348,8 +382,15 @@ pub fn format_crawl_text(
             let mut seen = HashSet::new();
             for l in &all_internal {
                 if seen.insert(&l.url) {
-                    let label = if l.anchor.is_empty() { &l.url } else { &l.anchor };
-                    out.push_str(&format!("- [{}]({}) \u{2190} {}\n", label, l.url, l.source_url));
+                    let label = if l.anchor.is_empty() {
+                        &l.url
+                    } else {
+                        &l.anchor
+                    };
+                    out.push_str(&format!(
+                        "- [{}]({}) \u{2190} {}\n",
+                        label, l.url, l.source_url
+                    ));
                 }
             }
         }
@@ -358,7 +399,11 @@ pub fn format_crawl_text(
             let mut seen = HashSet::new();
             for l in &all_external {
                 if seen.insert(&l.url) {
-                    let label = if l.anchor.is_empty() { &l.url } else { &l.anchor };
+                    let label = if l.anchor.is_empty() {
+                        &l.url
+                    } else {
+                        &l.anchor
+                    };
                     out.push_str(&format!("- [{}]({})\n", label, l.url));
                 }
             }
@@ -375,11 +420,7 @@ pub fn format_crawl_text(
     out
 }
 
-pub fn format_crawl_json(
-    start_url: &str,
-    results: &[PageResult],
-    errors: &[String],
-) -> String {
+pub fn format_crawl_json(start_url: &str, results: &[PageResult], errors: &[String]) -> String {
     let pages: Vec<Value> = results
         .iter()
         .map(|page| {

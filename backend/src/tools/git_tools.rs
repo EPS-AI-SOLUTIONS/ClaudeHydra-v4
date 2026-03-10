@@ -143,10 +143,7 @@ pub async fn tool_git_branch(repo_path: &str, action: Option<&str>) -> Result<St
                 ],
             )
             .await?;
-            Ok(format!(
-                "### Git Branches: {}\n\n{}",
-                repo_path, branches
-            ))
+            Ok(format!("### Git Branches: {}\n\n{}", repo_path, branches))
         }
         a if a.starts_with("create:") => {
             let name = a.strip_prefix("create:").unwrap_or("").trim();
@@ -167,10 +164,7 @@ pub async fn tool_git_branch(repo_path: &str, action: Option<&str>) -> Result<St
             }
             validate_git_ref(name)?;
             let result = run_git(repo_path, &["checkout", name]).await?;
-            Ok(format!(
-                "### Switched to branch: {}\n\n{}",
-                name, result
-            ))
+            Ok(format!("### Switched to branch: {}\n\n{}", name, result))
         }
         other => Err(format!(
             "Unknown branch action: '{}'. Use 'list', 'create:name', or 'switch:name'",

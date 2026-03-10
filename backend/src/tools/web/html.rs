@@ -39,13 +39,15 @@ pub fn extract_text_from_html(html: &str, base_url: &Url, options: &ExtractionOp
             if let Some(el) = doc.select(&sel).next() {
                 collect_element_text(el, &mut raw_text, base_url, options);
             } else if let Ok(body_sel) = Selector::parse("body")
-                && let Some(body) = doc.select(&body_sel).next() {
-                    collect_element_text(body, &mut raw_text, base_url, options);
-                }
-        } else if let Ok(body_sel) = Selector::parse("body")
-            && let Some(body) = doc.select(&body_sel).next() {
+                && let Some(body) = doc.select(&body_sel).next()
+            {
                 collect_element_text(body, &mut raw_text, base_url, options);
             }
+        } else if let Ok(body_sel) = Selector::parse("body")
+            && let Some(body) = doc.select(&body_sel).next()
+        {
+            collect_element_text(body, &mut raw_text, base_url, options);
+        }
     }
 
     // Clean up excessive whitespace
@@ -113,27 +115,29 @@ fn collect_element_text(
                 if !href.is_empty()
                     && !href.starts_with('#')
                     && !href.starts_with("javascript:")
-                    && let Ok(resolved) = base_url.join(href) {
-                        let text: String = element.text().collect::<Vec<_>>().join(" ");
-                        let text = text.trim();
-                        if !text.is_empty() {
-                            output.push_str(&format!("[{}]({})", text, resolved));
-                            output.push(' ');
-                            return;
-                        }
+                    && let Ok(resolved) = base_url.join(href)
+                {
+                    let text: String = element.text().collect::<Vec<_>>().join(" ");
+                    let text = text.trim();
+                    if !text.is_empty() {
+                        output.push_str(&format!("[{}]({})", text, resolved));
+                        output.push(' ');
+                        return;
                     }
+                }
             }
             // Fallthrough: collect text normally
         }
         // Images → alt text (#6)
         "img" => {
             if options.include_images
-                && let Some(alt) = element.value().attr("alt") {
-                    let alt = alt.trim();
-                    if !alt.is_empty() {
-                        output.push_str(&format!("[Image: {}] ", alt));
-                    }
+                && let Some(alt) = element.value().attr("alt")
+            {
+                let alt = alt.trim();
+                if !alt.is_empty() {
+                    output.push_str(&format!("[Image: {}] ", alt));
                 }
+            }
             return;
         }
         // Definition lists (#9)
@@ -156,10 +160,25 @@ fn collect_element_text(
     // Block elements
     let is_block = matches!(
         tag,
-        "p" | "div" | "section" | "article" | "main" | "blockquote"
-            | "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
-            | "ul" | "ol" | "br" | "hr" | "details" | "figure"
-            | "figcaption" | "header"
+        "p" | "div"
+            | "section"
+            | "article"
+            | "main"
+            | "blockquote"
+            | "h1"
+            | "h2"
+            | "h3"
+            | "h4"
+            | "h5"
+            | "h6"
+            | "ul"
+            | "ol"
+            | "br"
+            | "hr"
+            | "details"
+            | "figure"
+            | "figcaption"
+            | "header"
     );
     let is_list_item = tag == "li";
     let is_heading = matches!(tag, "h1" | "h2" | "h3" | "h4" | "h5" | "h6");
@@ -274,21 +293,22 @@ fn extract_code_block(pre: scraper::ElementRef, output: &mut String) {
 
     for child in pre.children() {
         if let Some(el) = scraper::ElementRef::wrap(child)
-            && el.value().name() == "code" {
-                if let Some(classes) = el.value().attr("class") {
-                    for class in classes.split_whitespace() {
-                        if let Some(lang) = class
-                            .strip_prefix("language-")
-                            .or_else(|| class.strip_prefix("lang-"))
-                            .or_else(|| class.strip_prefix("highlight-"))
-                        {
-                            language = lang.to_string();
-                            break;
-                        }
+            && el.value().name() == "code"
+        {
+            if let Some(classes) = el.value().attr("class") {
+                for class in classes.split_whitespace() {
+                    if let Some(lang) = class
+                        .strip_prefix("language-")
+                        .or_else(|| class.strip_prefix("lang-"))
+                        .or_else(|| class.strip_prefix("highlight-"))
+                    {
+                        language = lang.to_string();
+                        break;
                     }
                 }
-                code_text = el.text().collect::<String>();
             }
+            code_text = el.text().collect::<String>();
+        }
     }
 
     if code_text.is_empty() {
@@ -369,9 +389,10 @@ pub fn extract_metadata(html: &str, final_url: &Url) -> PageMetadata {
         for el in doc.select(&sel) {
             if let (Some(prop), Some(content)) =
                 (el.value().attr("property"), el.value().attr("content"))
-                && (prop.starts_with("og:") || prop.starts_with("article:")) {
-                    og_tags.push((prop.to_string(), content.to_string()));
-                }
+                && (prop.starts_with("og:") || prop.starts_with("article:"))
+            {
+                og_tags.push((prop.to_string(), content.to_string()));
+            }
         }
     }
 

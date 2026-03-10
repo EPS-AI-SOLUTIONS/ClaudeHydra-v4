@@ -19,7 +19,10 @@ pub fn validate_and_check_url(raw: &str) -> Result<Url, String> {
         other => return Err(format!("Unsupported scheme '{}' — only http/https", other)),
     }
     if is_ssrf_target(&parsed) {
-        return Err(format!("Blocked: URL '{}' targets a private/internal address", raw));
+        return Err(format!(
+            "Blocked: URL '{}' targets a private/internal address",
+            raw
+        ));
     }
     Ok(parsed)
 }
@@ -40,9 +43,16 @@ pub fn normalize_url(url: &Url) -> String {
         } else {
             let mut sorted = pairs;
             sorted.sort_by(|a, b| a.0.cmp(&b.0));
-            let qs: Vec<String> = sorted.iter().map(|(k, v)| {
-                if v.is_empty() { k.clone() } else { format!("{}={}", k, v) }
-            }).collect();
+            let qs: Vec<String> = sorted
+                .iter()
+                .map(|(k, v)| {
+                    if v.is_empty() {
+                        k.clone()
+                    } else {
+                        format!("{}={}", k, v)
+                    }
+                })
+                .collect();
             normalized.set_query(Some(&qs.join("&")));
         }
     }
@@ -79,12 +89,10 @@ fn is_ssrf_target(url: &Url) -> bool {
                     || v4.octets()[0] == 100 && v4.octets()[1] >= 64 && v4.octets()[1] <= 127
             }
             IpAddr::V6(v6) => {
-                v6.is_loopback()
-                    || v6.is_unspecified()
-                    || {
-                        let seg = v6.segments();
-                        (seg[0] & 0xfe00) == 0xfc00 || (seg[0] & 0xffc0) == 0xfe80
-                    }
+                v6.is_loopback() || v6.is_unspecified() || {
+                    let seg = v6.segments();
+                    (seg[0] & 0xfe00) == 0xfc00 || (seg[0] & 0xffc0) == 0xfe80
+                }
             }
         };
     }
@@ -233,30 +241,32 @@ pub async fn fetch_sitemap_urls(
         }
         if let Ok(resp) = req.send().await
             && resp.status().is_success()
-                && let Ok(text) = resp.text().await {
-                    let urls = parse_sitemap_xml(&text);
-                    // Check if it's a sitemap index (URLs end in .xml)
-                    let is_index = urls.iter().any(|u| u.ends_with(".xml"));
-                    if is_index {
-                        // Fetch first sub-sitemap only
-                        if let Some(sub_url) = urls.first() {
-                            let mut sub_req = client
-                                .get(sub_url)
-                                .header("User-Agent", USER_AGENT)
-                                .timeout(Duration::from_secs(10));
-                            for (k, v) in custom_headers {
-                                sub_req = sub_req.header(k.as_str(), v.as_str());
-                            }
-                            if let Ok(sub_resp) = sub_req.send().await
-                                && sub_resp.status().is_success()
-                                    && let Ok(sub_text) = sub_resp.text().await {
-                                        all_urls.extend(parse_sitemap_xml(&sub_text));
-                                    }
-                        }
-                    } else {
-                        all_urls.extend(urls);
+            && let Ok(text) = resp.text().await
+        {
+            let urls = parse_sitemap_xml(&text);
+            // Check if it's a sitemap index (URLs end in .xml)
+            let is_index = urls.iter().any(|u| u.ends_with(".xml"));
+            if is_index {
+                // Fetch first sub-sitemap only
+                if let Some(sub_url) = urls.first() {
+                    let mut sub_req = client
+                        .get(sub_url)
+                        .header("User-Agent", USER_AGENT)
+                        .timeout(Duration::from_secs(10));
+                    for (k, v) in custom_headers {
+                        sub_req = sub_req.header(k.as_str(), v.as_str());
+                    }
+                    if let Ok(sub_resp) = sub_req.send().await
+                        && sub_resp.status().is_success()
+                        && let Ok(sub_text) = sub_resp.text().await
+                    {
+                        all_urls.extend(parse_sitemap_xml(&sub_text));
                     }
                 }
+            } else {
+                all_urls.extend(urls);
+            }
+        }
     }
 
     all_urls
@@ -309,7 +319,9 @@ pub async fn fetch_url_with_retry(
                 let status = resp.status();
 
                 // Retry on server errors and 429 (#39)
-                if (status.is_server_error() || status.as_u16() == 429) && attempt < MAX_RETRY_ATTEMPTS {
+                if (status.is_server_error() || status.as_u16() == 429)
+                    && attempt < MAX_RETRY_ATTEMPTS
+                {
                     let delay = if status.as_u16() == 429 {
                         resp.headers()
                             .get("retry-after")
@@ -337,9 +349,13 @@ pub async fn fetch_url_with_retry(
 
                 // Content-Length pre-check (#36)
                 if let Some(len) = resp.content_length()
-                    && len as usize > MAX_PAGE_SIZE {
-                        return Err(format!("Response too large: {} bytes (max {})", len, MAX_PAGE_SIZE));
-                    }
+                    && len as usize > MAX_PAGE_SIZE
+                {
+                    return Err(format!(
+                        "Response too large: {} bytes (max {})",
+                        len, MAX_PAGE_SIZE
+                    ));
+                }
 
                 let final_url = Url::parse(resp.url().as_str()).unwrap_or(parsed.clone());
 
@@ -349,7 +365,11 @@ pub async fn fetch_url_with_retry(
                     .map_err(|e| format!("Failed to read body from '{}': {}", url, e))?;
 
                 if bytes.len() > MAX_PAGE_SIZE {
-                    return Err(format!("Response too large: {} bytes (max {})", bytes.len(), MAX_PAGE_SIZE));
+                    return Err(format!(
+                        "Response too large: {} bytes (max {})",
+                        bytes.len(),
+                        MAX_PAGE_SIZE
+                    ));
                 }
 
                 let html = String::from_utf8_lossy(&bytes).to_string();
@@ -372,7 +392,10 @@ pub async fn fetch_url_with_retry(
         }
     }
 
-    Err(format!("Failed to fetch '{}' after {} retries", url, MAX_RETRY_ATTEMPTS))
+    Err(format!(
+        "Failed to fetch '{}' after {} retries",
+        url, MAX_RETRY_ATTEMPTS
+    ))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -410,11 +433,26 @@ pub async fn tool_fetch_webpage(
         .get("url")
         .and_then(|v| v.as_str())
         .ok_or("Missing required argument: url")?;
-    let extract_links = input.get("extract_links").and_then(|v| v.as_bool()).unwrap_or(true);
-    let extract_meta = input.get("extract_metadata").and_then(|v| v.as_bool()).unwrap_or(true);
-    let include_images = input.get("include_images").and_then(|v| v.as_bool()).unwrap_or(false);
-    let output_format = input.get("output_format").and_then(|v| v.as_str()).unwrap_or("text");
-    let max_text_length = input.get("max_text_length").and_then(|v| v.as_u64()).map(|n| n as usize);
+    let extract_links = input
+        .get("extract_links")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let extract_meta = input
+        .get("extract_metadata")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let include_images = input
+        .get("include_images")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let output_format = input
+        .get("output_format")
+        .and_then(|v| v.as_str())
+        .unwrap_or("text");
+    let max_text_length = input
+        .get("max_text_length")
+        .and_then(|v| v.as_u64())
+        .map(|n| n as usize);
     let custom_headers: Vec<(String, String)> = input
         .get("headers")
         .and_then(|v| v.as_object())
@@ -440,7 +478,8 @@ pub async fn tool_fetch_webpage(
         ));
     }
 
-    let text = super::html::extract_text_from_html(&fetch_result.html, &fetch_result.final_url, &options);
+    let text =
+        super::html::extract_text_from_html(&fetch_result.html, &fetch_result.final_url, &options);
     let text = if let Some(max_len) = max_text_length {
         truncate_text(&text, max_len)
     } else {
@@ -448,15 +487,23 @@ pub async fn tool_fetch_webpage(
     };
 
     let metadata = if extract_meta {
-        Some(super::html::extract_metadata(&fetch_result.html, &fetch_result.final_url))
+        Some(super::html::extract_metadata(
+            &fetch_result.html,
+            &fetch_result.final_url,
+        ))
     } else {
         None
     };
 
     let links = if extract_links {
-        let raw_links = super::html::extract_links_from_html(&fetch_result.html, &fetch_result.final_url);
+        let raw_links =
+            super::html::extract_links_from_html(&fetch_result.html, &fetch_result.final_url);
         let domain = fetch_result.final_url.domain().unwrap_or("");
-        Some(super::html::categorize_links(&raw_links, domain, fetch_result.final_url.as_ref()))
+        Some(super::html::categorize_links(
+            &raw_links,
+            domain,
+            fetch_result.final_url.as_ref(),
+        ))
     } else {
         None
     };

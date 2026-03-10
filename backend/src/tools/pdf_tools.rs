@@ -5,8 +5,8 @@
 
 use std::path::Path;
 
-use base64::Engine as _;
 use crate::state::AppState;
+use base64::Engine as _;
 
 /// Maximum PDF file size (50 MB).
 const MAX_PDF_SIZE: u64 = 50 * 1024 * 1024;
@@ -85,8 +85,7 @@ pub async fn tool_read_pdf(
                 alpha_count
             );
             let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-            let ocr_text =
-                crate::ocr::ocr_pdf_text(state, &b64, page_range).await?;
+            let ocr_text = crate::ocr::ocr_pdf_text(state, &b64, page_range).await?;
 
             let mut output = format!("### PDF (OCR): {} (Vision API)\n\n", filename);
             if ocr_text.len() + output.len() > MAX_OUTPUT_CHARS {
@@ -116,7 +115,10 @@ pub async fn tool_read_pdf(
             .map(|(i, p)| format!("--- Page {} ---\n{}", start + i, p.trim()))
             .collect::<Vec<_>>()
             .join("\n\n");
-        (selected, format!("pages {}-{} of {}", start, end, total_pages))
+        (
+            selected,
+            format!("pages {}-{} of {}", start, end, total_pages),
+        )
     } else {
         (text.clone(), format!("{} pages", total_pages))
     };
@@ -142,7 +144,10 @@ pub async fn tool_read_pdf(
 fn parse_page_range(range: &str, total: usize) -> Result<(usize, usize), String> {
     let range = range.trim();
     if let Some((start_s, end_s)) = range.split_once('-') {
-        let start: usize = start_s.trim().parse().map_err(|_| "Invalid page range start")?;
+        let start: usize = start_s
+            .trim()
+            .parse()
+            .map_err(|_| "Invalid page range start")?;
         let end: usize = end_s.trim().parse().map_err(|_| "Invalid page range end")?;
         if start < 1 || end < start || end > total {
             return Err(format!(

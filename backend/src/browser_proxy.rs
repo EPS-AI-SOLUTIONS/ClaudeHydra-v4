@@ -16,8 +16,7 @@ pub fn is_enabled() -> bool {
 }
 
 fn proxy_base_url() -> String {
-    std::env::var("BROWSER_PROXY_URL")
-        .unwrap_or_else(|_| "http://localhost:3001".to_string())
+    std::env::var("BROWSER_PROXY_URL").unwrap_or_else(|_| "http://localhost:3001".to_string())
 }
 
 /// Call the browser proxy to generate/edit an image.
@@ -62,7 +61,9 @@ pub async fn generate_image(
                 if attempt < 2 {
                     tracing::warn!(
                         "browser_proxy[{}]: attempt {} failed ({}), retrying in 5s",
-                        context, attempt, e
+                        context,
+                        attempt,
+                        e
                     );
                     tokio::time::sleep(Duration::from_secs(5)).await;
                     continue;
@@ -78,7 +79,9 @@ pub async fn generate_image(
                 if attempt < 2 {
                     tracing::warn!(
                         "browser_proxy[{}]: body read failed on attempt {} ({}), retrying in 5s",
-                        context, attempt, e
+                        context,
+                        attempt,
+                        e
                     );
                     tokio::time::sleep(Duration::from_secs(5)).await;
                     continue;
@@ -91,7 +94,9 @@ pub async fn generate_image(
         if (status.as_u16() == 502 || status.as_u16() == 503) && attempt < 2 {
             tracing::warn!(
                 "browser_proxy[{}]: HTTP {} on attempt {}, retrying in 5s",
-                context, status.as_u16(), attempt
+                context,
+                status.as_u16(),
+                attempt
             );
             tokio::time::sleep(Duration::from_secs(5)).await;
             continue;
@@ -133,7 +138,9 @@ pub async fn generate_image(
 
 /// Return the configured proxy directory for auto-restart.
 pub fn proxy_dir() -> Option<String> {
-    std::env::var("BROWSER_PROXY_DIR").ok().filter(|s| !s.is_empty())
+    std::env::var("BROWSER_PROXY_DIR")
+        .ok()
+        .filter(|s| !s.is_empty())
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -223,7 +230,12 @@ pub(crate) async fn detailed_health_check(client: &reqwest::Client) -> BrowserPr
         .as_secs();
 
     let url = format!("{}/health", proxy_base_url());
-    match client.get(&url).timeout(Duration::from_secs(5)).send().await {
+    match client
+        .get(&url)
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await
+    {
         Ok(resp) => {
             if let Ok(json) = resp.json::<serde_json::Value>().await {
                 BrowserProxyStatus {
@@ -266,14 +278,12 @@ pub(crate) async fn detailed_health_check(client: &reqwest::Client) -> BrowserPr
 
 // ── HTTP handlers for browser proxy management ───────────────────────────
 
-use axum::extract::State;
 use axum::Json;
+use axum::extract::State;
 use axum::http::StatusCode;
 
 /// GET /api/browser-proxy/status — combined health + login status
-pub async fn proxy_status(
-    State(state): State<crate::state::AppState>,
-) -> Json<serde_json::Value> {
+pub async fn proxy_status(State(state): State<crate::state::AppState>) -> Json<serde_json::Value> {
     if !is_enabled() {
         return Json(json!({
             "configured": false,
@@ -352,7 +362,10 @@ pub async fn proxy_login(
             StatusCode::BAD_GATEWAY
         })?;
 
-    let body: serde_json::Value = resp.json().await.unwrap_or(json!({"error": "invalid response"}));
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .unwrap_or(json!({"error": "invalid response"}));
     Ok(Json(body))
 }
 
@@ -376,7 +389,10 @@ pub async fn proxy_login_status(
             StatusCode::BAD_GATEWAY
         })?;
 
-    let body: serde_json::Value = resp.json().await.unwrap_or(json!({"error": "invalid response"}));
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .unwrap_or(json!({"error": "invalid response"}));
     Ok(Json(body))
 }
 
@@ -400,7 +416,10 @@ pub async fn proxy_reinit(
             StatusCode::BAD_GATEWAY
         })?;
 
-    let body: serde_json::Value = resp.json().await.unwrap_or(json!({"error": "invalid response"}));
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .unwrap_or(json!({"error": "invalid response"}));
     Ok(Json(body))
 }
 
@@ -424,6 +443,9 @@ pub async fn proxy_logout(
             StatusCode::BAD_GATEWAY
         })?;
 
-    let body: serde_json::Value = resp.json().await.unwrap_or(json!({"error": "invalid response"}));
+    let body: serde_json::Value = resp
+        .json()
+        .await
+        .unwrap_or(json!({"error": "invalid response"}));
     Ok(Json(body))
 }

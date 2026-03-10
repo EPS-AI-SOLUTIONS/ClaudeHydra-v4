@@ -3,7 +3,7 @@
 //! Image analysis tool using Claude Vision for ClaudeHydra agents.
 
 use base64::Engine;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -142,10 +142,18 @@ pub async fn tool_analyze_image(
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("image");
-    let label = if extract_text.unwrap_or(false) { "OCR" } else { "Image Analysis" };
+    let label = if extract_text.unwrap_or(false) {
+        "OCR"
+    } else {
+        "Image Analysis"
+    };
     let output = format!(
         "### {}: {} ({}, {} bytes)\n\n{}",
-        label, filename, media_type, metadata.len(), text
+        label,
+        filename,
+        media_type,
+        metadata.len(),
+        text
     );
 
     Ok((output, false))

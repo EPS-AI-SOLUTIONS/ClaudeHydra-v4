@@ -70,7 +70,7 @@ pub fn check_bearer_token(header_value: Option<&str>, expected_secret: &str) -> 
     match header_value {
         Some(header) => header
             .strip_prefix("Bearer ")
-            .map_or(false, |token| bool::from(token.as_bytes().ct_eq(expected_secret.as_bytes()))),
+            .is_some_and(|token| bool::from(token.as_bytes().ct_eq(expected_secret.as_bytes()))),
         _ => false,
     }
 }
@@ -103,7 +103,10 @@ mod tests {
 
     #[test]
     fn bearer_basic_auth_rejected() {
-        assert!(!check_bearer_token(Some("Basic not-a-bearer-token"), "mysecret"));
+        assert!(!check_bearer_token(
+            Some("Basic not-a-bearer-token"),
+            "mysecret"
+        ));
     }
 
     #[test]
@@ -151,7 +154,7 @@ pub async fn require_api_key_auth(
 
             // Verify against api_keys table
             let is_valid = match sqlx::query_scalar::<_, i64>(
-                "SELECT COUNT(*) FROM api_keys WHERE token = $1"
+                "SELECT COUNT(*) FROM api_keys WHERE token = $1",
             )
             .bind(token)
             .fetch_one(&state.db)
@@ -172,7 +175,10 @@ pub async fn require_api_key_auth(
             }
         }
         _ => {
-            tracing::warn!("API Key Auth failed: missing or malformed Authorization header for path {}", path);
+            tracing::warn!(
+                "API Key Auth failed: missing or malformed Authorization header for path {}",
+                path
+            );
             Err(StatusCode::UNAUTHORIZED)
         }
     }

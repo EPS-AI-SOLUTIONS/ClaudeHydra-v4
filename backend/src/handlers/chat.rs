@@ -3,10 +3,10 @@
 //! - `claude_models` — list resolved Claude models per tier
 //! - `claude_chat` — non-streaming chat completion
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::*;
 use crate::state::AppState;
@@ -25,22 +25,46 @@ pub async fn claude_models(State(state): State<AppState>) -> Json<Value> {
 
     let models = vec![
         ClaudeModelInfo {
-            id: resolved.commander.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-opus-4-6".to_string()),
-            name: resolved.commander.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Opus".to_string()),
+            id: resolved
+                .commander
+                .as_ref()
+                .map(|m| m.id.clone())
+                .unwrap_or_else(|| "claude-opus-4-6".to_string()),
+            name: resolved
+                .commander
+                .as_ref()
+                .and_then(|m| m.display_name.clone())
+                .unwrap_or_else(|| "Claude Opus".to_string()),
             tier: "Commander".to_string(),
             provider: "anthropic".to_string(),
             available: true,
         },
         ClaudeModelInfo {
-            id: resolved.coordinator.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-sonnet-4-6".to_string()),
-            name: resolved.coordinator.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Sonnet".to_string()),
+            id: resolved
+                .coordinator
+                .as_ref()
+                .map(|m| m.id.clone())
+                .unwrap_or_else(|| "claude-sonnet-4-6".to_string()),
+            name: resolved
+                .coordinator
+                .as_ref()
+                .and_then(|m| m.display_name.clone())
+                .unwrap_or_else(|| "Claude Sonnet".to_string()),
             tier: "Coordinator".to_string(),
             provider: "anthropic".to_string(),
             available: true,
         },
         ClaudeModelInfo {
-            id: resolved.executor.as_ref().map(|m| m.id.clone()).unwrap_or_else(|| "claude-haiku-4-5-20251001".to_string()),
-            name: resolved.executor.as_ref().and_then(|m| m.display_name.clone()).unwrap_or_else(|| "Claude Haiku".to_string()),
+            id: resolved
+                .executor
+                .as_ref()
+                .map(|m| m.id.clone())
+                .unwrap_or_else(|| "claude-haiku-4-5-20251001".to_string()),
+            name: resolved
+                .executor
+                .as_ref()
+                .and_then(|m| m.display_name.clone())
+                .unwrap_or_else(|| "Claude Haiku".to_string()),
             tier: "Executor".to_string(),
             provider: "anthropic".to_string(),
             available: true,
@@ -124,11 +148,16 @@ pub async fn claude_chat(
         prompt_tokens: u.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
         completion_tokens: u.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
         total_tokens: (u.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0)
-            + u.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0)) as u32,
+            + u.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0))
+            as u32,
     });
 
     let chat_resp = ChatResponse {
-        id: resp_body.get("id").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
+        id: resp_body
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string(),
         message: ChatMessage {
             role: "assistant".to_string(),
             content,
@@ -140,6 +169,9 @@ pub async fn claude_chat(
     };
 
     Ok(Json(serde_json::to_value(chat_resp).map_err(|_| {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "serialization failed"})))
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "serialization failed"})),
+        )
     })?))
 }

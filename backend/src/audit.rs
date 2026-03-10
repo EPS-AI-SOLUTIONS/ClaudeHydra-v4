@@ -9,14 +9,13 @@ pub async fn log_audit(
     details: serde_json::Value,
     ip: Option<&str>,
 ) {
-    if let Err(e) = sqlx::query(
-        "INSERT INTO ch_audit_log (action, details, ip_address) VALUES ($1, $2, $3)",
-    )
-    .bind(action)
-    .bind(&details)
-    .bind(ip)
-    .execute(pool)
-    .await
+    if let Err(e) =
+        sqlx::query("INSERT INTO ch_audit_log (action, details, ip_address) VALUES ($1, $2, $3)")
+            .bind(action)
+            .bind(&details)
+            .bind(ip)
+            .execute(pool)
+            .await
     {
         tracing::warn!("audit: failed to log action={}: {}", action, e);
     }

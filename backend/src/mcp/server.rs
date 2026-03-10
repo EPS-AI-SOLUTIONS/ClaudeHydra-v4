@@ -4,11 +4,11 @@
 //! External MCP clients can connect to `POST /mcp` to discover and call CH tools,
 //! and read CH resources (agents, sessions, system stats).
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::state::AppState;
 
@@ -37,10 +37,7 @@ pub async fn mcp_handler(
     State(state): State<AppState>,
     Json(request): Json<Value>,
 ) -> impl IntoResponse {
-    let method = request
-        .get("method")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let method = request.get("method").and_then(|v| v.as_str()).unwrap_or("");
     let id = request.get("id").cloned();
     let params = request.get("params").cloned().unwrap_or(json!({}));
 
@@ -128,10 +125,7 @@ async fn handle_tools_call(state: &AppState, params: &Value) -> Result<Value, Va
         .and_then(|v| v.as_str())
         .ok_or_else(|| json_rpc_error_body(-32602, "Missing 'name' parameter"))?;
 
-    let arguments = params
-        .get("arguments")
-        .cloned()
-        .unwrap_or(json!({}));
+    let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
 
     tracing::info!("mcp_server: tools/call name={}", tool_name);
 
@@ -151,7 +145,10 @@ async fn handle_tools_call(state: &AppState, params: &Value) -> Result<Value, Va
     {
         Ok(r) => r,
         Err(_) => (
-            format!("Tool '{}' timed out after {}s", tool_name, MCP_TOOL_TIMEOUT_SECS),
+            format!(
+                "Tool '{}' timed out after {}s",
+                tool_name, MCP_TOOL_TIMEOUT_SECS
+            ),
             true,
         ),
     };
@@ -199,8 +196,7 @@ async fn handle_resources_read(state: &AppState, params: &Value) -> Result<Value
     match uri {
         "claudehydra://agents" => {
             let agents = state.agents.read().await;
-            let agents_json = serde_json::to_value(&*agents)
-                .unwrap_or_else(|_| json!([]));
+            let agents_json = serde_json::to_value(&*agents).unwrap_or_else(|_| json!([]));
             Ok(json!({
                 "contents": [{
                     "uri": uri,

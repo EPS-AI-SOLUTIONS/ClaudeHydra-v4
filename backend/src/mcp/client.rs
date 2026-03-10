@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::PgPool;
 use tokio::sync::RwLock;
 
@@ -112,18 +112,31 @@ impl McpClientManager {
                 };
 
                 // Initialize
-                self.http_jsonrpc(url, config.auth_token.as_deref(), "initialize", json!({
-                    "protocolVersion": "2025-03-26",
-                    "capabilities": {},
-                    "clientInfo": {
-                        "name": "ClaudeHydra-v4",
-                        "version": "4.0.0"
-                    }
-                }), timeout).await?;
+                self.http_jsonrpc(
+                    url,
+                    config.auth_token.as_deref(),
+                    "initialize",
+                    json!({
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {
+                            "name": "ClaudeHydra-v4",
+                            "version": "4.0.0"
+                        }
+                    }),
+                    timeout,
+                )
+                .await?;
 
                 // Send initialized notification (no id)
                 let _ = self
-                    .http_jsonrpc_notify(url, config.auth_token.as_deref(), "notifications/initialized", json!({}), timeout)
+                    .http_jsonrpc_notify(
+                        url,
+                        config.auth_token.as_deref(),
+                        "notifications/initialized",
+                        json!({}),
+                        timeout,
+                    )
                     .await;
 
                 // List tools
@@ -139,13 +152,13 @@ impl McpClientManager {
                     .as_deref()
                     .ok_or_else(|| anyhow::anyhow!("stdio transport requires command"))?;
 
-                let args: Vec<String> =
-                    serde_json::from_str(&config.args).unwrap_or_default();
+                let args: Vec<String> = serde_json::from_str(&config.args).unwrap_or_default();
                 let env_vars: HashMap<String, String> =
                     serde_json::from_str(&config.env_vars).unwrap_or_default();
 
-                let (transport, tools) =
-                    self.stdio_connect(command, &args, &env_vars, timeout).await?;
+                let (transport, tools) = self
+                    .stdio_connect(command, &args, &env_vars, timeout)
+                    .await?;
 
                 (transport, tools)
             }
@@ -170,7 +183,11 @@ impl McpClientManager {
             })
             .collect();
         if let Err(e) = config::upsert_discovered_tools(&self.db, &config.id, &tool_rows).await {
-            tracing::warn!("mcp: failed to persist discovered tools for '{}': {}", config.name, e);
+            tracing::warn!(
+                "mcp: failed to persist discovered tools for '{}': {}",
+                config.name,
+                e
+            );
         }
 
         let conn = Arc::new(McpConnection {
@@ -181,7 +198,10 @@ impl McpClientManager {
             timeout,
         });
 
-        self.connections.write().await.insert(config.id.clone(), conn);
+        self.connections
+            .write()
+            .await
+            .insert(config.id.clone(), conn);
 
         Ok(tools)
     }
@@ -192,12 +212,13 @@ impl McpClientManager {
             tracing::info!("mcp: disconnected from '{}'", conn.server_name);
             // For stdio, kill the child process
             if let McpTransport::Stdio { child, .. } = &conn.transport
-                && let Ok(c) = child.lock().await.try_wait() {
-                    // already exited
-                    let _ = c;
-                }
-                // Best-effort: the child is behind an Arc, so it will be dropped when
-                // all references are gone. tokio::process::Child::drop kills the child.
+                && let Ok(c) = child.lock().await.try_wait()
+            {
+                // already exited
+                let _ = c;
+            }
+            // Best-effort: the child is behind an Arc, so it will be dropped when
+            // all references are gone. tokio::process::Child::drop kills the child.
         }
     }
 
@@ -321,14 +342,15 @@ impl McpClientManager {
         }
 
         let parsed: Value = serde_json::from_str(&text).map_err(|e| {
-            anyhow::anyhow!("MCP JSON-RPC parse error: {} — body: {}", e, truncate(&text, 200))
+            anyhow::anyhow!(
+                "MCP JSON-RPC parse error: {} — body: {}",
+                e,
+                truncate(&text, 200)
+            )
         })?;
 
         if let Some(error) = parsed.get("error") {
-            return Err(anyhow::anyhow!(
-                "MCP JSON-RPC error: {}",
-                error
-            ));
+            return Err(anyhow::anyhow!("MCP JSON-RPC error: {}", error));
         }
 
         Ok(parsed.get("result").cloned().unwrap_or(json!(null)))
@@ -448,7 +470,13 @@ impl McpClientManager {
 
         // List tools
         let tools_result = self
-            .stdio_request(&stdin_mutex, &stdout_mutex, "tools/list", json!({}), timeout)
+            .stdio_request(
+                &stdin_mutex,
+                &stdout_mutex,
+                "tools/list",
+                json!({}),
+                timeout,
+            )
             .await?;
 
         let tools = parse_tools_list(&tools_result)?;
@@ -515,7 +543,9 @@ impl McpClientManager {
             }
         })
         .await
-        .map_err(|_| anyhow::anyhow!("MCP stdio: timeout waiting for response to '{}'", method))??;
+        .map_err(|_| {
+            anyhow::anyhow!("MCP stdio: timeout waiting for response to '{}'", method)
+        })??;
 
         Ok(response)
     }
@@ -650,7 +680,11 @@ fn truncate(s: &str, max: usize) -> String {
     if s.len() <= max {
         s.to_string()
     } else {
-        let end: String = s.char_indices().take_while(|(i, _)| *i < max).map(|(_, c)| c).collect();
+        let end: String = s
+            .char_indices()
+            .take_while(|(i, _)| *i < max)
+            .map(|(_, c)| c)
+            .collect();
         format!("{}...", end)
     }
 }

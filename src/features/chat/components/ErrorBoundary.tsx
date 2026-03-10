@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
       if (navigator.sendBeacon) {
         navigator.sendBeacon('/api/telemetry/error', new Blob([payload], { type: 'application/json' }));
       }
-    } catch (e) {
+    } catch (_e) {
       // Ignore telemetry errors to avoid infinite loops
     }
   }

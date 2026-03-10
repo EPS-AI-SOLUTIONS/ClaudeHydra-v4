@@ -8,14 +8,14 @@
 
 use std::collections::HashMap;
 
+use axum::Json;
 use axum::body::Body;
-use axum::extract::ws::{Message as WsMessage, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
+use axum::extract::ws::{Message as WsMessage, WebSocket, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use futures_util::{SinkExt, stream::SplitSink};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
@@ -23,10 +23,10 @@ use crate::auth::validate_ws_token;
 use crate::models::*;
 use crate::state::AppState;
 
-use super::prompt::{resolve_chat_context, ChatContext};
+use super::prompt::{ChatContext, resolve_chat_context};
 use super::{
-    is_retryable_status, sanitize_json_strings, send_to_anthropic,
-    truncate_for_context_with_limit, TOOL_TIMEOUT_SECS,
+    TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings, send_to_anthropic,
+    truncate_for_context_with_limit,
 };
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -41,10 +41,12 @@ async fn google_chat_stream(
     let credential = crate::oauth_google::get_google_credential(&state).await;
     let (api_key, is_oauth) = match credential {
         Some(c) => c,
-        None => return Err((
-            StatusCode::UNAUTHORIZED,
-            Json(json!({ "error": "No Google API credential configured" })),
-        )),
+        None => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": "No Google API credential configured" })),
+            ));
+        }
     };
 
     let model = &ctx.model;
@@ -53,10 +55,18 @@ async fn google_chat_stream(
         model
     );
 
-    let contents: Vec<Value> = req.messages.iter().map(|m| {
-        let role = if m.role == "assistant" { "model" } else { "user" };
-        json!({ "role": role, "parts": [{ "text": m.content }] })
-    }).collect();
+    let contents: Vec<Value> = req
+        .messages
+        .iter()
+        .map(|m| {
+            let role = if m.role == "assistant" {
+                "model"
+            } else {
+                "user"
+            };
+            json!({ "role": role, "parts": [{ "text": m.content }] })
+        })
+        .collect();
 
     let body = json!({
         "systemInstruction": { "parts": [{ "text": ctx.system_prompt }] },
@@ -67,16 +77,17 @@ async fn google_chat_stream(
         }
     });
 
-    let request = crate::oauth_google::apply_google_auth(
-        state.http_client.post(&url), &api_key, is_oauth,
-    )
-    .json(&body)
-    .timeout(std::time::Duration::from_secs(300));
+    let request =
+        crate::oauth_google::apply_google_auth(state.http_client.post(&url), &api_key, is_oauth)
+            .json(&body)
+            .timeout(std::time::Duration::from_secs(300));
 
-    let resp = request.send().await.map_err(|e| (
-        StatusCode::BAD_GATEWAY,
-        Json(json!({ "error": format!("Google API request failed: {}", e) })),
-    ))?;
+    let resp = request.send().await.map_err(|e| {
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": format!("Google API request failed: {}", e) })),
+        )
+    })?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -134,7 +145,12 @@ async fn google_chat_stream(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(Body::from_stream(ndjson_stream))
-        .unwrap_or_else(|_| Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap_or_default()))
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_default()
+        }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -158,19 +174,20 @@ async fn load_session_history(db: &sqlx::PgPool, sid: &uuid::Uuid) -> Vec<Value>
     for i in 0..messages.len() {
         if i < messages.len().saturating_sub(6)
             && let Some(content) = messages[i].get_mut("content")
-                && let Some(s) = content.as_str().map(|s| s.to_string())
-                    && s.len() > 500 {
-                        let boundary = s
-                            .char_indices()
-                            .take_while(|(idx, _)| *idx < 500)
-                            .last()
-                            .map(|(idx, c)| idx + c.len_utf8())
-                            .unwrap_or(500.min(s.len()));
-                        *content = json!(format!(
-                            "{}... [message truncated for context efficiency]",
-                            &s[..boundary]
-                        ));
-                    }
+            && let Some(s) = content.as_str().map(|s| s.to_string())
+            && s.len() > 500
+        {
+            let boundary = s
+                .char_indices()
+                .take_while(|(idx, _)| *idx < 500)
+                .last()
+                .map(|(idx, c)| idx + c.len_utf8())
+                .unwrap_or(500.min(s.len()));
+            *content = json!(format!(
+                "{}... [message truncated for context efficiency]",
+                &s[..boundary]
+            ));
+        }
     }
 
     messages
@@ -252,14 +269,22 @@ pub async fn claude_chat_stream(
         let fallback_models = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
         let mut fallback_resp = None;
         for fb_model in &fallback_models {
-            if *fb_model == model { continue; }
-            tracing::warn!("claude_chat_stream: {} returned {}, falling back to {}", model, resp.status(), fb_model);
+            if *fb_model == model {
+                continue;
+            }
+            tracing::warn!(
+                "claude_chat_stream: {} returned {}, falling back to {}",
+                model,
+                resp.status(),
+                fb_model
+            );
             body["model"] = json!(fb_model);
             if let Ok(fb) = send_to_anthropic(&state, &body, 300).await
-                && fb.status().is_success() {
-                    fallback_resp = Some(fb);
-                    break;
-                }
+                && fb.status().is_success()
+            {
+                fallback_resp = Some(fb);
+                break;
+            }
         }
         fallback_resp.unwrap_or(resp)
     } else {
@@ -387,7 +412,12 @@ pub async fn claude_chat_stream(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(Body::from_stream(ndjson_stream))
-        .unwrap_or_else(|_| Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap_or_default()))
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_default()
+        }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -407,7 +437,13 @@ async fn claude_chat_stream_with_tools(
 
     // Dynamic iteration cap based on prompt complexity
     let prompt_len = req.messages.last().map(|m| m.content.len()).unwrap_or(0);
-    let dynamic_max: usize = if prompt_len < 200 { 15 } else if prompt_len < 1000 { 20 } else { 25 };
+    let dynamic_max: usize = if prompt_len < 200 {
+        15
+    } else if prompt_len < 1000 {
+        20
+    } else {
+        25
+    };
     let max_tool_iterations: usize = dynamic_max.min(ctx.max_iterations.max(1) as usize);
 
     // Build initial messages — prefer DB history when session_id present
@@ -427,11 +463,13 @@ async fn claude_chat_stream_with_tools(
         .tool_definitions_with_mcp(&state)
         .await
         .into_iter()
-        .map(|td| json!({
-            "name": td.name,
-            "description": td.description,
-            "input_schema": td.input_schema,
-        }))
+        .map(|td| {
+            json!({
+                "name": td.name,
+                "description": td.description,
+                "input_schema": td.input_schema,
+            })
+        })
         .collect();
 
     let (tx, rx) = tokio::sync::mpsc::channel::<String>(256);
@@ -450,19 +488,32 @@ async fn claude_chat_stream_with_tools(
             iteration += 1;
 
             if execution_start.elapsed() >= execution_timeout {
-                tracing::warn!("Global execution timeout (300s) reached at iteration {}", iteration);
-                let _ = tx.send(serde_json::to_string(&json!({
-                    "token": "\n[Execution timeout — 5 minutes reached]",
-                    "done": true, "model": &model, "total_tokens": 0,
-                })).unwrap_or_default()).await;
+                tracing::warn!(
+                    "Global execution timeout (300s) reached at iteration {}",
+                    iteration
+                );
+                let _ = tx
+                    .send(
+                        serde_json::to_string(&json!({
+                            "token": "\n[Execution timeout — 5 minutes reached]",
+                            "done": true, "model": &model, "total_tokens": 0,
+                        }))
+                        .unwrap_or_default(),
+                    )
+                    .await;
                 break;
             }
 
             if iteration > max_tool_iterations {
-                let _ = tx.send(serde_json::to_string(&json!({
-                    "token": "\n[Max tool iterations reached]",
-                    "done": true, "model": &model, "total_tokens": 0,
-                })).unwrap_or_default()).await;
+                let _ = tx
+                    .send(
+                        serde_json::to_string(&json!({
+                            "token": "\n[Max tool iterations reached]",
+                            "done": true, "model": &model, "total_tokens": 0,
+                        }))
+                        .unwrap_or_default(),
+                    )
+                    .await;
                 break;
             }
 
@@ -481,11 +532,19 @@ async fn claude_chat_stream_with_tools(
             let resp = match send_to_anthropic(&state_clone, &body, 300).await {
                 Ok(r) => r,
                 Err((_, Json(err_val))) => {
-                    let err_msg = err_val.get("error").and_then(|e| e.as_str()).unwrap_or("Unknown error");
-                    let _ = tx.send(serde_json::to_string(&json!({
-                        "token": format!("\n[API error: {}]", err_msg),
-                        "done": true, "model": &model, "total_tokens": 0,
-                    })).unwrap_or_default()).await;
+                    let err_msg = err_val
+                        .get("error")
+                        .and_then(|e| e.as_str())
+                        .unwrap_or("Unknown error");
+                    let _ = tx
+                        .send(
+                            serde_json::to_string(&json!({
+                                "token": format!("\n[API error: {}]", err_msg),
+                                "done": true, "model": &model, "total_tokens": 0,
+                            }))
+                            .unwrap_or_default(),
+                        )
+                        .await;
                     break;
                 }
             };
@@ -493,11 +552,21 @@ async fn claude_chat_stream_with_tools(
             if !resp.status().is_success() {
                 let status = resp.status();
                 let err_text = resp.text().await.unwrap_or_default();
-                tracing::error!("Anthropic API error (status={}, iteration={}): {}", status, iteration, &truncate_for_context_with_limit(&err_text, 500));
-                let _ = tx.send(serde_json::to_string(&json!({
-                    "token": format!("\n[Anthropic error: {}]", err_text),
-                    "done": true, "model": &model, "total_tokens": 0,
-                })).unwrap_or_default()).await;
+                tracing::error!(
+                    "Anthropic API error (status={}, iteration={}): {}",
+                    status,
+                    iteration,
+                    &truncate_for_context_with_limit(&err_text, 500)
+                );
+                let _ = tx
+                    .send(
+                        serde_json::to_string(&json!({
+                            "token": format!("\n[Anthropic error: {}]", err_text),
+                            "done": true, "model": &model, "total_tokens": 0,
+                        }))
+                        .unwrap_or_default(),
+                    )
+                    .await;
                 break;
             }
 
@@ -527,7 +596,9 @@ async fn claude_chat_stream_with_tools(
                     raw_buf = raw_buf[newline_pos + 1..].to_vec();
                     let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
 
-                    if line.is_empty() || line.starts_with(':') { continue; }
+                    if line.is_empty() || line.starts_with(':') {
+                        continue;
+                    }
 
                     let data = match line.strip_prefix("data: ") {
                         Some(d) if d != "[DONE]" => d,
@@ -547,38 +618,62 @@ async fn claude_chat_stream_with_tools(
                             let cb_type = cb.get("type").and_then(|t| t.as_str()).unwrap_or("");
                             if cb_type == "tool_use" {
                                 in_tool_use = true;
-                                current_tool_id = cb.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                current_tool_name = cb.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                current_tool_id = cb
+                                    .get("id")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("")
+                                    .to_string();
+                                current_tool_name = cb
+                                    .get("name")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("")
+                                    .to_string();
                                 current_tool_input_json.clear();
                             }
                         }
                         "content_block_delta" => {
                             let delta = event.get("delta").unwrap_or(&Value::Null);
-                            let delta_type = delta.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            let delta_type =
+                                delta.get("type").and_then(|t| t.as_str()).unwrap_or("");
                             if delta_type == "text_delta" {
                                 let text = delta.get("text").and_then(|t| t.as_str()).unwrap_or("");
                                 if !text.is_empty() {
                                     text_content.push_str(text);
                                     full_text.push_str(text);
                                     agent_text_len += text.len();
-                                    let _ = tx.send(serde_json::to_string(&json!({
-                                        "token": text, "done": false,
-                                    })).unwrap_or_default()).await;
+                                    let _ = tx
+                                        .send(
+                                            serde_json::to_string(&json!({
+                                                "token": text, "done": false,
+                                            }))
+                                            .unwrap_or_default(),
+                                        )
+                                        .await;
                                 }
                             } else if delta_type == "input_json_delta" {
-                                let partial = delta.get("partial_json").and_then(|t| t.as_str()).unwrap_or("");
+                                let partial = delta
+                                    .get("partial_json")
+                                    .and_then(|t| t.as_str())
+                                    .unwrap_or("");
                                 current_tool_input_json.push_str(partial);
                             }
                         }
                         "content_block_stop" => {
                             if in_tool_use {
-                                let tool_input: Value = serde_json::from_str(&current_tool_input_json).unwrap_or(json!({}));
-                                let _ = tx.send(serde_json::to_string(&json!({
-                                    "type": "tool_call",
-                                    "tool_use_id": &current_tool_id,
-                                    "tool_name": &current_tool_name,
-                                    "tool_input": &tool_input,
-                                })).unwrap_or_default()).await;
+                                let tool_input: Value =
+                                    serde_json::from_str(&current_tool_input_json)
+                                        .unwrap_or(json!({}));
+                                let _ = tx
+                                    .send(
+                                        serde_json::to_string(&json!({
+                                            "type": "tool_call",
+                                            "tool_use_id": &current_tool_id,
+                                            "tool_name": &current_tool_name,
+                                            "tool_input": &tool_input,
+                                        }))
+                                        .unwrap_or_default(),
+                                    )
+                                    .await;
                                 tool_uses.push(json!({
                                     "type": "tool_use",
                                     "id": &current_tool_id,
@@ -589,11 +684,19 @@ async fn claude_chat_stream_with_tools(
                             }
                         }
                         "message_delta" => {
-                            if let Some(sr) = event.get("delta").and_then(|d| d.get("stop_reason")).and_then(|s| s.as_str()) {
+                            if let Some(sr) = event
+                                .get("delta")
+                                .and_then(|d| d.get("stop_reason"))
+                                .and_then(|s| s.as_str())
+                            {
                                 stop_reason = sr.to_string();
                             }
                             if let Some(usage) = event.get("usage") {
-                                total_tokens = usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                                total_tokens = usage
+                                    .get("output_tokens")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0)
+                                    as u32;
                             }
                         }
                         _ => {}
@@ -623,7 +726,9 @@ async fn claude_chat_stream_with_tools(
                         match tokio::time::timeout(
                             std::time::Duration::from_secs(120),
                             execute_agent_call(&state_clone, tool_input, &wd, 0),
-                        ).await {
+                        )
+                        .await
+                        {
                             Ok(res) => res,
                             Err(_) => ("Agent delegation timed out after 120s".to_string(), true),
                         }
@@ -633,11 +738,23 @@ async fn claude_chat_stream_with_tools(
                         match tokio::time::timeout(
                             timeout,
                             executor.execute_with_state(tool_name, tool_input, &state_clone),
-                        ).await {
+                        )
+                        .await
+                        {
                             Ok(res) => res,
                             Err(_) => {
-                                tracing::warn!("Tool '{}' timed out after {}s", tool_name, TOOL_TIMEOUT_SECS);
-                                (format!("Tool '{}' timed out after {}s", tool_name, TOOL_TIMEOUT_SECS), true)
+                                tracing::warn!(
+                                    "Tool '{}' timed out after {}s",
+                                    tool_name,
+                                    TOOL_TIMEOUT_SECS
+                                );
+                                (
+                                    format!(
+                                        "Tool '{}' timed out after {}s",
+                                        tool_name, TOOL_TIMEOUT_SECS
+                                    ),
+                                    true,
+                                )
                             }
                         }
                     };
@@ -646,15 +763,26 @@ async fn claude_chat_stream_with_tools(
                         has_written_file = true;
                     }
 
-                    let context_limit = if iteration < 3 { 25000 } else if iteration < 6 { 15000 } else { 8000 };
+                    let context_limit = if iteration < 3 {
+                        25000
+                    } else if iteration < 6 {
+                        15000
+                    } else {
+                        8000
+                    };
                     let truncated_result = truncate_for_context_with_limit(&result, context_limit);
 
-                    let _ = tx.send(serde_json::to_string(&json!({
-                        "type": "tool_result",
-                        "tool_use_id": tool_id,
-                        "result": &result,
-                        "is_error": is_error,
-                    })).unwrap_or_default()).await;
+                    let _ = tx
+                        .send(
+                            serde_json::to_string(&json!({
+                                "type": "tool_result",
+                                "tool_use_id": tool_id,
+                                "result": &result,
+                                "is_error": is_error,
+                            }))
+                            .unwrap_or_default(),
+                        )
+                        .await;
 
                     tool_results.push(json!({
                         "type": "tool_result",
@@ -668,19 +796,30 @@ async fn claude_chat_stream_with_tools(
 
                 // Iteration nudges
                 if iteration >= 3 {
-                    let approx_context_bytes: usize = conversation.iter()
+                    let approx_context_bytes: usize = conversation
+                        .iter()
                         .map(|c| serde_json::to_string(c).map(|s| s.len()).unwrap_or(0))
                         .sum();
                     let context_hint = format!(
                         "[CONTEXT: ~{}KB, {} msgs, iter {}/{}]",
-                        approx_context_bytes / 1024, conversation.len(), iteration, max_tool_iterations
+                        approx_context_bytes / 1024,
+                        conversation.len(),
+                        iteration,
+                        max_tool_iterations
                     );
                     let nudge = if iteration >= 12 {
-                        format!("[SYSTEM: Approaching limit. {} Wrap up and apply any pending changes.]", context_hint)
+                        format!(
+                            "[SYSTEM: Approaching limit. {} Wrap up and apply any pending changes.]",
+                            context_hint
+                        )
                     } else if iteration >= 8 {
                         format!("[SYSTEM: {} Consider applying edits now.]", context_hint)
                     } else {
-                        format!("[SYSTEM: {} {} iterations remaining.]", context_hint, max_tool_iterations - iteration)
+                        format!(
+                            "[SYSTEM: {} {} iterations remaining.]",
+                            context_hint,
+                            max_tool_iterations - iteration
+                        )
                     };
                     conversation.push(json!({ "role": "user", "content": nudge }));
                 }
@@ -691,17 +830,32 @@ async fn claude_chat_stream_with_tools(
 
             // Auto-fix phase
             if !has_written_file && !full_text.is_empty() && agent_text_len > 50 {
-                let fix_keywords = ["fix", "napraw", "zmian", "popraw", "zastosow",
-                                    "write_file", "edit_file", "zmieni", "edytu", "zapisa"];
+                let fix_keywords = [
+                    "fix",
+                    "napraw",
+                    "zmian",
+                    "popraw",
+                    "zastosow",
+                    "write_file",
+                    "edit_file",
+                    "zmieni",
+                    "edytu",
+                    "zapisa",
+                ];
                 let lower = full_text.to_lowercase();
                 let needs_fix = fix_keywords.iter().any(|kw| lower.contains(kw));
 
                 if needs_fix {
-                    tracing::info!("Auto-fix phase — agent described changes but never wrote files");
-                    let edit_tools: Vec<&Value> = tool_defs.iter().filter(|td| {
-                        let name = td.get("name").and_then(|n| n.as_str()).unwrap_or("");
-                        name == "edit_file" || name == "write_file"
-                    }).collect();
+                    tracing::info!(
+                        "Auto-fix phase — agent described changes but never wrote files"
+                    );
+                    let edit_tools: Vec<&Value> = tool_defs
+                        .iter()
+                        .filter(|td| {
+                            let name = td.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                            name == "edit_file" || name == "write_file"
+                        })
+                        .collect();
 
                     if !edit_tools.is_empty() {
                         conversation.push(json!({
@@ -720,56 +874,89 @@ async fn claude_chat_stream_with_tools(
 
                         if let Ok(fix_resp) = send_to_anthropic(&state_clone, &fix_body, 60).await
                             && fix_resp.status().is_success()
-                                && let Ok(fix_json) = fix_resp.json::<Value>().await
-                                    && let Some(content) = fix_json.get("content").and_then(|c| c.as_array()) {
-                                        for block in content {
-                                            let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                                            if block_type == "tool_use" {
-                                                let fix_tool_name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
-                                                let empty_input = json!({});
-                                                let fix_tool_input = block.get("input").unwrap_or(&empty_input);
-                                                let fix_tool_id = block.get("id").and_then(|i| i.as_str()).unwrap_or("");
+                            && let Ok(fix_json) = fix_resp.json::<Value>().await
+                            && let Some(content) =
+                                fix_json.get("content").and_then(|c| c.as_array())
+                        {
+                            for block in content {
+                                let block_type =
+                                    block.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                if block_type == "tool_use" {
+                                    let fix_tool_name =
+                                        block.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                                    let empty_input = json!({});
+                                    let fix_tool_input = block.get("input").unwrap_or(&empty_input);
+                                    let fix_tool_id =
+                                        block.get("id").and_then(|i| i.as_str()).unwrap_or("");
 
-                                                let executor = state_clone.tool_executor.with_working_directory(&wd);
-                                                let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
-                                                let (result, is_error) = match tokio::time::timeout(
-                                                    timeout,
-                                                    executor.execute_with_state(fix_tool_name, fix_tool_input, &state_clone),
-                                                ).await {
-                                                    Ok(res) => res,
-                                                    Err(_) => (format!("Tool '{}' timed out", fix_tool_name), true),
-                                                };
-
-                                                let _ = tx.send(serde_json::to_string(&json!({
-                                                    "type": "tool_call",
-                                                    "tool_use_id": fix_tool_id,
-                                                    "tool_name": fix_tool_name,
-                                                    "tool_input": fix_tool_input,
-                                                })).unwrap_or_default()).await;
-                                                let _ = tx.send(serde_json::to_string(&json!({
-                                                    "type": "tool_result",
-                                                    "tool_use_id": fix_tool_id,
-                                                    "result": &result,
-                                                    "is_error": is_error,
-                                                })).unwrap_or_default()).await;
-
-                                                let _ = is_error;
-                                            } else if block_type == "text"
-                                                && let Some(text) = block.get("text").and_then(|t| t.as_str())
-                                                    && !text.is_empty() {
-                                                        let _ = tx.send(serde_json::to_string(&json!({
-                                                            "token": text, "done": false,
-                                                        })).unwrap_or_default()).await;
-                                                    }
+                                    let executor =
+                                        state_clone.tool_executor.with_working_directory(&wd);
+                                    let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
+                                    let (result, is_error) = match tokio::time::timeout(
+                                        timeout,
+                                        executor.execute_with_state(
+                                            fix_tool_name,
+                                            fix_tool_input,
+                                            &state_clone,
+                                        ),
+                                    )
+                                    .await
+                                    {
+                                        Ok(res) => res,
+                                        Err(_) => {
+                                            (format!("Tool '{}' timed out", fix_tool_name), true)
                                         }
-                                    }
+                                    };
+
+                                    let _ = tx
+                                        .send(
+                                            serde_json::to_string(&json!({
+                                                "type": "tool_call",
+                                                "tool_use_id": fix_tool_id,
+                                                "tool_name": fix_tool_name,
+                                                "tool_input": fix_tool_input,
+                                            }))
+                                            .unwrap_or_default(),
+                                        )
+                                        .await;
+                                    let _ = tx
+                                        .send(
+                                            serde_json::to_string(&json!({
+                                                "type": "tool_result",
+                                                "tool_use_id": fix_tool_id,
+                                                "result": &result,
+                                                "is_error": is_error,
+                                            }))
+                                            .unwrap_or_default(),
+                                        )
+                                        .await;
+
+                                    let _ = is_error;
+                                } else if block_type == "text"
+                                    && let Some(text) = block.get("text").and_then(|t| t.as_str())
+                                    && !text.is_empty()
+                                {
+                                    let _ = tx
+                                        .send(
+                                            serde_json::to_string(&json!({
+                                                "token": text, "done": false,
+                                            }))
+                                            .unwrap_or_default(),
+                                        )
+                                        .await;
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             // Forced synthesis — if agent produced very little text
             if agent_text_len < 100 && !full_text.is_empty() {
-                tracing::info!("Forced synthesis — agent produced {}B text, requesting summary", agent_text_len);
+                tracing::info!(
+                    "Forced synthesis — agent produced {}B text, requesting summary",
+                    agent_text_len
+                );
                 conversation.push(json!({ "role": "assistant", "content": &full_text }));
                 conversation.push(json!({
                     "role": "user",
@@ -785,34 +972,49 @@ async fn claude_chat_stream_with_tools(
                 });
 
                 if let Ok(synth_resp) = send_to_anthropic(&state_clone, &synth_body, 30).await
-                    && synth_resp.status().is_success() {
-                        let mut synth_stream = synth_resp.bytes_stream();
-                        let mut synth_buf: Vec<u8> = Vec::new();
-                        while let Some(Ok(chunk)) = synth_stream.next().await {
-                            synth_buf.extend_from_slice(&chunk);
-                            while let Some(nl) = synth_buf.iter().position(|&b| b == b'\n') {
-                                let line_bytes = synth_buf[..nl].to_vec();
-                                synth_buf = synth_buf[nl + 1..].to_vec();
-                                let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
-                                if let Some(data) = line.strip_prefix("data: ") {
-                                    if data == "[DONE]" { continue; }
-                                    if let Ok(ev) = serde_json::from_str::<Value>(data)
-                                        && let Some(text) = ev.pointer("/delta/text").and_then(|t| t.as_str())
-                                            && !text.is_empty() {
-                                                let _ = tx.send(serde_json::to_string(&json!({
-                                                    "token": text, "done": false,
-                                                })).unwrap_or_default()).await;
-                                            }
+                    && synth_resp.status().is_success()
+                {
+                    let mut synth_stream = synth_resp.bytes_stream();
+                    let mut synth_buf: Vec<u8> = Vec::new();
+                    while let Some(Ok(chunk)) = synth_stream.next().await {
+                        synth_buf.extend_from_slice(&chunk);
+                        while let Some(nl) = synth_buf.iter().position(|&b| b == b'\n') {
+                            let line_bytes = synth_buf[..nl].to_vec();
+                            synth_buf = synth_buf[nl + 1..].to_vec();
+                            let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
+                            if let Some(data) = line.strip_prefix("data: ") {
+                                if data == "[DONE]" {
+                                    continue;
+                                }
+                                if let Ok(ev) = serde_json::from_str::<Value>(data)
+                                    && let Some(text) =
+                                        ev.pointer("/delta/text").and_then(|t| t.as_str())
+                                    && !text.is_empty()
+                                {
+                                    let _ = tx
+                                        .send(
+                                            serde_json::to_string(&json!({
+                                                "token": text, "done": false,
+                                            }))
+                                            .unwrap_or_default(),
+                                        )
+                                        .await;
                                 }
                             }
                         }
                     }
+                }
             }
 
             // stop_reason == "end_turn" or other — emit done
-            let _ = tx.send(serde_json::to_string(&json!({
-                "token": "", "done": true, "model": &model, "total_tokens": total_tokens,
-            })).unwrap_or_default()).await;
+            let _ = tx
+                .send(
+                    serde_json::to_string(&json!({
+                        "token": "", "done": true, "model": &model, "total_tokens": total_tokens,
+                    }))
+                    .unwrap_or_default(),
+                )
+                .await;
             break;
         }
     });
@@ -844,7 +1046,12 @@ async fn claude_chat_stream_with_tools(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(Body::from_stream(ndjson_stream))
-        .unwrap_or_else(|_| Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap_or_default()))
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(Body::empty())
+                .unwrap_or_default()
+        }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -852,10 +1059,7 @@ async fn claude_chat_stream_with_tools(
 // ═══════════════════════════════════════════════════════════════════════
 
 /// Send a `WsServerMessage` through the WebSocket sink.
-async fn ws_send(
-    sender: &mut SplitSink<WebSocket, WsMessage>,
-    msg: &WsServerMessage,
-) {
+async fn ws_send(sender: &mut SplitSink<WebSocket, WsMessage>, msg: &WsServerMessage) {
     let json = match serde_json::to_string(msg) {
         Ok(s) => s,
         Err(e) => {
@@ -912,10 +1116,14 @@ async fn handle_ws(socket: WebSocket, state: AppState) {
                     Ok(m) => m,
                     Err(e) => {
                         tracing::warn!("Invalid WS message: {}", e);
-                        ws_send(&mut sender, &WsServerMessage::Error {
-                            message: format!("Invalid message format: {}", e),
-                            code: Some("PARSE_ERROR".to_string()),
-                        }).await;
+                        ws_send(
+                            &mut sender,
+                            &WsServerMessage::Error {
+                                message: format!("Invalid message format: {}", e),
+                                code: Some("PARSE_ERROR".to_string()),
+                            },
+                        )
+                        .await;
                         continue;
                     }
                 };
@@ -998,15 +1206,25 @@ async fn execute_streaming_ws(
 
     // Dynamic iteration cap
     let prompt_len = prompt.len();
-    let dynamic_max: usize = if prompt_len < 200 { 15 } else if prompt_len < 1000 { 20 } else { 25 };
+    let dynamic_max: usize = if prompt_len < 200 {
+        15
+    } else if prompt_len < 1000 {
+        20
+    } else {
+        25
+    };
     let max_tool_iterations: usize = dynamic_max.min(ctx.max_iterations.max(1) as usize);
 
     // Send Start
-    ws_send(sender, &WsServerMessage::Start {
-        id: execution_id.clone(),
-        model: model.clone(),
-        files_loaded: vec![],
-    }).await;
+    ws_send(
+        sender,
+        &WsServerMessage::Start {
+            id: execution_id.clone(),
+            model: model.clone(),
+            files_loaded: vec![],
+        },
+    )
+    .await;
 
     // Build initial messages — prefer DB history when session_id present
     let initial_messages: Vec<Value> = if let Some(ref sid) = ctx.session_id {
@@ -1034,11 +1252,18 @@ async fn execute_streaming_ws(
         let resp = match send_to_anthropic(state, &body, 300).await {
             Ok(r) => r,
             Err((_, Json(err_val))) => {
-                let err_msg = err_val.get("error").and_then(|e| e.as_str()).unwrap_or("Unknown error");
-                ws_send(sender, &WsServerMessage::Error {
-                    message: err_msg.to_string(),
-                    code: Some("API_ERROR".to_string()),
-                }).await;
+                let err_msg = err_val
+                    .get("error")
+                    .and_then(|e| e.as_str())
+                    .unwrap_or("Unknown error");
+                ws_send(
+                    sender,
+                    &WsServerMessage::Error {
+                        message: err_msg.to_string(),
+                        code: Some("API_ERROR".to_string()),
+                    },
+                )
+                .await;
                 return;
             }
         };
@@ -1048,14 +1273,22 @@ async fn execute_streaming_ws(
             let fallback_models = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
             let mut fallback_resp = None;
             for fb_model in &fallback_models {
-                if *fb_model == model { continue; }
-                tracing::warn!("ws: {} returned {}, falling back to {}", model, resp.status(), fb_model);
+                if *fb_model == model {
+                    continue;
+                }
+                tracing::warn!(
+                    "ws: {} returned {}, falling back to {}",
+                    model,
+                    resp.status(),
+                    fb_model
+                );
                 body["model"] = json!(fb_model);
                 if let Ok(fb) = send_to_anthropic(state, &body, 300).await
-                    && fb.status().is_success() {
-                        fallback_resp = Some(fb);
-                        break;
-                    }
+                    && fb.status().is_success()
+                {
+                    fallback_resp = Some(fb);
+                    break;
+                }
             }
             fallback_resp.unwrap_or(resp)
         } else {
@@ -1064,10 +1297,14 @@ async fn execute_streaming_ws(
 
         if !resp.status().is_success() {
             let err_text = resp.text().await.unwrap_or_default();
-            ws_send(sender, &WsServerMessage::Error {
-                message: err_text,
-                code: Some("ANTHROPIC_ERROR".to_string()),
-            }).await;
+            ws_send(
+                sender,
+                &WsServerMessage::Error {
+                    message: err_text,
+                    code: Some("ANTHROPIC_ERROR".to_string()),
+                },
+            )
+            .await;
             return;
         }
 
@@ -1078,10 +1315,14 @@ async fn execute_streaming_ws(
 
         while let Some(chunk_result) = byte_stream.next().await {
             if cancel.is_cancelled() {
-                ws_send(sender, &WsServerMessage::Error {
-                    message: "Cancelled by user".to_string(),
-                    code: Some("CANCELLED".to_string()),
-                }).await;
+                ws_send(
+                    sender,
+                    &WsServerMessage::Error {
+                        message: "Cancelled by user".to_string(),
+                        code: Some("CANCELLED".to_string()),
+                    },
+                )
+                .await;
                 return;
             }
             let chunk = match chunk_result {
@@ -1094,7 +1335,9 @@ async fn execute_streaming_ws(
                 let line_bytes = raw_buf[..nl].to_vec();
                 raw_buf = raw_buf[nl + 1..].to_vec();
                 let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
-                if line.is_empty() || line.starts_with(':') { continue; }
+                if line.is_empty() || line.starts_with(':') {
+                    continue;
+                }
                 let data = match line.strip_prefix("data: ") {
                     Some(d) if d != "[DONE]" => d,
                     _ => continue,
@@ -1105,10 +1348,20 @@ async fn execute_streaming_ws(
                 };
                 let event_type = event.get("type").and_then(|t| t.as_str()).unwrap_or("");
                 if event_type == "content_block_delta" {
-                    let text = event.get("delta").and_then(|d| d.get("text")).and_then(|t| t.as_str()).unwrap_or("");
+                    let text = event
+                        .get("delta")
+                        .and_then(|d| d.get("text"))
+                        .and_then(|t| t.as_str())
+                        .unwrap_or("");
                     if !text.is_empty() {
                         full_text.push_str(text);
-                        ws_send(sender, &WsServerMessage::Token { content: text.to_string() }).await;
+                        ws_send(
+                            sender,
+                            &WsServerMessage::Token {
+                                content: text.to_string(),
+                            },
+                        )
+                        .await;
                     }
                 }
             }
@@ -1119,9 +1372,13 @@ async fn execute_streaming_ws(
             let _ = store_ws_messages(state, sid, &prompt, &full_text).await;
         }
 
-        ws_send(sender, &WsServerMessage::Complete {
-            duration_ms: execution_start.elapsed().as_millis() as u64,
-        }).await;
+        ws_send(
+            sender,
+            &WsServerMessage::Complete {
+                duration_ms: execution_start.elapsed().as_millis() as u64,
+            },
+        )
+        .await;
         return;
     }
 
@@ -1132,11 +1389,13 @@ async fn execute_streaming_ws(
         .tool_definitions_with_mcp(state)
         .await
         .into_iter()
-        .map(|td| json!({
-            "name": td.name,
-            "description": td.description,
-            "input_schema": td.input_schema,
-        }))
+        .map(|td| {
+            json!({
+                "name": td.name,
+                "description": td.description,
+                "input_schema": td.input_schema,
+            })
+        })
         .collect();
 
     let mut conversation: Vec<Value> = initial_messages;
@@ -1150,35 +1409,54 @@ async fn execute_streaming_ws(
         iteration += 1;
 
         if cancel.is_cancelled() {
-            ws_send(sender, &WsServerMessage::Error {
-                message: "Cancelled by user".to_string(),
-                code: Some("CANCELLED".to_string()),
-            }).await;
+            ws_send(
+                sender,
+                &WsServerMessage::Error {
+                    message: "Cancelled by user".to_string(),
+                    code: Some("CANCELLED".to_string()),
+                },
+            )
+            .await;
             break;
         }
 
         if execution_start.elapsed() >= execution_timeout {
-            tracing::warn!("WS: Global execution timeout (300s) at iteration {}", iteration);
-            ws_send(sender, &WsServerMessage::Error {
-                message: "Execution timeout — 5 minutes reached".to_string(),
-                code: Some("TIMEOUT".to_string()),
-            }).await;
+            tracing::warn!(
+                "WS: Global execution timeout (300s) at iteration {}",
+                iteration
+            );
+            ws_send(
+                sender,
+                &WsServerMessage::Error {
+                    message: "Execution timeout — 5 minutes reached".to_string(),
+                    code: Some("TIMEOUT".to_string()),
+                },
+            )
+            .await;
             break;
         }
 
         if iteration > max_tool_iterations as u32 {
-            ws_send(sender, &WsServerMessage::Error {
-                message: "Max tool iterations reached".to_string(),
-                code: Some("MAX_ITERATIONS".to_string()),
-            }).await;
+            ws_send(
+                sender,
+                &WsServerMessage::Error {
+                    message: "Max tool iterations reached".to_string(),
+                    code: Some("MAX_ITERATIONS".to_string()),
+                },
+            )
+            .await;
             break;
         }
 
         // Send Iteration
-        ws_send(sender, &WsServerMessage::Iteration {
-            number: iteration,
-            max: max_tool_iterations as u32,
-        }).await;
+        ws_send(
+            sender,
+            &WsServerMessage::Iteration {
+                number: iteration,
+                max: max_tool_iterations as u32,
+            },
+        )
+        .await;
 
         let mut body = json!({
             "model": &model,
@@ -1194,11 +1472,18 @@ async fn execute_streaming_ws(
         let resp = match send_to_anthropic(state, &body, 300).await {
             Ok(r) => r,
             Err((_, Json(err_val))) => {
-                let err_msg = err_val.get("error").and_then(|e| e.as_str()).unwrap_or("Unknown error");
-                ws_send(sender, &WsServerMessage::Error {
-                    message: format!("API error: {}", err_msg),
-                    code: Some("API_ERROR".to_string()),
-                }).await;
+                let err_msg = err_val
+                    .get("error")
+                    .and_then(|e| e.as_str())
+                    .unwrap_or("Unknown error");
+                ws_send(
+                    sender,
+                    &WsServerMessage::Error {
+                        message: format!("API error: {}", err_msg),
+                        code: Some("API_ERROR".to_string()),
+                    },
+                )
+                .await;
                 break;
             }
         };
@@ -1206,11 +1491,20 @@ async fn execute_streaming_ws(
         if !resp.status().is_success() {
             let status = resp.status();
             let err_text = resp.text().await.unwrap_or_default();
-            tracing::error!("WS: Anthropic API error (status={}, iter={}): {}", status, iteration, &truncate_for_context_with_limit(&err_text, 500));
-            ws_send(sender, &WsServerMessage::Error {
-                message: err_text,
-                code: Some("ANTHROPIC_ERROR".to_string()),
-            }).await;
+            tracing::error!(
+                "WS: Anthropic API error (status={}, iter={}): {}",
+                status,
+                iteration,
+                &truncate_for_context_with_limit(&err_text, 500)
+            );
+            ws_send(
+                sender,
+                &WsServerMessage::Error {
+                    message: err_text,
+                    code: Some("ANTHROPIC_ERROR".to_string()),
+                },
+            )
+            .await;
             break;
         }
 
@@ -1228,7 +1522,9 @@ async fn execute_streaming_ws(
         let mut raw_buf: Vec<u8> = Vec::new();
 
         while let Some(chunk_result) = byte_stream.next().await {
-            if cancel.is_cancelled() { break; }
+            if cancel.is_cancelled() {
+                break;
+            }
 
             let chunk = match chunk_result {
                 Ok(bytes) => bytes,
@@ -1240,7 +1536,9 @@ async fn execute_streaming_ws(
                 let line_bytes = raw_buf[..nl].to_vec();
                 raw_buf = raw_buf[nl + 1..].to_vec();
                 let line = String::from_utf8_lossy(&line_bytes).trim().to_string();
-                if line.is_empty() || line.starts_with(':') { continue; }
+                if line.is_empty() || line.starts_with(':') {
+                    continue;
+                }
                 let data = match line.strip_prefix("data: ") {
                     Some(d) if d != "[DONE]" => d,
                     _ => continue,
@@ -1257,8 +1555,16 @@ async fn execute_streaming_ws(
                         let cb_type = cb.get("type").and_then(|t| t.as_str()).unwrap_or("");
                         if cb_type == "tool_use" {
                             in_tool_use = true;
-                            current_tool_id = cb.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                            current_tool_name = cb.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            current_tool_id = cb
+                                .get("id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
+                            current_tool_name = cb
+                                .get("name")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
                             current_tool_input_json.clear();
                         }
                     }
@@ -1271,21 +1577,35 @@ async fn execute_streaming_ws(
                                 text_content.push_str(text);
                                 full_text.push_str(text);
                                 agent_text_len += text.len();
-                                ws_send(sender, &WsServerMessage::Token { content: text.to_string() }).await;
+                                ws_send(
+                                    sender,
+                                    &WsServerMessage::Token {
+                                        content: text.to_string(),
+                                    },
+                                )
+                                .await;
                             }
                         } else if delta_type == "input_json_delta" {
-                            let partial = delta.get("partial_json").and_then(|t| t.as_str()).unwrap_or("");
+                            let partial = delta
+                                .get("partial_json")
+                                .and_then(|t| t.as_str())
+                                .unwrap_or("");
                             current_tool_input_json.push_str(partial);
                         }
                     }
                     "content_block_stop" => {
                         if in_tool_use {
-                            let tool_input: Value = serde_json::from_str(&current_tool_input_json).unwrap_or(json!({}));
-                            ws_send(sender, &WsServerMessage::ToolCall {
-                                name: current_tool_name.clone(),
-                                args: tool_input.clone(),
-                                iteration,
-                            }).await;
+                            let tool_input: Value =
+                                serde_json::from_str(&current_tool_input_json).unwrap_or(json!({}));
+                            ws_send(
+                                sender,
+                                &WsServerMessage::ToolCall {
+                                    name: current_tool_name.clone(),
+                                    args: tool_input.clone(),
+                                    iteration,
+                                },
+                            )
+                            .await;
                             tool_uses.push(json!({
                                 "type": "tool_use",
                                 "id": &current_tool_id,
@@ -1296,11 +1616,18 @@ async fn execute_streaming_ws(
                         }
                     }
                     "message_delta" => {
-                        if let Some(sr) = event.get("delta").and_then(|d| d.get("stop_reason")).and_then(|s| s.as_str()) {
+                        if let Some(sr) = event
+                            .get("delta")
+                            .and_then(|d| d.get("stop_reason"))
+                            .and_then(|s| s.as_str())
+                        {
                             stop_reason = sr.to_string();
                         }
                         if let Some(usage) = event.get("usage") {
-                            _total_tokens = usage.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                            _total_tokens = usage
+                                .get("output_tokens")
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0) as u32;
                         }
                     }
                     _ => {}
@@ -1309,10 +1636,14 @@ async fn execute_streaming_ws(
         }
 
         if cancel.is_cancelled() {
-            ws_send(sender, &WsServerMessage::Error {
-                message: "Cancelled by user".to_string(),
-                code: Some("CANCELLED".to_string()),
-            }).await;
+            ws_send(
+                sender,
+                &WsServerMessage::Error {
+                    message: "Cancelled by user".to_string(),
+                    code: Some("CANCELLED".to_string()),
+                },
+            )
+            .await;
             break;
         }
 
@@ -1333,8 +1664,16 @@ async fn execute_streaming_ws(
             let mut handles = Vec::new();
             let mut pending_tool_ids: Vec<String> = Vec::new();
             for tu in &tool_uses {
-                let tool_name = tu.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
-                let tool_id = tu.get("id").and_then(|i| i.as_str()).unwrap_or("").to_string();
+                let tool_name = tu
+                    .get("name")
+                    .and_then(|n| n.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let tool_id = tu
+                    .get("id")
+                    .and_then(|i| i.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 pending_tool_ids.push(tool_id.clone());
                 let tool_input = tu.get("input").unwrap_or(&json!({})).clone();
                 let executor = state.tool_executor.with_working_directory(&wd);
@@ -1347,7 +1686,9 @@ async fn execute_streaming_ws(
                         match tokio::time::timeout(
                             std::time::Duration::from_secs(120),
                             execute_agent_call(&state_ref, &tool_input, &wd_ref, 0),
-                        ).await {
+                        )
+                        .await
+                        {
                             Ok(res) => res,
                             Err(_) => ("Agent delegation timed out after 120s".to_string(), true),
                         }
@@ -1356,9 +1697,17 @@ async fn execute_streaming_ws(
                         match tokio::time::timeout(
                             timeout,
                             executor.execute_with_state(&tool_name, &tool_input, &state_ref),
-                        ).await {
+                        )
+                        .await
+                        {
                             Ok(res) => res,
-                            Err(_) => (format!("Tool '{}' timed out after {}s", tool_name, TOOL_TIMEOUT_SECS), true),
+                            Err(_) => (
+                                format!(
+                                    "Tool '{}' timed out after {}s",
+                                    tool_name, TOOL_TIMEOUT_SECS
+                                ),
+                                true,
+                            ),
                         }
                     };
                     (tool_name, tool_id, result, is_error)
@@ -1386,20 +1735,34 @@ async fn execute_streaming_ws(
                         }
 
                         let summary: String = result.chars().take(200).collect();
-                        ws_send(sender, &WsServerMessage::ToolResult {
-                            name: tool_name.clone(),
-                            success: !is_error,
-                            summary,
-                            iteration,
-                        }).await;
+                        ws_send(
+                            sender,
+                            &WsServerMessage::ToolResult {
+                                name: tool_name.clone(),
+                                success: !is_error,
+                                summary,
+                                iteration,
+                            },
+                        )
+                        .await;
 
-                        ws_send(sender, &WsServerMessage::ToolProgress {
-                            iteration,
-                            tools_completed,
-                            tools_total,
-                        }).await;
+                        ws_send(
+                            sender,
+                            &WsServerMessage::ToolProgress {
+                                iteration,
+                                tools_completed,
+                                tools_total,
+                            },
+                        )
+                        .await;
 
-                        let context_limit = if iteration < 3 { 25000 } else if iteration < 6 { 15000 } else { 8000 };
+                        let context_limit = if iteration < 3 {
+                            25000
+                        } else if iteration < 6 {
+                            15000
+                        } else {
+                            8000
+                        };
                         let truncated = truncate_for_context_with_limit(&result, context_limit);
                         tool_results.push(json!({
                             "type": "tool_result",
@@ -1426,19 +1789,30 @@ async fn execute_streaming_ws(
 
             // Iteration nudges
             if iteration >= 3 {
-                let approx_context_bytes: usize = conversation.iter()
+                let approx_context_bytes: usize = conversation
+                    .iter()
                     .map(|c| serde_json::to_string(c).map(|s| s.len()).unwrap_or(0))
                     .sum();
                 let context_hint = format!(
                     "[CONTEXT: ~{}KB, {} msgs, iter {}/{}]",
-                    approx_context_bytes / 1024, conversation.len(), iteration, max_tool_iterations
+                    approx_context_bytes / 1024,
+                    conversation.len(),
+                    iteration,
+                    max_tool_iterations
                 );
                 let nudge = if iteration >= 12 {
-                    format!("[SYSTEM: Approaching limit. {} Wrap up and apply any pending changes.]", context_hint)
+                    format!(
+                        "[SYSTEM: Approaching limit. {} Wrap up and apply any pending changes.]",
+                        context_hint
+                    )
                 } else if iteration >= 8 {
                     format!("[SYSTEM: {} Consider applying edits now.]", context_hint)
                 } else {
-                    format!("[SYSTEM: {} {} iterations remaining.]", context_hint, max_tool_iterations as u32 - iteration)
+                    format!(
+                        "[SYSTEM: {} {} iterations remaining.]",
+                        context_hint,
+                        max_tool_iterations as u32 - iteration
+                    )
                 };
                 conversation.push(json!({ "role": "user", "content": nudge }));
             }
@@ -1449,17 +1823,32 @@ async fn execute_streaming_ws(
 
         // Auto-fix phase
         if !has_written_file && !full_text.is_empty() && agent_text_len > 50 {
-            let fix_keywords = ["fix", "napraw", "zmian", "popraw", "zastosow",
-                                "write_file", "edit_file", "zmieni", "edytu", "zapisa"];
+            let fix_keywords = [
+                "fix",
+                "napraw",
+                "zmian",
+                "popraw",
+                "zastosow",
+                "write_file",
+                "edit_file",
+                "zmieni",
+                "edytu",
+                "zapisa",
+            ];
             let lower = full_text.to_lowercase();
             let needs_fix = fix_keywords.iter().any(|kw| lower.contains(kw));
 
             if needs_fix {
-                tracing::info!("WS: Auto-fix phase — agent described changes but never wrote files");
-                let edit_tools: Vec<&Value> = tool_defs.iter().filter(|td| {
-                    let name = td.get("name").and_then(|n| n.as_str()).unwrap_or("");
-                    name == "edit_file" || name == "write_file"
-                }).collect();
+                tracing::info!(
+                    "WS: Auto-fix phase — agent described changes but never wrote files"
+                );
+                let edit_tools: Vec<&Value> = tool_defs
+                    .iter()
+                    .filter(|td| {
+                        let name = td.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                        name == "edit_file" || name == "write_file"
+                    })
+                    .collect();
 
                 if !edit_tools.is_empty() {
                     conversation.push(json!({
@@ -1478,43 +1867,67 @@ async fn execute_streaming_ws(
 
                     if let Ok(fix_resp) = send_to_anthropic(state, &fix_body, 60).await
                         && fix_resp.status().is_success()
-                            && let Ok(fix_json) = fix_resp.json::<Value>().await
-                                && let Some(content) = fix_json.get("content").and_then(|c| c.as_array()) {
-                                    for block in content {
-                                        let block_type = block.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                                        if block_type == "tool_use" {
-                                            let fix_tool_name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
-                                            let empty_input = json!({});
-                                            let fix_tool_input = block.get("input").unwrap_or(&empty_input);
-                                            let executor = state.tool_executor.with_working_directory(&wd);
-                                            let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
-                                            let (result, is_error) = match tokio::time::timeout(
-                                                timeout,
-                                                executor.execute_with_state(fix_tool_name, fix_tool_input, state),
-                                            ).await {
-                                                Ok(res) => res,
-                                                Err(_) => (format!("Tool '{}' timed out", fix_tool_name), true),
-                                            };
+                        && let Ok(fix_json) = fix_resp.json::<Value>().await
+                        && let Some(content) = fix_json.get("content").and_then(|c| c.as_array())
+                    {
+                        for block in content {
+                            let block_type =
+                                block.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            if block_type == "tool_use" {
+                                let fix_tool_name =
+                                    block.get("name").and_then(|n| n.as_str()).unwrap_or("");
+                                let empty_input = json!({});
+                                let fix_tool_input = block.get("input").unwrap_or(&empty_input);
+                                let executor = state.tool_executor.with_working_directory(&wd);
+                                let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
+                                let (result, is_error) = match tokio::time::timeout(
+                                    timeout,
+                                    executor.execute_with_state(
+                                        fix_tool_name,
+                                        fix_tool_input,
+                                        state,
+                                    ),
+                                )
+                                .await
+                                {
+                                    Ok(res) => res,
+                                    Err(_) => (format!("Tool '{}' timed out", fix_tool_name), true),
+                                };
 
-                                            ws_send(sender, &WsServerMessage::ToolCall {
-                                                name: fix_tool_name.to_string(),
-                                                args: fix_tool_input.clone(),
-                                                iteration,
-                                            }).await;
-                                            let summary: String = result.chars().take(200).collect();
-                                            ws_send(sender, &WsServerMessage::ToolResult {
-                                                name: fix_tool_name.to_string(),
-                                                success: !is_error,
-                                                summary,
-                                                iteration,
-                                            }).await;
-                                        } else if block_type == "text"
-                                            && let Some(text) = block.get("text").and_then(|t| t.as_str())
-                                                && !text.is_empty() {
-                                                    ws_send(sender, &WsServerMessage::Token { content: text.to_string() }).await;
-                                                }
-                                    }
-                                }
+                                ws_send(
+                                    sender,
+                                    &WsServerMessage::ToolCall {
+                                        name: fix_tool_name.to_string(),
+                                        args: fix_tool_input.clone(),
+                                        iteration,
+                                    },
+                                )
+                                .await;
+                                let summary: String = result.chars().take(200).collect();
+                                ws_send(
+                                    sender,
+                                    &WsServerMessage::ToolResult {
+                                        name: fix_tool_name.to_string(),
+                                        success: !is_error,
+                                        summary,
+                                        iteration,
+                                    },
+                                )
+                                .await;
+                            } else if block_type == "text"
+                                && let Some(text) = block.get("text").and_then(|t| t.as_str())
+                                && !text.is_empty()
+                            {
+                                ws_send(
+                                    sender,
+                                    &WsServerMessage::Token {
+                                        content: text.to_string(),
+                                    },
+                                )
+                                .await;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1525,9 +1938,13 @@ async fn execute_streaming_ws(
         }
 
         // Complete
-        ws_send(sender, &WsServerMessage::Complete {
-            duration_ms: execution_start.elapsed().as_millis() as u64,
-        }).await;
+        ws_send(
+            sender,
+            &WsServerMessage::Complete {
+                duration_ms: execution_start.elapsed().as_millis() as u64,
+            },
+        )
+        .await;
         break;
     }
 }
@@ -1548,7 +1965,7 @@ pub(crate) async fn execute_agent_call(
     let (max_call_depth, agent_max_iterations) = {
         let row: Option<(i32, i32)> = sqlx::query_as(
             "SELECT COALESCE(agent_max_call_depth, 3), COALESCE(agent_max_iterations, 8) \
-             FROM ch_settings WHERE id = 1"
+             FROM ch_settings WHERE id = 1",
         )
         .fetch_optional(&state.db)
         .await
@@ -1560,7 +1977,10 @@ pub(crate) async fn execute_agent_call(
     let depth = call_depth + 1;
     if depth > max_call_depth as u32 {
         return (
-            format!("Agent call depth limit ({}) reached — cannot delegate further", max_call_depth),
+            format!(
+                "Agent call depth limit ({}) reached — cannot delegate further",
+                max_call_depth
+            ),
             true,
         );
     }
@@ -1578,11 +1998,20 @@ pub(crate) async fn execute_agent_call(
     let (agent_display_name, agent_role, agent_tier, agent_desc) = {
         let agents = state.agents.read().await;
         match agents.iter().find(|a| a.name.to_lowercase() == agent_name) {
-            Some(a) => (a.name.clone(), a.role.clone(), a.tier.clone(), a.description.clone()),
+            Some(a) => (
+                a.name.clone(),
+                a.role.clone(),
+                a.tier.clone(),
+                a.description.clone(),
+            ),
             None => {
                 let available: Vec<String> = agents.iter().map(|a| a.name.to_lowercase()).collect();
                 return (
-                    format!("Unknown agent '{}'. Available: {}", agent_name, available.join(", ")),
+                    format!(
+                        "Unknown agent '{}'. Available: {}",
+                        agent_name,
+                        available.join(", ")
+                    ),
                     true,
                 );
             }
@@ -1595,7 +2024,11 @@ pub(crate) async fn execute_agent_call(
 
     tracing::info!(
         "call_agent: delegating to {} ({}, {}, depth={}) — model={}",
-        agent_display_name, agent_role, agent_tier, depth, model
+        agent_display_name,
+        agent_role,
+        agent_tier,
+        depth,
+        model
     );
 
     let task_start = std::time::Instant::now();
@@ -1626,13 +2059,12 @@ pub(crate) async fn execute_agent_call(
 
     // Build agent-specific system prompt
     let lang = {
-        let row: Option<(String,)> = sqlx::query_as(
-            "SELECT COALESCE(language, 'en') FROM ch_settings WHERE id = 1"
-        )
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT COALESCE(language, 'en') FROM ch_settings WHERE id = 1")
+                .fetch_optional(&state.db)
+                .await
+                .ok()
+                .flatten();
         row.map(|(l,)| l).unwrap_or_else(|| "en".to_string())
     };
     let lang_name = if lang == "pl" { "Polish" } else { "English" };
@@ -1661,7 +2093,10 @@ pub(crate) async fn execute_agent_call(
             "You are at max delegation depth — complete the task yourself."
         },
         wd_section = if !working_directory.is_empty() {
-            format!("\n## Working Directory\n**Current working directory**: `{}`", working_directory)
+            format!(
+                "\n## Working Directory\n**Current working directory**: `{}`",
+                working_directory
+            )
         } else {
             String::new()
         },
@@ -1673,16 +2108,16 @@ pub(crate) async fn execute_agent_call(
         .tool_definitions_with_mcp(state)
         .await
         .into_iter()
-        .map(|td| json!({
-            "name": td.name,
-            "description": td.description,
-            "input_schema": td.input_schema,
-        }))
+        .map(|td| {
+            json!({
+                "name": td.name,
+                "description": td.description,
+                "input_schema": td.input_schema,
+            })
+        })
         .collect();
 
-    let mut conversation: Vec<Value> = vec![
-        json!({ "role": "user", "content": task }),
-    ];
+    let mut conversation: Vec<Value> = vec![json!({ "role": "user", "content": task })];
 
     let mut collected_text = String::new();
 
@@ -1698,14 +2133,24 @@ pub(crate) async fn execute_agent_call(
         let resp = match send_to_anthropic(state, &body, 120).await {
             Ok(r) => r,
             Err((_, Json(err_val))) => {
-                let msg = err_val.get("error").and_then(|e| e.as_str()).unwrap_or("Unknown error");
+                let msg = err_val
+                    .get("error")
+                    .and_then(|e| e.as_str())
+                    .unwrap_or("Unknown error");
                 return (format!("[{} error: {}]", agent_display_name, msg), true);
             }
         };
 
         if !resp.status().is_success() {
             let err = resp.text().await.unwrap_or_default();
-            return (format!("[{} API error: {}]", agent_display_name, &truncate_for_context_with_limit(&err, 300)), true);
+            return (
+                format!(
+                    "[{} API error: {}]",
+                    agent_display_name,
+                    &truncate_for_context_with_limit(&err, 300)
+                ),
+                true,
+            );
         }
 
         let resp_json: Value = match resp.json().await {
@@ -1713,7 +2158,10 @@ pub(crate) async fn execute_agent_call(
             Err(e) => return (format!("[{} parse error: {}]", agent_display_name, e), true),
         };
 
-        let stop_reason = resp_json.get("stop_reason").and_then(|s| s.as_str()).unwrap_or("end_turn");
+        let stop_reason = resp_json
+            .get("stop_reason")
+            .and_then(|s| s.as_str())
+            .unwrap_or("end_turn");
         let content = resp_json.get("content").and_then(|c| c.as_array());
 
         let mut text_parts = Vec::new();
@@ -1756,14 +2204,24 @@ pub(crate) async fn execute_agent_call(
 
                 let (result, is_error) = if tool_name == "call_agent" {
                     // Recursive delegation
-                    Box::pin(execute_agent_call(state, tool_input, working_directory, depth)).await
+                    Box::pin(execute_agent_call(
+                        state,
+                        tool_input,
+                        working_directory,
+                        depth,
+                    ))
+                    .await
                 } else {
-                    let executor = state.tool_executor.with_working_directory(working_directory);
+                    let executor = state
+                        .tool_executor
+                        .with_working_directory(working_directory);
                     let timeout = std::time::Duration::from_secs(TOOL_TIMEOUT_SECS);
                     match tokio::time::timeout(
                         timeout,
                         executor.execute_with_state(tool_name, tool_input, state),
-                    ).await {
+                    )
+                    .await
+                    {
                         Ok(res) => res,
                         Err(_) => (format!("Tool '{}' timed out", tool_name), true),
                     }
@@ -1803,7 +2261,7 @@ pub(crate) async fn execute_agent_call(
         tokio::spawn(async move {
             let _ = sqlx::query(
                 "UPDATE ch_a2a_tasks SET status = $1, result_preview = $2, duration_ms = $3, \
-                 is_error = $4, completed_at = NOW() WHERE id = $5"
+                 is_error = $4, completed_at = NOW() WHERE id = $5",
             )
             .bind(if is_error { "failed" } else { "completed" })
             .bind(&preview)
@@ -1816,11 +2274,20 @@ pub(crate) async fn execute_agent_call(
     }
 
     if collected_text.is_empty() {
-        return (format!("[{} completed the task but produced no text output]", agent_display_name), false);
+        return (
+            format!(
+                "[{} completed the task but produced no text output]",
+                agent_display_name
+            ),
+            false,
+        );
     }
 
     (
-        format!("**[Agent {} ({})]:**\n\n{}", agent_display_name, agent_role, collected_text),
+        format!(
+            "**[Agent {} ({})]:**\n\n{}",
+            agent_display_name, agent_role, collected_text
+        ),
         false,
     )
 }

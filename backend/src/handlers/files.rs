@@ -1,9 +1,9 @@
 //! File listing and native folder browser endpoints.
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::state::AppState;
 
@@ -68,8 +68,14 @@ pub async fn list_files(
 
     // Sort: directories first, then alphabetical
     entries.sort_by(|a, b| {
-        let a_dir = a.get("is_directory").and_then(|v| v.as_bool()).unwrap_or(false);
-        let b_dir = b.get("is_directory").and_then(|v| v.as_bool()).unwrap_or(false);
+        let a_dir = a
+            .get("is_directory")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let b_dir = b
+            .get("is_directory")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         match (b_dir, a_dir) {
             (true, false) => std::cmp::Ordering::Greater,
             (false, true) => std::cmp::Ordering::Less,
@@ -118,7 +124,10 @@ if ($result -eq [System.Windows.Forms.DialogResult]::OK) {{
         if initial_dir.is_empty() {
             String::new()
         } else {
-            format!("$dialog.SelectedPath = '{}'", initial_dir.replace('\'', "''"))
+            format!(
+                "$dialog.SelectedPath = '{}'",
+                initial_dir.replace('\'', "''")
+            )
         }
     );
 

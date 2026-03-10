@@ -37,7 +37,10 @@ pub fn spawn(state: AppState) -> tokio::task::JoinHandle<()> {
     if crate::browser_proxy::is_enabled() {
         let proxy_state = state.clone();
         tokio::spawn(async move {
-            tracing::info!("watchdog: browser proxy monitor started (interval={}s)", PROXY_CHECK_INTERVAL.as_secs());
+            tracing::info!(
+                "watchdog: browser proxy monitor started (interval={}s)",
+                PROXY_CHECK_INTERVAL.as_secs()
+            );
 
             // Initial check immediately
             check_browser_proxy(&proxy_state).await;
@@ -87,7 +90,10 @@ async fn check_db(state: &AppState) -> bool {
             false
         }
         Err(_) => {
-            tracing::error!("watchdog: DB ping timed out after {}s", DB_PING_TIMEOUT.as_secs());
+            tracing::error!(
+                "watchdog: DB ping timed out after {}s",
+                DB_PING_TIMEOUT.as_secs()
+            );
             false
         }
     }
@@ -95,11 +101,8 @@ async fn check_db(state: &AppState) -> bool {
 
 async fn check_and_refresh_cache(state: &AppState) -> bool {
     let is_stale = {
-        let lock_result = tokio::time::timeout(
-            Duration::from_secs(5),
-            state.model_cache.read(),
-        )
-        .await;
+        let lock_result =
+            tokio::time::timeout(Duration::from_secs(5), state.model_cache.read()).await;
 
         match lock_result {
             Ok(cache) => cache.is_stale(),
@@ -121,7 +124,11 @@ async fn check_and_refresh_cache(state: &AppState) -> bool {
         match refresh_result {
             Ok((models, errors)) => {
                 let total: usize = models.values().map(|v| v.len()).sum();
-                tracing::info!("watchdog: cache refreshed — {} models from {} providers", total, models.len());
+                tracing::info!(
+                    "watchdog: cache refreshed — {} models from {} providers",
+                    total,
+                    models.len()
+                );
                 for err in &errors {
                     tracing::warn!("watchdog: provider fetch error: {}", err);
                 }
@@ -190,11 +197,25 @@ async fn check_browser_proxy(state: &AppState) {
     let mut status = crate::browser_proxy::detailed_health_check(&state.http_client).await;
 
     // Carry over restart tracking from previous state
-    let (was_ready, prev_failures, prev_restart_epoch, prev_total_restarts,
-         prev_backoff, prev_successes, prev_pid) = {
+    let (
+        was_ready,
+        prev_failures,
+        prev_restart_epoch,
+        prev_total_restarts,
+        prev_backoff,
+        prev_successes,
+        prev_pid,
+    ) = {
         let prev = state.browser_proxy_status.read().await;
-        (prev.ready, prev.consecutive_failures, prev.last_restart_epoch,
-         prev.total_restarts, prev.backoff_level, prev.consecutive_successes, prev.last_pid)
+        (
+            prev.ready,
+            prev.consecutive_failures,
+            prev.last_restart_epoch,
+            prev.total_restarts,
+            prev.backoff_level,
+            prev.consecutive_successes,
+            prev.last_pid,
+        )
     };
 
     // Preserve restart history in new status
@@ -212,10 +233,12 @@ async fn check_browser_proxy(state: &AppState) {
         status.consecutive_successes = prev_successes + 1;
 
         // Reset backoff after sustained health
-        if status.consecutive_successes >= PROXY_BACKOFF_RESET_THRESHOLD && status.backoff_level > 0 {
+        if status.consecutive_successes >= PROXY_BACKOFF_RESET_THRESHOLD && status.backoff_level > 0
+        {
             tracing::info!(
                 "watchdog: browser proxy healthy for {} consecutive checks — resetting backoff from level {}",
-                status.consecutive_successes, status.backoff_level
+                status.consecutive_successes,
+                status.backoff_level
             );
             status.backoff_level = 0;
         }
@@ -223,13 +246,18 @@ async fn check_browser_proxy(state: &AppState) {
         if !was_ready {
             tracing::info!(
                 "watchdog: browser proxy ONLINE — {}/{} workers ready, {} total requests",
-                status.workers_ready, status.pool_size, status.total_requests
+                status.workers_ready,
+                status.pool_size,
+                status.total_requests
             );
             push_history_event(state, "online", &status, None);
         } else {
             tracing::debug!(
                 "watchdog: browser proxy ok — {}/{} workers ready, {} busy, queue={}",
-                status.workers_ready, status.pool_size, status.workers_busy, status.queue_length
+                status.workers_ready,
+                status.pool_size,
+                status.workers_busy,
+                status.queue_length
             );
         }
     } else {
@@ -249,7 +277,9 @@ async fn check_browser_proxy(state: &AppState) {
         } else {
             tracing::warn!(
                 "watchdog: browser proxy reachable but NOT READY (workers_ready={}/{}, failures={})",
-                status.workers_ready, status.pool_size, status.consecutive_failures
+                status.workers_ready,
+                status.pool_size,
+                status.consecutive_failures
             );
             if was_ready || status.consecutive_failures == 1 {
                 push_history_event(state, "not_ready", &status, None);
@@ -334,7 +364,11 @@ async fn kill_previous_proxy(pid: u32) {
             if exit.success() {
                 tracing::info!("watchdog: killed previous proxy PID={}", pid);
             } else {
-                tracing::debug!("watchdog: PID={} already exited (kill returned {})", pid, exit);
+                tracing::debug!(
+                    "watchdog: PID={} already exited (kill returned {})",
+                    pid,
+                    exit
+                );
             }
         }
         Err(e) => {
@@ -357,7 +391,8 @@ async fn poll_after_restart(client: &reqwest::Client) -> bool {
         if check.ready {
             tracing::info!(
                 "watchdog: browser proxy came up during post-restart polling — {}/{} workers ready",
-                check.workers_ready, check.pool_size
+                check.workers_ready,
+                check.pool_size
             );
             return true;
         }
@@ -378,15 +413,17 @@ fn push_history_event(
     status: &crate::browser_proxy::BrowserProxyStatus,
     error: Option<String>,
 ) {
-    state.browser_proxy_history.push(crate::browser_proxy::ProxyHealthEvent {
-        timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-        event_type: event_type.to_string(),
-        workers_ready: status.workers_ready,
-        pool_size: status.pool_size,
-        error,
-        consecutive_failures: status.consecutive_failures,
-        total_restarts: status.total_restarts,
-    });
+    state
+        .browser_proxy_history
+        .push(crate::browser_proxy::ProxyHealthEvent {
+            timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            event_type: event_type.to_string(),
+            workers_ready: status.workers_ready,
+            pool_size: status.pool_size,
+            error,
+            consecutive_failures: status.consecutive_failures,
+            total_restarts: status.total_restarts,
+        });
 }
 
 /// Attempt to auto-restart the browser proxy process.
@@ -416,7 +453,9 @@ async fn try_restart_proxy(
     if status.last_restart_epoch > 0 && elapsed < cooldown {
         tracing::debug!(
             "watchdog: proxy restart cooldown (level={}, {}s) — {}s remaining",
-            status.backoff_level, cooldown, cooldown - elapsed
+            status.backoff_level,
+            cooldown,
+            cooldown - elapsed
         );
         return false;
     }
@@ -440,38 +479,39 @@ async fn try_restart_proxy(
 
     // Prepare log file: redirect stdout/stderr to logs/browser-proxy.log
     let logs_dir = std::path::Path::new(&proxy_dir).join("logs");
-    let log_file_result = std::fs::create_dir_all(&logs_dir)
-        .and_then(|_| {
-            // Truncate (create/overwrite) on each restart
-            std::fs::File::create(logs_dir.join("browser-proxy.log"))
-        });
+    let log_file_result = std::fs::create_dir_all(&logs_dir).and_then(|_| {
+        // Truncate (create/overwrite) on each restart
+        std::fs::File::create(logs_dir.join("browser-proxy.log"))
+    });
 
     let (stdout_cfg, stderr_cfg) = match log_file_result {
-        Ok(log_file) => {
-            match log_file.try_clone() {
-                Ok(log_file_clone) => {
-                    tracing::info!(
-                        "watchdog: proxy output → {}",
-                        logs_dir.join("browser-proxy.log").display()
-                    );
-                    (
-                        std::process::Stdio::from(log_file),
-                        std::process::Stdio::from(log_file_clone),
-                    )
-                }
-                Err(e) => {
-                    tracing::warn!("watchdog: failed to clone log file handle: {} — stdout only", e);
-                    (
-                        std::process::Stdio::from(log_file),
-                        std::process::Stdio::null(),
-                    )
-                }
+        Ok(log_file) => match log_file.try_clone() {
+            Ok(log_file_clone) => {
+                tracing::info!(
+                    "watchdog: proxy output → {}",
+                    logs_dir.join("browser-proxy.log").display()
+                );
+                (
+                    std::process::Stdio::from(log_file),
+                    std::process::Stdio::from(log_file_clone),
+                )
             }
-        }
+            Err(e) => {
+                tracing::warn!(
+                    "watchdog: failed to clone log file handle: {} — stdout only",
+                    e
+                );
+                (
+                    std::process::Stdio::from(log_file),
+                    std::process::Stdio::null(),
+                )
+            }
+        },
         Err(e) => {
             tracing::warn!(
                 "watchdog: cannot create proxy log file ({}), output will be discarded: {}",
-                logs_dir.display(), e
+                logs_dir.display(),
+                e
             );
             (std::process::Stdio::null(), std::process::Stdio::null())
         }

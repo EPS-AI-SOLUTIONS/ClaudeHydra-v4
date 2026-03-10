@@ -14,11 +14,17 @@ use crate::state::AppState;
 
 pub(crate) fn tier_token_budget(model: &str) -> u32 {
     let lower = model.to_lowercase();
-    if lower.contains("opus") { 8192 }
-    else if lower.contains("sonnet") { 4096 }
-    else if lower.contains("haiku") { 2048 }
-    else if lower.contains("flash") || lower.contains("gemini") { 8192 }
-    else { 4096 }
+    if lower.contains("opus") {
+        8192
+    } else if lower.contains("sonnet") {
+        4096
+    } else if lower.contains("haiku") {
+        2048
+    } else if lower.contains("flash") || lower.contains("gemini") {
+        8192
+    } else {
+        4096
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -41,7 +47,11 @@ pub(crate) struct ChatContext {
 
 /// Build system prompt server-side (single source of truth).
 fn build_system_prompt(working_directory: &str, language: &str) -> String {
-    let lang_name = if language == "pl" { "Polish" } else { "English" };
+    let lang_name = if language == "pl" {
+        "Polish"
+    } else {
+        "English"
+    };
     let mut lines = vec![
         "You are a Witcher-themed AI agent in the ClaudeHydra v4 Swarm Control Center.".to_string(),
         "The swarm consists of 12 agents organized in 3 tiers:".to_string(),
@@ -99,11 +109,20 @@ fn build_system_prompt(working_directory: &str, language: &str) -> String {
 // ═══════════════════════════════════════════════════════════════════════
 
 /// Resolves model, max_tokens, session WD (session → global fallback).
-pub(crate) async fn resolve_chat_context(state: &AppState, req: &crate::models::ChatRequest) -> ChatContext {
+pub(crate) async fn resolve_chat_context(
+    state: &AppState,
+    req: &crate::models::ChatRequest,
+) -> ChatContext {
     let model = if let Some(ref m) = req.model {
         m.clone()
     } else {
-        let prompt_text: String = req.messages.iter().rev().take(1).map(|m| m.content.as_str()).collect();
+        let prompt_text: String = req
+            .messages
+            .iter()
+            .rev()
+            .take(1)
+            .map(|m| m.content.as_str())
+            .collect();
         let complexity = crate::model_registry::classify_complexity(&prompt_text);
         match complexity {
             "simple" => crate::model_registry::get_model_id(state, "coordinator").await,
@@ -114,19 +133,26 @@ pub(crate) async fn resolve_chat_context(state: &AppState, req: &crate::models::
 
     // A/B testing: read ab_model_b + ab_split from settings
     let model = {
-        let ab_row: Option<(Option<String>, Option<f64>)> = sqlx::query_as(
-            "SELECT ab_model_b, ab_split::float8 FROM ch_settings WHERE id = 1",
-        )
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
+        let ab_row: Option<(Option<String>, Option<f64>)> =
+            sqlx::query_as("SELECT ab_model_b, ab_split::float8 FROM ch_settings WHERE id = 1")
+                .fetch_optional(&state.db)
+                .await
+                .ok()
+                .flatten();
         if let Some((Some(model_b), Some(split))) = ab_row {
             if !model_b.is_empty() && rand::random::<f64>() < split {
-                tracing::info!("A/B test: using model_b={} (split={:.0}%)", model_b, split * 100.0);
+                tracing::info!(
+                    "A/B test: using model_b={} (split={:.0}%)",
+                    model_b,
+                    split * 100.0
+                );
                 model_b
-            } else { model }
-        } else { model }
+            } else {
+                model
+            }
+        } else {
+            model
+        }
     };
 
     let session_uuid = req
@@ -135,9 +161,10 @@ pub(crate) async fn resolve_chat_context(state: &AppState, req: &crate::models::
         .and_then(|s| uuid::Uuid::parse_str(s).ok());
 
     // Single query: fetch session WD, global WD, language, and generation params
-    let (working_directory, language, db_temperature, db_max_tokens, db_max_iterations) = if let Some(ref sid) = session_uuid {
-        let row: Option<(String, String, String, f64, i32, i32)> = sqlx::query_as(
-            "SELECT COALESCE(s.working_directory, '') AS session_wd, \
+    let (working_directory, language, db_temperature, db_max_tokens, db_max_iterations) =
+        if let Some(ref sid) = session_uuid {
+            let row: Option<(String, String, String, f64, i32, i32)> = sqlx::query_as(
+                "SELECT COALESCE(s.working_directory, '') AS session_wd, \
              COALESCE(g.working_directory, '') AS global_wd, \
              COALESCE(g.language, 'en') AS language, \
              COALESCE(g.temperature, 0.7) AS temperature, \
@@ -146,31 +173,35 @@ pub(crate) async fn resolve_chat_context(state: &AppState, req: &crate::models::
              FROM ch_sessions s \
              CROSS JOIN ch_settings g \
              WHERE s.id = $1 AND g.id = 1",
-        )
-        .bind(sid)
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
-        match row {
-            Some((session_wd, global_wd, lang, temp, mtok, miter)) => {
-                let wd = if !session_wd.is_empty() { session_wd } else { global_wd };
-                (wd, lang, temp, mtok, miter)
+            )
+            .bind(sid)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
+            match row {
+                Some((session_wd, global_wd, lang, temp, mtok, miter)) => {
+                    let wd = if !session_wd.is_empty() {
+                        session_wd
+                    } else {
+                        global_wd
+                    };
+                    (wd, lang, temp, mtok, miter)
+                }
+                None => (String::new(), "en".to_string(), 0.7, 4096, 10),
             }
-            None => (String::new(), "en".to_string(), 0.7, 4096, 10),
-        }
-    } else {
-        let row: Option<(String, String, f64, i32, i32)> = sqlx::query_as(
-            "SELECT COALESCE(working_directory, ''), COALESCE(language, 'en'), \
+        } else {
+            let row: Option<(String, String, f64, i32, i32)> = sqlx::query_as(
+                "SELECT COALESCE(working_directory, ''), COALESCE(language, 'en'), \
              COALESCE(temperature, 0.7), COALESCE(max_tokens, 4096), COALESCE(max_iterations, 10) \
              FROM ch_settings WHERE id = 1",
-        )
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
-        row.unwrap_or(("".to_string(), "en".to_string(), 0.7, 4096, 10))
-    };
+            )
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten();
+            row.unwrap_or(("".to_string(), "en".to_string(), 0.7, 4096, 10))
+        };
 
     let budget = tier_token_budget(&model);
     let max_tokens = req.max_tokens.unwrap_or(db_max_tokens as u32).min(budget);
@@ -181,7 +212,8 @@ pub(crate) async fn resolve_chat_context(state: &AppState, req: &crate::models::
     let system_prompt = {
         let cache = state.prompt_cache.read().await;
         cache.get(&cache_key).cloned()
-    }.unwrap_or_else(|| {
+    }
+    .unwrap_or_else(|| {
         let prompt = build_system_prompt(&working_directory, &language);
         let prompt_clone = prompt.clone();
         let state_clone = state.prompt_cache.clone();
@@ -213,7 +245,11 @@ pub async fn warm_prompt_cache(state: &AppState) {
     let mut count = 0;
     for lang in &languages {
         let prompt = build_system_prompt("", lang);
-        state.prompt_cache.write().await.insert(format!(":{}", lang), prompt);
+        state
+            .prompt_cache
+            .write()
+            .await
+            .insert(format!(":{}", lang), prompt);
         count += 1;
     }
     tracing::info!("prompt_cache: pre-warmed {} system prompt variants", count);

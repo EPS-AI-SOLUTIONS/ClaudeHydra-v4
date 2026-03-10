@@ -25,9 +25,7 @@ pub fn validate_path(raw: &str, allowed_dirs: &[PathBuf]) -> Result<PathBuf, Str
             raw
         };
         if after_drive.contains(':') {
-            return Err(
-                "Access denied: NTFS alternate data streams are not allowed".to_string(),
-            );
+            return Err("Access denied: NTFS alternate data streams are not allowed".to_string());
         }
     }
 
@@ -387,9 +385,7 @@ pub async fn exec_write_file(input: &Value, allowed_dirs: &[PathBuf]) -> (String
     if path.is_file() {
         let bak = path.with_extension(format!(
             "{}.bak",
-            path.extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("txt")
+            path.extension().and_then(|e| e.to_str()).unwrap_or("txt")
         ));
         if let Err(e) = std::fs::copy(&path, &bak) {
             tracing::warn!("Could not create backup {}: {}", bak.display(), e);

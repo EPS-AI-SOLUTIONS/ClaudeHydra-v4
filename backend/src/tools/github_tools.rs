@@ -2,7 +2,7 @@
 // Agent tools for GitHub API interactions.
 // Reads token from ch_oauth_github table via oauth_github module.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::ToolDefinition;
 use crate::oauth_github;
@@ -39,8 +39,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "github_get_repo".to_string(),
-            description: "Get detailed information about a specific GitHub repository."
-                .to_string(),
+            description: "Get detailed information about a specific GitHub repository.".to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -81,8 +80,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "github_get_issue".to_string(),
-            description: "Get a specific GitHub issue with its comments."
-                .to_string(),
+            description: "Get a specific GitHub issue with its comments.".to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -104,8 +102,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "github_create_issue".to_string(),
-            description: "Create a new issue in a GitHub repository."
-                .to_string(),
+            description: "Create a new issue in a GitHub repository.".to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -131,8 +128,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
         },
         ToolDefinition {
             name: "github_create_pr".to_string(),
-            description: "Create a pull request in a GitHub repository."
-                .to_string(),
+            description: "Create a pull request in a GitHub repository.".to_string(),
             input_schema: json!({
                 "type": "object",
                 "properties": {
@@ -171,11 +167,7 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
 //  Tool execution
 // ═══════════════════════════════════════════════════════════════════════
 
-pub async fn execute(
-    tool_name: &str,
-    input: &Value,
-    state: &AppState,
-) -> (String, bool) {
+pub async fn execute(tool_name: &str, input: &Value, state: &AppState) -> (String, bool) {
     let token = match oauth_github::get_github_access_token(state).await {
         Some(t) => t,
         None => {
@@ -201,12 +193,12 @@ pub async fn execute(
 
 // ── Individual tool implementations ──────────────────────────────────────
 
-async fn exec_list_repos(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
-    let sort = match input.get("sort").and_then(|v| v.as_str()).unwrap_or("updated") {
+async fn exec_list_repos(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
+    let sort = match input
+        .get("sort")
+        .and_then(|v| v.as_str())
+        .unwrap_or("updated")
+    {
         s @ ("created" | "updated" | "pushed" | "full_name") => s,
         _ => "updated",
     };
@@ -216,7 +208,10 @@ async fn exec_list_repos(
         .unwrap_or(30)
         .min(100);
 
-    let url = format!("{}/user/repos?sort={}&per_page={}", GITHUB_API_BASE, sort, per_page);
+    let url = format!(
+        "{}/user/repos?sort={}&per_page={}",
+        GITHUB_API_BASE, sort, per_page
+    );
 
     match github_get(client, token, &url).await {
         Ok(body) => {
@@ -247,11 +242,7 @@ async fn exec_list_repos(
     }
 }
 
-async fn exec_get_repo(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
+async fn exec_get_repo(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
     let owner = input.get("owner").and_then(|v| v.as_str()).unwrap_or("");
     let repo = input.get("repo").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -286,11 +277,7 @@ async fn exec_get_repo(
     }
 }
 
-async fn exec_list_issues(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
+async fn exec_list_issues(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
     let owner = input.get("owner").and_then(|v| v.as_str()).unwrap_or("");
     let repo = input.get("repo").and_then(|v| v.as_str()).unwrap_or("");
     let state_filter = input
@@ -339,11 +326,7 @@ async fn exec_list_issues(
     }
 }
 
-async fn exec_get_issue(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
+async fn exec_get_issue(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
     let owner = input.get("owner").and_then(|v| v.as_str()).unwrap_or("");
     let repo = input.get("repo").and_then(|v| v.as_str()).unwrap_or("");
     let number = input.get("number").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -402,11 +385,7 @@ async fn exec_get_issue(
     )
 }
 
-async fn exec_create_issue(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
+async fn exec_create_issue(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
     let owner = input.get("owner").and_then(|v| v.as_str()).unwrap_or("");
     let repo = input.get("repo").and_then(|v| v.as_str()).unwrap_or("");
     let title = input.get("title").and_then(|v| v.as_str()).unwrap_or("");
@@ -418,7 +397,14 @@ async fn exec_create_issue(
 
     let url = format!("{}/repos/{}/{}/issues", GITHUB_API_BASE, owner, repo);
 
-    match github_post(client, token, &url, &json!({ "title": title, "body": body })).await {
+    match github_post(
+        client,
+        token,
+        &url,
+        &json!({ "title": title, "body": body }),
+    )
+    .await
+    {
         Ok(resp) => {
             let result = json!({
                 "number": resp.get("number"),
@@ -435,11 +421,7 @@ async fn exec_create_issue(
     }
 }
 
-async fn exec_create_pr(
-    client: &reqwest::Client,
-    token: &str,
-    input: &Value,
-) -> (String, bool) {
+async fn exec_create_pr(client: &reqwest::Client, token: &str, input: &Value) -> (String, bool) {
     let owner = input.get("owner").and_then(|v| v.as_str()).unwrap_or("");
     let repo = input.get("repo").and_then(|v| v.as_str()).unwrap_or("");
     let title = input.get("title").and_then(|v| v.as_str()).unwrap_or("");
@@ -487,11 +469,7 @@ async fn exec_create_pr(
 
 // ── HTTP helpers ─────────────────────────────────────────────────────────
 
-async fn github_get(
-    client: &reqwest::Client,
-    token: &str,
-    url: &str,
-) -> Result<Value, String> {
+async fn github_get(client: &reqwest::Client, token: &str, url: &str) -> Result<Value, String> {
     let resp = client
         .get(url)
         .header("authorization", format!("Bearer {}", token))

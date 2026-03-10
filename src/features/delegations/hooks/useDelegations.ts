@@ -48,7 +48,7 @@ const useDelegationStore = create<DelegationStore>((set) => ({
     try {
       const data = await apiGet<DelegationsResponse>('/api/agents/delegations');
       set({ data, isLoading: false, isError: false });
-    } catch (error) {
+    } catch (_error) {
       set({ isError: true, isLoading: false });
     }
   },
@@ -65,7 +65,7 @@ const useDelegationStore = create<DelegationStore>((set) => ({
         tasks.unshift(newTask);
         toast.info(`New Delegation: ${newTask.agent_name}`, {
           description:
-            newTask.task_prompt.length > 60 ? newTask.task_prompt.substring(0, 60) + '...' : newTask.task_prompt,
+            newTask.task_prompt.length > 60 ? `${newTask.task_prompt.substring(0, 60)}...` : newTask.task_prompt,
         });
       }
 

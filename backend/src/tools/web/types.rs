@@ -19,19 +19,25 @@ pub const USER_AGENT: &str = "Jaskier-Bot/1.0 (AI Agent Tool)";
 
 /// URL tracking parameters to strip during normalization (#14)
 pub const TRACKING_PARAMS: &[&str] = &[
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "fbclid", "gclid", "mc_cid", "mc_eid", "ref", "_ga",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "fbclid",
+    "gclid",
+    "mc_cid",
+    "mc_eid",
+    "ref",
+    "_ga",
 ];
 
 /// File extensions to skip when crawling (#16)
 pub const SKIP_EXTENSIONS: &[&str] = &[
-    ".pdf", ".zip", ".tar", ".gz", ".rar", ".7z",
-    ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".ico", ".bmp",
-    ".css", ".js", ".woff", ".woff2", ".ttf", ".eot",
-    ".xml", ".json", ".rss", ".atom",
-    ".mp3", ".mp4", ".avi", ".mov", ".wmv", ".flv",
-    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-    ".exe", ".dmg", ".apk", ".deb", ".rpm",
+    ".pdf", ".zip", ".tar", ".gz", ".rar", ".7z", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp",
+    ".ico", ".bmp", ".css", ".js", ".woff", ".woff2", ".ttf", ".eot", ".xml", ".json", ".rss",
+    ".atom", ".mp3", ".mp4", ".avi", ".mov", ".wmv", ".flv", ".doc", ".docx", ".xls", ".xlsx",
+    ".ppt", ".pptx", ".exe", ".dmg", ".apk", ".deb", ".rpm",
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════

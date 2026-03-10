@@ -55,7 +55,7 @@ export function VirtualMessageList({ messages, highlightId }: VirtualMessageList
               <MessageBubble
                 message={msg}
                 isLast={virtualRow.index === messages.length - 1}
-                isStreaming={!!(msg as any).streaming}
+                isStreaming={!!msg.streaming}
               />
             </div>
           );

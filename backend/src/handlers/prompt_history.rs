@@ -1,9 +1,9 @@
 //! Prompt history endpoints — bash-like Arrow Up/Down recall.
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::*;
 use crate::state::AppState;
@@ -16,9 +16,7 @@ const MAX_PROMPT_HISTORY: i64 = 200;
 
 #[utoipa::path(get, path = "/api/prompt-history", tag = "chat",
     responses((status = 200, description = "Prompt history list")))]
-pub async fn list_prompt_history(
-    State(state): State<AppState>,
-) -> Result<Json<Value>, StatusCode> {
+pub async fn list_prompt_history(State(state): State<AppState>) -> Result<Json<Value>, StatusCode> {
     let rows = sqlx::query_as::<_, PromptHistoryRow>(
         "SELECT id, content, created_at FROM ch_prompt_history ORDER BY created_at ASC LIMIT 500",
     )
@@ -61,9 +59,10 @@ pub async fn add_prompt_history(
     })?;
 
     if let Some(ref last_content) = last
-        && last_content == trimmed {
-            return Ok(StatusCode::OK);
-        }
+        && last_content == trimmed
+    {
+        return Ok(StatusCode::OK);
+    }
 
     sqlx::query("INSERT INTO ch_prompt_history (content) VALUES ($1)")
         .bind(trimmed)

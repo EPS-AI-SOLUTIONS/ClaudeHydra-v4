@@ -1,9 +1,9 @@
 //! Health, readiness, system stats, and admin endpoints.
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::*;
 use crate::state::AppState;
@@ -23,8 +23,8 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
 
     // Check which providers are available
     let rt = state.runtime.read().await;
-    let anthropic_available = rt.api_keys.contains_key("ANTHROPIC_API_KEY")
-        || std::env::var("ANTHROPIC_API_KEY").is_ok();
+    let anthropic_available =
+        rt.api_keys.contains_key("ANTHROPIC_API_KEY") || std::env::var("ANTHROPIC_API_KEY").is_ok();
     let google_available = rt.api_keys.contains_key("GOOGLE_API_KEY")
         || std::env::var("GOOGLE_API_KEY").is_ok()
         || std::env::var("GEMINI_API_KEY").is_ok();
@@ -34,13 +34,21 @@ pub async fn health_check(State(state): State<AppState>) -> Json<Value> {
 
     // Browser proxy cached status (if enabled)
     let browser_proxy = if crate::browser_proxy::is_enabled() {
-        state.browser_proxy_status.try_read().ok().map(|s| s.clone())
+        state
+            .browser_proxy_status
+            .try_read()
+            .ok()
+            .map(|s| s.clone())
     } else {
         None
     };
 
     let resp = HealthResponse {
-        status: if db_ok { "healthy".to_string() } else { "degraded".to_string() },
+        status: if db_ok {
+            "healthy".to_string()
+        } else {
+            "degraded".to_string()
+        },
         version: env!("CARGO_PKG_VERSION").to_string(),
         app: "ClaudeHydra v4".to_string(),
         uptime_seconds: uptime,
@@ -137,13 +145,13 @@ pub async fn system_stats(State(state): State<AppState>) -> Json<Value> {
 )]
 pub async fn system_metrics(State(state): State<AppState>) -> Json<Value> {
     let snapshot = state.system_monitor.read().await;
-    
+
     // Status can be determined based on connection or simple mock, here we use online
     // and network I/O to show activity.
     let status = "online".to_string();
     let rx_mb = snapshot.network_rx_bytes as f64 / 1_048_576.0;
     let tx_mb = snapshot.network_tx_bytes as f64 / 1_048_576.0;
-    
+
     let metrics = SystemMetricsResponse {
         cpu: MetricItem {
             label: "CPU".to_string(),
@@ -161,7 +169,7 @@ pub async fn system_metrics(State(state): State<AppState>) -> Json<Value> {
             label: Some(format!("Rx: {:.1} MB | Tx: {:.1} MB", rx_mb, tx_mb)),
             status,
             ping: Some(12), // Placeholder ping
-        }
+        },
     };
     Json(serde_json::to_value(metrics).unwrap_or_else(|_| json!({"error": "serialization failed"})))
 }

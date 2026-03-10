@@ -21,27 +21,64 @@ pub async fn tool_crawl_website(
         .get("url")
         .and_then(|v| v.as_str())
         .ok_or("Missing required argument: url")?;
-    let max_depth = (input.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(2) as u32)
-        .min(MAX_CRAWL_DEPTH);
-    let max_pages = (input.get("max_pages").and_then(|v| v.as_u64()).unwrap_or(10) as usize)
+    let max_depth =
+        (input.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(2) as u32).min(MAX_CRAWL_DEPTH);
+    let max_pages = (input
+        .get("max_pages")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(10) as usize)
         .min(MAX_CRAWL_PAGES);
-    let same_domain = input.get("same_domain_only").and_then(|v| v.as_bool()).unwrap_or(true);
-    let path_prefix = input.get("path_prefix").and_then(|v| v.as_str()).map(String::from);
+    let same_domain = input
+        .get("same_domain_only")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let path_prefix = input
+        .get("path_prefix")
+        .and_then(|v| v.as_str())
+        .map(String::from);
     let exclude_patterns: Vec<String> = input
         .get("exclude_patterns")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
         .unwrap_or_default();
-    let respect_robots = input.get("respect_robots_txt").and_then(|v| v.as_bool()).unwrap_or(true);
-    let use_sitemap = input.get("use_sitemap").and_then(|v| v.as_bool()).unwrap_or(true);
-    let concurrent = (input.get("concurrent_requests").and_then(|v| v.as_u64()).unwrap_or(3) as usize)
+    let respect_robots = input
+        .get("respect_robots_txt")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let use_sitemap = input
+        .get("use_sitemap")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let concurrent = (input
+        .get("concurrent_requests")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(3) as usize)
         .clamp(1, MAX_CONCURRENT);
-    let delay_ms = input.get("delay_ms").and_then(|v| v.as_u64()).unwrap_or(DEFAULT_CRAWL_DELAY_MS);
-    let max_total_secs = (input.get("max_total_seconds").and_then(|v| v.as_u64()).unwrap_or(120))
-        .min(MAX_TOTAL_CRAWL_SECS);
-    let output_format = input.get("output_format").and_then(|v| v.as_str()).unwrap_or("text");
-    let max_text_length = input.get("max_text_length").and_then(|v| v.as_u64()).unwrap_or(3000) as usize;
-    let include_metadata = input.get("include_metadata").and_then(|v| v.as_bool()).unwrap_or(true);
+    let delay_ms = input
+        .get("delay_ms")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(DEFAULT_CRAWL_DELAY_MS);
+    let max_total_secs = (input
+        .get("max_total_seconds")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(120))
+    .min(MAX_TOTAL_CRAWL_SECS);
+    let output_format = input
+        .get("output_format")
+        .and_then(|v| v.as_str())
+        .unwrap_or("text");
+    let max_text_length = input
+        .get("max_text_length")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(3000) as usize;
+    let include_metadata = input
+        .get("include_metadata")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
     let custom_headers: Vec<(String, String)> = input
         .get("headers")
         .and_then(|v| v.as_object())
@@ -62,7 +99,9 @@ pub async fn tool_crawl_website(
 
     let crawl_start = Instant::now();
     let total_timeout = Duration::from_secs(max_total_secs);
-    let options = ExtractionOptions { include_images: false };
+    let options = ExtractionOptions {
+        include_images: false,
+    };
 
     // Fetch robots.txt (#11)
     let robots_rules = if respect_robots {
@@ -107,9 +146,10 @@ pub async fn tool_crawl_website(
                 continue;
             }
             if let Some(ref prefix) = path_prefix
-                && !parsed.path().starts_with(prefix.as_str()) {
-                    continue;
-                }
+                && !parsed.path().starts_with(prefix.as_str())
+            {
+                continue;
+            }
             if !visited.contains(&normalized) {
                 pending.push_back((normalized, 1));
             }
@@ -125,15 +165,17 @@ pub async fn tool_crawl_website(
         // Path prefix (#19)
         if let Some(ref prefix) = path_prefix
             && let Ok(parsed) = Url::parse(url)
-                && !parsed.path().starts_with(prefix.as_str()) {
-                    return true;
-                }
+            && !parsed.path().starts_with(prefix.as_str())
+        {
+            return true;
+        }
         // robots.txt (#11)
         if let Some(ref rules) = robots_rules
             && let Ok(parsed) = Url::parse(url)
-                && !fetch::is_path_allowed(parsed.path(), rules) {
-                    return true;
-                }
+            && !fetch::is_path_allowed(parsed.path(), rules)
+        {
+            return true;
+        }
         false
     };
 
@@ -232,9 +274,10 @@ pub async fn tool_crawl_website(
                             {
                                 if same_domain
                                     && let Ok(parsed) = Url::parse(&link.url)
-                                        && parsed.domain().unwrap_or("") != start_domain {
-                                            continue;
-                                        }
+                                    && parsed.domain().unwrap_or("") != start_domain
+                                {
+                                    continue;
+                                }
                                 pending.push_back((link.url.clone(), depth + 1));
                             }
                         }
@@ -255,6 +298,8 @@ pub async fn tool_crawl_website(
     // Format output (#45)
     match output_format {
         "json" => Ok(super::format_crawl_json(start_url, &results, &errors)),
-        _ => Ok(super::format_crawl_text(start_url, &results, &errors, &visited)),
+        _ => Ok(super::format_crawl_text(
+            start_url, &results, &errors, &visited,
+        )),
     }
 }

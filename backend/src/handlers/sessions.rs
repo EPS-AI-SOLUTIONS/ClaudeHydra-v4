@@ -1,14 +1,14 @@
 //! Session CRUD, message storage, and AI title generation.
 
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::models::*;
 use crate::state::AppState;
 
-use super::{send_to_anthropic, MAX_MESSAGE_LENGTH, MAX_TITLE_LENGTH};
+use super::{MAX_MESSAGE_LENGTH, MAX_TITLE_LENGTH, send_to_anthropic};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Pagination
@@ -111,7 +111,11 @@ pub async fn create_session(
     Json(req): Json<CreateSessionRequest>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
     if req.title.len() > MAX_TITLE_LENGTH {
-        tracing::warn!("create_session: title exceeds {} chars (got {})", MAX_TITLE_LENGTH, req.title.len());
+        tracing::warn!(
+            "create_session: title exceeds {} chars (got {})",
+            MAX_TITLE_LENGTH,
+            req.title.len()
+        );
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -168,16 +172,15 @@ pub async fn get_session(
     })?
     .ok_or(StatusCode::NOT_FOUND)?;
 
-    let total_messages: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM ch_messages WHERE session_id = $1",
-    )
-    .bind(session_id)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to count session messages: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let total_messages: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM ch_messages WHERE session_id = $1")
+            .bind(session_id)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to count session messages: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
     let message_rows = sqlx::query_as::<_, MessageRow>(
         "SELECT * FROM (\
@@ -272,7 +275,11 @@ pub async fn update_session(
     Json(req): Json<UpdateSessionRequest>,
 ) -> Result<Json<Value>, StatusCode> {
     if req.title.len() > MAX_TITLE_LENGTH {
-        tracing::warn!("update_session: title exceeds {} chars (got {})", MAX_TITLE_LENGTH, req.title.len());
+        tracing::warn!(
+            "update_session: title exceeds {} chars (got {})",
+            MAX_TITLE_LENGTH,
+            req.title.len()
+        );
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -300,7 +307,9 @@ pub async fn update_session(
         working_directory: row.working_directory,
     };
 
-    Ok(Json(serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?))
+    Ok(Json(
+        serde_json::to_value(session).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
 }
 
 /// PATCH /api/sessions/{id}/working-directory
@@ -375,7 +384,11 @@ pub async fn add_session_message(
     Json(req): Json<AddMessageRequest>,
 ) -> Result<(StatusCode, Json<Value>), StatusCode> {
     if req.content.len() > MAX_MESSAGE_LENGTH {
-        tracing::warn!("add_session_message: content exceeds {} chars (got {})", MAX_MESSAGE_LENGTH, req.content.len());
+        tracing::warn!(
+            "add_session_message: content exceeds {} chars (got {})",
+            MAX_MESSAGE_LENGTH,
+            req.content.len()
+        );
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -546,6 +559,10 @@ pub async fn generate_session_title(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    tracing::info!("generate_session_title: session {} → {:?}", session_id, title);
+    tracing::info!(
+        "generate_session_title: session {} → {:?}",
+        session_id,
+        title
+    );
     Ok(Json(json!({ "title": title })))
 }

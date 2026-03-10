@@ -1,12 +1,12 @@
 // Jaskier Shared Pattern -- mcp/config
 //! DB CRUD for MCP server configurations (ch_mcp_servers + ch_mcp_discovered_tools).
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sqlx::PgPool;
 
 // ── Models ───────────────────────────────────────────────────────────────
@@ -17,8 +17,8 @@ pub struct McpServerConfig {
     pub name: String,
     pub transport: String,
     pub command: Option<String>,
-    pub args: String,      // JSON array
-    pub env_vars: String,  // JSON object
+    pub args: String,     // JSON array
+    pub env_vars: String, // JSON object
     pub url: Option<String>,
     pub enabled: bool,
     pub auth_token: Option<String>,
@@ -100,7 +100,10 @@ pub async fn get_by_id(db: &PgPool, id: &str) -> Result<Option<McpServerConfig>,
 }
 
 /// Insert a new server config.
-pub async fn insert(db: &PgPool, req: &CreateMcpServerRequest) -> Result<McpServerConfig, sqlx::Error> {
+pub async fn insert(
+    db: &PgPool,
+    req: &CreateMcpServerRequest,
+) -> Result<McpServerConfig, sqlx::Error> {
     let args_json = serde_json::to_string(&req.args.as_deref().unwrap_or(&[]))
         .unwrap_or_else(|_| "[]".to_string());
     let env_json = req
@@ -128,11 +131,16 @@ pub async fn insert(db: &PgPool, req: &CreateMcpServerRequest) -> Result<McpServ
 }
 
 /// Update a server config by ID (partial update).
-pub async fn update(db: &PgPool, id: &str, req: &UpdateMcpServerRequest) -> Result<Option<McpServerConfig>, sqlx::Error> {
+pub async fn update(
+    db: &PgPool,
+    id: &str,
+    req: &UpdateMcpServerRequest,
+) -> Result<Option<McpServerConfig>, sqlx::Error> {
     // Build dynamic SET clauses — keep it simple with COALESCE approach
-    let args_json = req.args.as_ref().map(|a| {
-        serde_json::to_string(a).unwrap_or_else(|_| "[]".to_string())
-    });
+    let args_json = req
+        .args
+        .as_ref()
+        .map(|a| serde_json::to_string(a).unwrap_or_else(|_| "[]".to_string()));
     let env_json = req.env_vars.as_ref().map(|v| v.to_string());
 
     sqlx::query_as::<_, McpServerConfig>(
@@ -174,7 +182,10 @@ pub async fn delete(db: &PgPool, id: &str) -> Result<bool, sqlx::Error> {
 }
 
 /// List discovered tools for a given server.
-pub async fn list_tools_for_server(db: &PgPool, server_id: &str) -> Result<Vec<McpDiscoveredTool>, sqlx::Error> {
+pub async fn list_tools_for_server(
+    db: &PgPool,
+    server_id: &str,
+) -> Result<Vec<McpDiscoveredTool>, sqlx::Error> {
     sqlx::query_as::<_, McpDiscoveredTool>(
         "SELECT id, server_id, tool_name, description, input_schema, discovered_at \
          FROM ch_mcp_discovered_tools WHERE server_id = $1 ORDER BY tool_name",
@@ -199,19 +210,21 @@ pub async fn list_all_tools(db: &PgPool) -> Result<Vec<(String, McpDiscoveredToo
 
     Ok(rows
         .into_iter()
-        .map(|(server_name, id, server_id, tool_name, description, input_schema, discovered_at)| {
-            (
-                server_name,
-                McpDiscoveredTool {
-                    id,
-                    server_id,
-                    tool_name,
-                    description,
-                    input_schema,
-                    discovered_at,
-                },
-            )
-        })
+        .map(
+            |(server_name, id, server_id, tool_name, description, input_schema, discovered_at)| {
+                (
+                    server_name,
+                    McpDiscoveredTool {
+                        id,
+                        server_id,
+                        tool_name,
+                        description,
+                        input_schema,
+                        discovered_at,
+                    },
+                )
+            },
+        )
         .collect())
 }
 
@@ -251,18 +264,13 @@ use crate::state::AppState;
 pub async fn list_servers_handler(
     State(state): State<AppState>,
 ) -> Result<Json<Value>, StatusCode> {
-    let servers = list_all(&state.db)
-        .await
-        .map_err(|e| {
-            tracing::error!("mcp: list_servers: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let servers = list_all(&state.db).await.map_err(|e| {
+        tracing::error!("mcp: list_servers: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     // Redact auth_token in response
-    let servers_json: Vec<Value> = servers
-        .into_iter()
-        .map(|s| redact_server(&s))
-        .collect();
+    let servers_json: Vec<Value> = servers.into_iter().map(|s| redact_server(&s)).collect();
 
     Ok(Json(json!(servers_json)))
 }
@@ -285,12 +293,10 @@ pub async fn create_server_handler(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let server = insert(&state.db, &req)
-        .await
-        .map_err(|e| {
-            tracing::error!("mcp: create_server: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let server = insert(&state.db, &req).await.map_err(|e| {
+        tracing::error!("mcp: create_server: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok((StatusCode::CREATED, Json(redact_server(&server))))
 }
@@ -320,12 +326,10 @@ pub async fn delete_server_handler(
     // Also disconnect from client manager
     state.mcp_client.disconnect_server(&id).await;
 
-    let deleted = delete(&state.db, &id)
-        .await
-        .map_err(|e| {
-            tracing::error!("mcp: delete_server: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let deleted = delete(&state.db, &id).await.map_err(|e| {
+        tracing::error!("mcp: delete_server: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     if deleted {
         Ok(StatusCode::NO_CONTENT)
@@ -385,12 +389,10 @@ pub async fn list_server_tools_handler(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, StatusCode> {
-    let tools = list_tools_for_server(&state.db, &id)
-        .await
-        .map_err(|e| {
-            tracing::error!("mcp: list_server_tools: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    let tools = list_tools_for_server(&state.db, &id).await.map_err(|e| {
+        tracing::error!("mcp: list_server_tools: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     let tools_json: Vec<Value> = tools
         .into_iter()
