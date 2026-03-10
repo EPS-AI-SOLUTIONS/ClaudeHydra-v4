@@ -5,16 +5,19 @@ interface UseChatFileHandlerProps {
   onPasteFile?: (content: string, filename: string) => void;
 }
 
-export function useChatFileHandler({ onPasteImage, onPasteFile }: UseChatFileHandlerProps) {
-  const handlePaste = useCallback((e: any) => {
+export function useChatFileHandler({
+  onPasteImage: _onPasteImage,
+  onPasteFile: _onPasteFile,
+}: UseChatFileHandlerProps) {
+  const handlePaste = useCallback((_e: React.ClipboardEvent) => {
     // Stub implementation
   }, []);
 
-  const handleDrop = useCallback((e: any) => {
+  const handleDrop = useCallback((_e: React.DragEvent) => {
     // Stub implementation
   }, []);
 
-  const handleFileSelect = useCallback((e: any) => {
+  const handleFileSelect = useCallback((_e: React.ChangeEvent<HTMLInputElement>) => {
     // Stub implementation
   }, []);
 

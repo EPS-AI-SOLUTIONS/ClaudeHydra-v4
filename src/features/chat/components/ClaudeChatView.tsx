@@ -6,6 +6,7 @@
  * inline as collapsible ToolCallBlock panels.
  */
 
+import { cn, EmptyState } from '@jaskier/ui';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, Code2, FileSearch, FileText, GitBranch, Globe, MessageSquare, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -13,7 +14,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
-import { EmptyState } from '@/components/molecules/EmptyState';
 import type { ModelOption } from '@/components/molecules/ModelSelector';
 import { type PromptSuggestion, PromptSuggestions } from '@/components/molecules/PromptSuggestions';
 import { useAutoScroll } from '@/features/chat/hooks/useAutoScroll';
@@ -23,7 +23,6 @@ import { useCompletionFeedback } from '@/shared/hooks/useCompletionFeedback';
 import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { useWebSocketChat } from '@/shared/hooks/useWebSocketChat';
-import { cn } from '@/shared/utils/cn';
 import { useViewStore } from '@/stores/viewStore';
 import { claudeHealthCheck, DEFAULT_MODEL } from '../api/claudeStream';
 import { useChatMessages } from '../hooks/useChatMessages';
@@ -74,7 +73,7 @@ function EmptyChatState({ onSuggestionSelect }: { onSuggestionSelect: (text: str
       className="h-full flex flex-col items-center justify-center"
     >
       <EmptyState
-        icon={MessageSquare}
+        icon={<MessageSquare />}
         title={t('chat.startConversation', 'Start a new conversation')}
         description={t(
           'chat.selectModelAndType',
@@ -173,7 +172,11 @@ function VirtualizedMessageArea({
       >
         <AnimatePresence>
           {searchOpen && (
-            <SearchOverlay messages={messages} onMatchChange={onSearchMatchChange} onClose={onSearchClose} />
+            <SearchOverlay
+              messages={messages.filter((m): m is ChatMessage & { id: string } => !!m.id)}
+              onMatchChange={onSearchMatchChange}
+              onClose={onSearchClose}
+            />
           )}
         </AnimatePresence>
         {welcomeMessage ? (
@@ -183,8 +186,10 @@ function VirtualizedMessageArea({
                 id: 'welcome',
                 role: 'assistant',
                 content: welcomeMessage,
-                timestamp: new Date(),
+                timestamp: Date.now(),
               }}
+              isLast={true}
+              isStreaming={false}
             />
           </div>
         ) : (
@@ -206,7 +211,11 @@ function VirtualizedMessageArea({
       {/* #19 — Search overlay */}
       <AnimatePresence>
         {searchOpen && (
-          <SearchOverlay messages={messages} onMatchChange={onSearchMatchChange} onClose={onSearchClose} />
+          <SearchOverlay
+            messages={messages.filter((m): m is ChatMessage & { id: string } => !!m.id)}
+            onMatchChange={onSearchMatchChange}
+            onClose={onSearchClose}
+          />
         )}
       </AnimatePresence>
 
@@ -235,10 +244,11 @@ function VirtualizedMessageArea({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <div className="pb-4">
+              <div className={`pb-4 ${searchMatchId === msg.id ? 'ring-2 ring-yellow-400/60 rounded-xl' : ''}`}>
                 <MessageBubble
                   message={msg}
-                  className={searchMatchId === msg.id ? 'ring-2 ring-yellow-400/60 rounded-xl' : undefined}
+                  isLast={virtualRow.index === messages.length - 1}
+                  isStreaming={!!msg.streaming}
                 />
               </div>
             </div>
@@ -586,7 +596,7 @@ export function ClaudeChatView() {
           content: a.content,
           mimeType: a.mimeType,
         })),
-        timestamp: new Date(),
+        timestamp: Date.now(),
       };
       messageState.updateSessionMessages(sessionId, (prev) => [...prev, userMessage]);
       addPrompt(text);
@@ -598,7 +608,7 @@ export function ClaudeChatView() {
         role: 'assistant',
         content: '',
         toolInteractions: [],
-        timestamp: new Date(),
+        timestamp: Date.now(),
         model: selectedModel,
         streaming: true,
       };

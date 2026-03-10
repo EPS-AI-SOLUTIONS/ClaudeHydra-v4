@@ -80,7 +80,7 @@ export function useChatStreaming({
           content: a.content,
           mimeType: a.mimeType,
         })),
-        timestamp: new Date(),
+        timestamp: Date.now(),
       };
 
       // Capture messages BEFORE adding new ones — used to build API context
@@ -105,7 +105,7 @@ export function useChatStreaming({
         role: 'assistant',
         content: '',
         toolInteractions: [],
-        timestamp: new Date(),
+        timestamp: Date.now(),
         model: selectedModel,
         streaming: true,
       };

@@ -206,10 +206,10 @@ async fn exec_list_repos(
     token: &str,
     input: &Value,
 ) -> (String, bool) {
-    let sort = input
-        .get("sort")
-        .and_then(|v| v.as_str())
-        .unwrap_or("updated");
+    let sort = match input.get("sort").and_then(|v| v.as_str()).unwrap_or("updated") {
+        s @ ("created" | "updated" | "pushed" | "full_name") => s,
+        _ => "updated",
+    };
     let per_page = input
         .get("per_page")
         .and_then(|v| v.as_u64())

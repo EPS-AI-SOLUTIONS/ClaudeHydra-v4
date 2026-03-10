@@ -1,10 +1,9 @@
-import { AgentAvatar, BaseMessageBubble } from '@jaskier/ui';
+import { AgentAvatar, BaseMessageBubble, cn } from '@jaskier/ui';
 import { Terminal } from 'lucide-react';
 import { type MouseEvent, memo, useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
-import { cn } from '@/shared/utils/cn';
-import { useCurrentSessionId } from '@/stores/viewStore';
+import { useCurrentSession } from '@/stores/viewStore';
 import { ErrorBoundary } from './ErrorBoundary';
 import { MessageRating } from './MessageRating';
 import { splitToolOutput, stripParallelHeader } from './messageParser';
@@ -16,19 +15,35 @@ export interface ChatMessage {
   timestamp?: number;
   error?: boolean;
   model?: string;
+  streaming?: boolean;
+  toolInteractions?: Array<{
+    id: string;
+    toolName: string;
+    toolInput?: unknown;
+    result?: string;
+    isError?: boolean;
+    status: 'pending' | 'running' | 'completed' | 'error';
+  }>;
+  attachments?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    content: string;
+    mimeType?: string;
+  }>;
 }
 
 interface MessageBubbleProps {
   message: ChatMessage;
   isLast: boolean;
   isStreaming: boolean;
-  onContextMenu?: (e: MouseEvent<HTMLDivElement>, message: ChatMessage) => void;
+  onContextMenu?: (e: MouseEvent<HTMLElement>, message: ChatMessage) => void;
 }
 
 export const MessageBubble = memo<MessageBubbleProps>(({ message, isLast, isStreaming, onContextMenu }) => {
   const { t } = useTranslation();
   const theme = useViewTheme();
-  const currentSessionId = useCurrentSessionId();
+  const currentSessionId = useCurrentSession()?.id;
 
   const deferredContent = useDeferredValue(message.content);
   const cleanedContent = useMemo(() => stripParallelHeader(deferredContent), [deferredContent]);
@@ -66,11 +81,11 @@ export const MessageBubble = memo<MessageBubbleProps>(({ message, isLast, isStre
 
   return (
     <ErrorBoundary name="MessageBubble">
-      <div onContextMenu={(e) => onContextMenu?.(e, message)}>
+      <article onContextMenu={(e) => onContextMenu?.(e, message)}>
         <BaseMessageBubble
           message={{
             id: message.id || '',
-            role: message.role as any,
+            role: message.role as 'user' | 'assistant' | 'system',
             content: textContent,
             isStreaming: isStreaming && isLast,
             timestamp: message.timestamp,
@@ -83,21 +98,22 @@ export const MessageBubble = memo<MessageBubbleProps>(({ message, isLast, isStre
             accentBg: theme.accentBg,
             textMuted: theme.textMuted,
           }}
-          avatar={message.role === 'assistant' ? <AgentAvatar status={status} /> : undefined}
+          avatar={message.role === 'assistant' ? <AgentAvatar state={status} /> : undefined}
           copyText={t('chat.copyMessage', 'Copy message')}
           copiedText={t('common.copied', 'Copied')}
           modelBadge={message.model}
           toolInteractions={
             toolSegments.length > 0 ? (
               <div className="mb-3">
-                {toolSegments.map((segment, i) => (
+                {toolSegments.map((segment) => (
                   <details
-                    key={`tool-${segment.name}-${i}`}
+                    key={`tool-${segment.name}-${segment.content.slice(0, 20)}`}
                     className={cn('my-2 rounded-lg border', toolDetailsClasses)}
                   >
+                    {/* biome-ignore lint/a11y/noStaticElementInteractions: summary is natively interactive in details */}
+                    {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-expanded needed for screen readers */}
                     <summary
                       aria-expanded="false"
-                      role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -139,7 +155,7 @@ export const MessageBubble = memo<MessageBubbleProps>(({ message, isLast, isStre
             <MessageRating sessionId={currentSessionId} messageId={message.id} />
           </div>
         )}
-      </div>
+      </article>
     </ErrorBoundary>
   );
 });

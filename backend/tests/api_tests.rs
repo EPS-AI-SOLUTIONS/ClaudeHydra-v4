@@ -7,10 +7,11 @@ use tower::ServiceExt;
 use claudehydra_backend::state::AppState;
 
 /// Helper: build a fresh app router with a clean in-memory AppState.
-/// Uses `connect_lazy` — no real database connection required.
+/// Uses `create_test_router` — no GovernorLayer (rate limiter needs peer IP
+/// which `oneshot()` doesn't provide) and `connect_lazy` (no real DB).
 fn app() -> axum::Router {
     let state = AppState::new_test();
-    claudehydra_backend::create_router(state)
+    claudehydra_backend::create_test_router(state)
 }
 
 /// Helper: collect a response body into a serde_json::Value.
@@ -52,10 +53,16 @@ async fn health_has_correct_fields() {
 
     let json = body_json(response).await;
 
-    // new_test() doesn't call mark_ready(), so status is "starting"
-    assert_eq!(json["status"], "starting");
+    // new_test() uses connect_lazy to a fake DB → SELECT 1 fails → "degraded"
+    // (not "starting" — the health endpoint checks DB, not the ready flag)
+    let status = json["status"].as_str().unwrap();
+    assert!(
+        status == "healthy" || status == "degraded",
+        "unexpected health status: {status}"
+    );
     assert_eq!(json["version"], "4.0.0");
-    assert_eq!(json["app"], "ClaudeHydra");
+    // Handler sets "ClaudeHydra v4"
+    assert_eq!(json["app"], "ClaudeHydra v4");
     assert!(json["uptime_seconds"].is_u64());
     assert!(json["providers"].is_array());
     // No ollama_connected field anymore
@@ -81,8 +88,8 @@ async fn auth_mode_returns_200() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
-    // new_test() sets auth_secret = None → auth not required
-    assert_eq!(json["auth_required"], false);
+    // new_test() sets auth_secret = None → mode is "open"
+    assert_eq!(json["mode"], "open");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

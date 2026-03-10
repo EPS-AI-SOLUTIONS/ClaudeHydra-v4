@@ -31,7 +31,10 @@ pub async fn list_tokens(State(state): State<AppState>) -> Json<Value> {
     ))
     .fetch_all(&state.db)
     .await
-    .unwrap_or_default();
+    .unwrap_or_else(|e| {
+        tracing::error!("Failed to list service tokens: {}", e);
+        vec![]
+    });
 
     let services: Vec<Value> = rows
         .iter()
@@ -79,9 +82,10 @@ pub async fn store_token(
     .execute(&state.db)
     .await
     .map_err(|e| {
+        tracing::error!("Failed to store service token: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": format!("Failed to store token: {}", e) })),
+            Json(json!({ "error": "Failed to store authentication data" })),
         )
     })?;
 

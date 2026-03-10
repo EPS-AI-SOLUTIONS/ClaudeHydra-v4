@@ -7,12 +7,12 @@
  * Extracted from ClaudeChatView.tsx to reduce component file size.
  */
 
+import { Button } from '@jaskier/ui';
 import { Bot, Check, ClipboardList, Trash2, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Button  } from '@jaskier/ui';
 import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
 import { copyToClipboard } from '@/shared/utils/clipboard';
 import { formatDateTime, formatTime } from '@/shared/utils/locale';
@@ -76,7 +76,7 @@ export const ChatHeader = memo(function ChatHeader({
     const lines = [`=== ${title} ===`, date ? `Date: ${date}` : '', `Messages: ${messages.length}`, ''];
     for (const msg of messages) {
       const role = msg.role === 'user' ? 'User' : 'Assistant';
-      const time = msg.timestamp instanceof Date ? formatTime(msg.timestamp) : '';
+      const time = typeof msg.timestamp === 'number' ? formatTime(new Date(msg.timestamp)) : '';
       const model = msg.model ? ` (${msg.model})` : '';
       lines.push(`[${role}] ${time}${model}:`);
       lines.push(msg.content);

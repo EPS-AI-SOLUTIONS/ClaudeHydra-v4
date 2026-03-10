@@ -1,15 +1,11 @@
 // src/features/chat/components/ChatInput.tsx
 
-import { BaseChatInput, type BaseChatInputHandle } from '@jaskier/ui';
-import { AlertCircle, ChevronDown, FolderOpen, Network, Send, StopCircle } from 'lucide-react';
+import { BaseChatInput, type BaseChatInputHandle, cn } from '@jaskier/ui';
+import { FolderOpen, Send, StopCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/atoms';
-import { useViewTheme } from '@/shared/hooks/useViewTheme';
-import { cn } from '@/shared/utils/cn';
-import { ImagePreview } from './ImagePreview';
-import { useChatFileHandler } from './useChatFileHandler';
 import { WorkingFolderPicker } from './WorkingFolderPicker';
 
 export interface Attachment {
@@ -17,6 +13,7 @@ export interface Attachment {
   name: string;
   type: 'image' | 'file';
   content: string;
+  mimeType?: string;
 }
 
 export interface ChatInputHandle {
@@ -24,134 +21,121 @@ export interface ChatInputHandle {
   setValue: (value: string) => void;
 }
 
-type OrchestrationMode = 'direct' | 'orchestrate';
-type OrchestrationPattern = 'auto' | 'sequential' | 'parallel' | 'loop' | 'hierarchical' | 'review' | 'security';
-
 interface ChatInputProps {
-  isStreaming: boolean;
-  onSubmit: (prompt: string, image: string | null) => void;
-  onOrchestrate?: (prompt: string, pattern: string) => void;
-  onStop?: () => void;
-  pendingImage: string | null;
-  onClearImage: () => void;
-  onPasteImage?: (base64: string) => void;
-  onPasteFile?: (content: string, filename: string) => void;
-  onAttachPath?: (path: string) => void;
+  onSend: (text: string, attachments: Attachment[]) => void;
+  disabled?: boolean;
+  isLoading?: boolean;
+  placeholder?: string;
   promptHistory?: string[];
   sessionId?: string;
   workingDirectory?: string;
   onWorkingDirectoryChange?: (wd: string) => void;
-  initialValue?: string;
-  initialValueKey?: number;
 }
 
-const PATTERN_OPTIONS: Array<{ value: OrchestrationPattern; label: string }> = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'hierarchical', label: 'Hierarchical' },
-  { value: 'sequential', label: 'Sequential' },
-  { value: 'parallel', label: 'Parallel' },
-  { value: 'loop', label: 'Loop' },
-  { value: 'review', label: 'Code Review' },
-  { value: 'security', label: 'Security Review' },
-];
-
-export const ChatInput = memo<ChatInputProps>(
-  ({
-    isStreaming,
-    onSubmit,
-    onOrchestrate,
-    onStop,
-    pendingImage,
-    onClearImage,
-    onPasteImage,
-    onPasteFile,
-    promptHistory = [],
-    sessionId,
-    workingDirectory,
-    onWorkingDirectoryChange,
-    initialValue,
-    initialValueKey,
-  }) => {
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
+  (
+    {
+      onSend,
+      disabled = false,
+      isLoading = false,
+      placeholder,
+      promptHistory = [],
+      sessionId,
+      workingDirectory,
+      onWorkingDirectoryChange,
+    },
+    ref,
+  ) => {
     const { t } = useTranslation();
-    const theme = useViewTheme();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const baseInputRef = useRef<BaseChatInputHandle>(null);
     const [value, setValue] = useState('');
-    const [error, setError] = useState<string | null>(null);
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-    const [orchMode, setOrchMode] = useState<OrchestrationMode>('direct');
-    const [orchPattern, setOrchPattern] = useState<OrchestrationPattern>('auto');
-    const [showPatternPicker, setShowPatternPicker] = useState(false);
+    useImperativeHandle(ref, () => ({
+      focus: () => baseInputRef.current?.focus(),
+      setValue: (val: string) => {
+        setValue(val);
+        baseInputRef.current?.setValue(val);
+      },
+    }));
 
-    const prevKeyRef = useRef(0);
-    useEffect(() => {
-      if (initialValueKey !== undefined && initialValueKey !== prevKeyRef.current && initialValue) {
-        prevKeyRef.current = initialValueKey;
-        setValue(initialValue);
-        baseInputRef.current?.setValue(initialValue);
-      }
-    }, [initialValue, initialValueKey]);
-
-    const canSubmit = !isStreaming && (value.trim().length > 0 || !!pendingImage);
+    const canSubmit = !disabled && !isLoading && (value.trim().length > 0 || attachments.length > 0);
 
     const handleSubmit = useCallback(
       (val: string) => {
         if (!canSubmit) return;
-        const trimmed = val.trim();
-        if (orchMode === 'orchestrate' && onOrchestrate) {
-          const pattern = orchPattern === 'auto' ? 'hierarchical' : orchPattern;
-          onOrchestrate(trimmed, pattern);
-        } else {
-          onSubmit(trimmed, pendingImage);
-        }
+        onSend(val.trim(), attachments);
         setValue('');
-        setError(null);
-        setShowPatternPicker(false);
+        setAttachments([]);
         baseInputRef.current?.clear();
       },
-      [canSubmit, onSubmit, onOrchestrate, pendingImage, orchMode, orchPattern],
+      [canSubmit, onSend, attachments],
     );
 
-    const { handlePaste, handleDrop, handleFileSelect } = useChatFileHandler({
-      onPasteImage,
-      onPasteFile,
-    });
+    const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+      for (const file of Array.from(files)) {
+        const reader = new FileReader();
+        const isImage = file.type.startsWith('image/');
+        reader.onload = () => {
+          const content = reader.result as string;
+          setAttachments((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              name: file.name,
+              type: isImage ? 'image' : 'file',
+              content: isImage ? content : content,
+              mimeType: file.type,
+            },
+          ]);
+        };
+        if (isImage) {
+          reader.readAsDataURL(file);
+        } else {
+          reader.readAsText(file);
+        }
+      }
+      e.target.value = '';
+    }, []);
 
     return (
-      <section className="p-4 flex flex-col relative transition-all duration-300 z-10 w-full" onDrop={handleDrop}>
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 5 }}
-              className={cn(
-                'absolute bottom-full left-4 mb-2',
-                'flex items-center gap-2 text-sm',
-                'text-red-400 bg-red-950/90 border border-red-500/30',
-                'px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm',
-              )}
-            >
-              <AlertCircle size={14} />
-              <span>{error}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
+      <section className="flex flex-col relative transition-all duration-300 z-10 w-full">
         <BaseChatInput
           ref={baseInputRef}
           value={value}
           onChange={setValue}
           onSend={handleSubmit}
-          disabled={isStreaming}
-          placeholder={pendingImage ? t('chat.describeVisualContext') : t('chat.typeMessage')}
+          disabled={disabled || isLoading}
+          placeholder={placeholder ?? t('chat.typeMessage', 'Type a message... (Shift+Enter = new line)')}
           promptHistory={promptHistory}
-          onPaste={handlePaste as any}
           topActions={
             <>
-              {pendingImage && (
-                <div className="flex w-full mb-2">
-                  <ImagePreview src={pendingImage} onRemove={onClearImage} />
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 w-full mb-2">
+                  {attachments.map((att) => (
+                    <motion.div
+                      key={att.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className={cn(
+                        'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono',
+                        'bg-[var(--matrix-accent)]/10 border border-[var(--matrix-accent)]/20',
+                      )}
+                    >
+                      <span className="truncate max-w-[120px]">{att.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                        className="text-[var(--matrix-text-secondary)] hover:text-red-400 transition-colors"
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        ×
+                      </button>
+                    </motion.div>
+                  ))}
                 </div>
               )}
               {sessionId && onWorkingDirectoryChange && (
@@ -165,110 +149,43 @@ export const ChatInput = memo<ChatInputProps>(
           }
           leftActions={
             <>
-              {onOrchestrate && (
-                <div className="relative">
-                  <Button
-                    type="button"
-                    variant={orchMode === 'orchestrate' ? 'primary' : 'ghost'}
-                    size="md"
-                    aria-label="Toggle orchestration mode"
-                    aria-expanded={showPatternPicker}
-                    onClick={() => {
-                      if (orchMode === 'direct') {
-                        setOrchMode('orchestrate');
-                        setShowPatternPicker(true);
-                      } else {
-                        setOrchMode('direct');
-                        setShowPatternPicker(false);
-                      }
-                    }}
-                    title={
-                      orchMode === 'orchestrate'
-                        ? t('chat.switchToDirect', 'Switch to direct mode')
-                        : t('chat.switchToOrchestrate', 'Switch to orchestrate mode')
-                    }
-                  >
-                    <Network size={18} />
-                    <ChevronDown size={12} className="ml-0.5" />
-                  </Button>
-                  <AnimatePresence>
-                    {showPatternPicker && orchMode === 'orchestrate' && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                        className={cn(
-                          'absolute bottom-full left-0 mb-2 z-50',
-                          'min-w-[160px] py-1 rounded-lg shadow-lg',
-                          'border border-white/10',
-                          theme.dropdown,
-                        )}
-                      >
-                        {PATTERN_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => {
-                              setOrchPattern(opt.value);
-                              setShowPatternPicker(false);
-                            }}
-                            className={cn(
-                              'w-full text-left px-3 py-1.5 text-sm font-mono transition-colors',
-                              theme.dropdownItem,
-                              orchPattern === opt.value && 'font-bold',
-                            )}
-                          >
-                            {orchPattern === opt.value && '> '}
-                            {opt.label}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-
-              {(onPasteImage || onPasteFile) && (
-                <>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    aria-hidden="true"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    accept="image/*,.txt,.md,.ts,.tsx,.js,.jsx,.json,.css,.html,.py,.rs,.toml,.yaml,.yml,.xml,.csv,.log,.sh,.bat,.sql,.env"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="md"
-                    aria-label="Attach local file"
-                    aria-keyshortcuts="Ctrl+O"
-                    onClick={() => fileInputRef.current?.click()}
-                    title={t('chat.attachLocalFile', 'Attach local file')}
-                  >
-                    <FolderOpen size={20} />
-                  </Button>
-                </>
-              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+                accept="image/*,.txt,.md,.ts,.tsx,.js,.jsx,.json,.css,.html,.py,.rs,.toml,.yaml,.yml,.xml,.csv,.log,.sh,.bat,.sql,.env"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                aria-label="Attach local file"
+                aria-keyshortcuts="Ctrl+O"
+                onClick={() => fileInputRef.current?.click()}
+                title={t('chat.attachLocalFile', 'Attach local file')}
+              >
+                <FolderOpen size={20} />
+              </Button>
             </>
           }
           rightActions={
-            <>
-              {isStreaming ? (
+            <AnimatePresence mode="wait">
+              {isLoading ? (
                 <Button
+                  key="stop"
                   type="button"
                   variant="danger"
                   size="md"
                   aria-label="Stop generation"
-                  onClick={onStop}
                   title={t('chat.stopGeneration', 'Stop generation')}
                 >
                   <StopCircle size={20} className="animate-pulse" aria-hidden="true" />
                 </Button>
               ) : (
                 <Button
+                  key="send"
                   type="button"
                   variant="primary"
                   size="md"
@@ -281,7 +198,7 @@ export const ChatInput = memo<ChatInputProps>(
                   <Send size={20} strokeWidth={2.5} className="ml-0.5" aria-hidden="true" />
                 </Button>
               )}
-            </>
+            </AnimatePresence>
           }
         />
       </section>

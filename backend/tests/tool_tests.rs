@@ -12,7 +12,7 @@ async fn test_tool_write_and_read_file() {
         std::env::set_var("ALLOWED_FILE_DIRS", temp_dir.to_string_lossy().to_string());
     }
     
-    let executor = ToolExecutor::new();
+    let executor = ToolExecutor::default();
     let file_name = "test_file_op.txt";
     let file_content = "Hello from automated test!";
 
@@ -51,7 +51,7 @@ async fn test_tool_list_directory() {
         std::env::set_var("ALLOWED_FILE_DIRS", temp_dir.to_string_lossy().to_string());
     }
     
-    let executor = ToolExecutor::new();
+    let executor = ToolExecutor::default();
 
     // Create some dummy files
     std::fs::write(temp_dir.join("a.txt"), "A").unwrap();

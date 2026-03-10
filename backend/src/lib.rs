@@ -380,6 +380,118 @@ pub fn create_router(state: AppState) -> Router {
         .with_state(state)
 }
 
+/// Test-only router — identical routes but **without** `GovernorLayer` rate
+/// limiting.  `tower_governor` extracts the peer IP via `ConnectInfo`, which
+/// is absent in `oneshot()` integration tests, causing a blanket 500
+/// "Unable To Extract Key!" error.  Removing the layer keeps all handler
+/// logic intact while allowing pure in-memory tests.
+#[doc(hidden)]
+pub fn create_test_router(state: AppState) -> Router {
+    // ── Public routes (no auth) ──────────────────────────────────────
+    let public = Router::new()
+        .route("/api/health", get(handlers::health_check))
+        .route("/api/health/ready", get(handlers::readiness))
+        .route("/api/auth/status", get(oauth::auth_status))
+        .route("/api/auth/login", post(oauth::auth_login))
+        .route("/api/auth/callback", post(oauth::auth_callback))
+        .route("/api/auth/logout", post(oauth::auth_logout))
+        .route("/api/auth/mode", get(handlers::auth_mode))
+        .route("/api/auth/google/status", get(oauth_google::google_auth_status))
+        .route("/api/auth/google/login", post(oauth_google::google_auth_login))
+        .route("/api/auth/google/redirect", get(oauth_google::google_redirect))
+        .route("/api/auth/google/logout", post(oauth_google::google_auth_logout))
+        .route("/api/auth/google/apikey", post(oauth_google::google_save_api_key).delete(oauth_google::google_delete_api_key))
+        .route("/api/auth/github/status", get(oauth_github::github_auth_status))
+        .route("/api/auth/github/login", post(oauth_github::github_auth_login))
+        .route("/api/auth/github/callback", post(oauth_github::github_auth_callback))
+        .route("/api/auth/github/logout", post(oauth_github::github_auth_logout))
+        .route("/api/auth/vercel/status", get(oauth_vercel::vercel_auth_status))
+        .route("/api/auth/vercel/login", post(oauth_vercel::vercel_auth_login))
+        .route("/api/auth/vercel/callback", post(oauth_vercel::vercel_auth_callback))
+        .route("/api/auth/vercel/logout", post(oauth_vercel::vercel_auth_logout))
+        .route("/api/browser-proxy/status", get(browser_proxy::proxy_status))
+        .route("/api/browser-proxy/login", post(browser_proxy::proxy_login))
+        .route("/api/browser-proxy/login/status", get(browser_proxy::proxy_login_status))
+        .route("/api/browser-proxy/reinit", post(browser_proxy::proxy_reinit))
+        .route("/api/browser-proxy/logout", delete(browser_proxy::proxy_logout))
+        .route("/api/browser-proxy/history", get(handlers::browser_proxy_history));
+
+    // ── Protected routes (auth middleware, NO rate limiter) ───────────
+    let protected = Router::new()
+        .route("/api/claude/chat/stream", post(handlers::claude_chat_stream))
+        .route("/api/claude/chat", post(handlers::claude_chat))
+        .route("/api/system/stats", get(handlers::system_stats))
+        .route("/api/admin/rotate-key", post(handlers::rotate_key))
+        .route("/api/tokens", get(service_tokens::list_tokens).post(service_tokens::store_token))
+        .route("/api/tokens/{service}", delete(service_tokens::delete_token))
+        .route("/api/logs/backend", get(logs::backend_logs).delete(logs::clear_backend_logs))
+        .route("/api/agents", get(handlers::list_agents))
+        .route("/api/agents/refresh", post(handlers::refresh_agents))
+        .route("/api/agents/delegations", get(handlers::list_delegations))
+        .route("/api/agents/delegations/stream", get(handlers::delegations_stream))
+        .route("/api/claude/models", get(handlers::claude_models))
+        .route("/api/models", get(model_registry::list_models))
+        .route("/api/models/refresh", post(model_registry::refresh_models))
+        .route("/api/models/pin", post(model_registry::pin_model))
+        .route("/api/models/pin/{use_case}", delete(model_registry::unpin_model))
+        .route("/api/models/pins", get(model_registry::list_pins))
+        .route("/api/settings", get(handlers::get_settings).post(handlers::update_settings))
+        .route("/api/settings/api-key", post(handlers::set_api_key))
+        .route("/api/sessions", get(handlers::list_sessions).post(handlers::create_session))
+        .route("/api/sessions/{id}", get(handlers::get_session).patch(handlers::update_session).delete(handlers::delete_session))
+        .route("/api/sessions/{id}/working-directory", patch(handlers::update_session_working_directory))
+        .route("/api/files/list", post(handlers::list_files))
+        .route("/api/files/browse", post(handlers::browse_directory))
+        .route("/api/sessions/{id}/messages", post(handlers::add_session_message))
+        .route("/api/sessions/{id}/generate-title", post(handlers::generate_session_title))
+        .route("/api/mcp/servers", get(mcp::config::list_servers_handler).post(mcp::config::create_server_handler))
+        .route("/api/mcp/servers/{id}", patch(mcp::config::update_server_handler).delete(mcp::config::delete_server_handler))
+        .route("/api/mcp/servers/{id}/connect", post(mcp::config::connect_server_handler))
+        .route("/api/mcp/servers/{id}/disconnect", post(mcp::config::disconnect_server_handler))
+        .route("/api/mcp/servers/{id}/tools", get(mcp::config::list_server_tools_handler))
+        .route("/api/mcp/tools", get(mcp::config::list_all_tools_handler))
+        .route("/mcp", post(mcp::server::mcp_handler))
+        .route("/api/ocr", post(ocr::ocr))
+        .route("/api/ocr/stream", post(ocr::ocr_stream))
+        .route("/api/ocr/batch/stream", post(ocr::ocr_batch_stream))
+        .route("/api/ocr/history", get(ocr::ocr_history))
+        .route("/api/ocr/history/{id}", get(ocr::ocr_history_item).delete(ocr::ocr_history_delete))
+        .route("/api/prompt-history", get(handlers::list_prompt_history).post(handlers::add_prompt_history).delete(handlers::clear_prompt_history))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::require_auth,
+        ));
+
+    let api_key_routes = Router::new()
+        .route("/api/system/metrics", get(handlers::system_metrics))
+        .route("/api/system/audit", get(handlers::system_audit))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::require_api_key_auth,
+        ));
+
+    let metrics = Router::new().route("/api/metrics", get(metrics_handler));
+
+    let v1_public = Router::new()
+        .route("/api/v1/health", get(handlers::health_check))
+        .route("/api/v1/health/ready", get(handlers::readiness))
+        .route("/api/v1/auth/mode", get(handlers::auth_mode));
+
+    let ws_routes = Router::new()
+        .route("/ws/chat", get(handlers::ws_chat));
+
+    public
+        .merge(protected)
+        .merge(api_key_routes)
+        .merge(ws_routes)
+        .merge(metrics)
+        .merge(v1_public)
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .layer(DefaultBodyLimit::max(60 * 1024 * 1024))
+        .layer(axum::middleware::from_fn(request_id_middleware))
+        .with_state(state)
+}
+
 // ── Prometheus-compatible metrics endpoint ───────────────────────────────────
 
 async fn metrics_handler(State(state): State<AppState>) -> String {

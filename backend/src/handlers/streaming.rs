@@ -107,6 +107,7 @@ async fn google_chat_stream(
             sse_buffer.push_str(&String::from_utf8_lossy(&chunk));
 
             while let Some(nl) = sse_buffer.find('\n') {
+                // Safety: '\n' is ASCII — find() returns byte pos at char boundary
                 let line = sse_buffer[..nl].trim().to_string();
                 sse_buffer = sse_buffer[nl + 1..].to_string();
                 if line.is_empty() || line.starts_with(':') { continue; }
@@ -133,7 +134,7 @@ async fn google_chat_stream(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(Body::from_stream(ndjson_stream))
-        .expect("Response builder with valid status and headers"))
+        .unwrap_or_else(|_| Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap_or_default()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -305,6 +306,7 @@ pub async fn claude_chat_stream(
 
             sse_buffer.push_str(&String::from_utf8_lossy(&chunk));
 
+            // Safety: '\n' is ASCII — find() returns byte pos at char boundary
             while let Some(newline_pos) = sse_buffer.find('\n') {
                 let line = sse_buffer[..newline_pos].trim().to_string();
                 sse_buffer = sse_buffer[newline_pos + 1..].to_string();
@@ -385,7 +387,7 @@ pub async fn claude_chat_stream(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(Body::from_stream(ndjson_stream))
-        .expect("Response builder with valid status and headers"))
+        .unwrap_or_else(|_| Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap_or_default()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -491,7 +493,7 @@ async fn claude_chat_stream_with_tools(
             if !resp.status().is_success() {
                 let status = resp.status();
                 let err_text = resp.text().await.unwrap_or_default();
-                tracing::error!("Anthropic API error (status={}, iteration={}): {}", status, iteration, &err_text[..err_text.len().min(500)]);
+                tracing::error!("Anthropic API error (status={}, iteration={}): {}", status, iteration, &truncate_for_context_with_limit(&err_text, 500));
                 let _ = tx.send(serde_json::to_string(&json!({
                     "token": format!("\n[Anthropic error: {}]", err_text),
                     "done": true, "model": &model, "total_tokens": 0,
@@ -842,7 +844,7 @@ async fn claude_chat_stream_with_tools(
         .header("cache-control", "no-cache")
         .header("x-content-type-options", "nosniff")
         .body(Body::from_stream(ndjson_stream))
-        .expect("Response builder with valid status and headers"))
+        .unwrap_or_else(|_| Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(Body::empty()).unwrap_or_default()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1204,7 +1206,7 @@ async fn execute_streaming_ws(
         if !resp.status().is_success() {
             let status = resp.status();
             let err_text = resp.text().await.unwrap_or_default();
-            tracing::error!("WS: Anthropic API error (status={}, iter={}): {}", status, iteration, &err_text[..err_text.len().min(500)]);
+            tracing::error!("WS: Anthropic API error (status={}, iter={}): {}", status, iteration, &truncate_for_context_with_limit(&err_text, 500));
             ws_send(sender, &WsServerMessage::Error {
                 message: err_text,
                 code: Some("ANTHROPIC_ERROR".to_string()),
@@ -1694,7 +1696,7 @@ pub(crate) async fn execute_agent_call(
 
         if !resp.status().is_success() {
             let err = resp.text().await.unwrap_or_default();
-            return (format!("[{} API error: {}]", agent_display_name, &err[..err.len().min(300)]), true);
+            return (format!("[{} API error: {}]", agent_display_name, &truncate_for_context_with_limit(&err, 300)), true);
         }
 
         let resp_json: Value = match resp.json().await {
