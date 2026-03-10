@@ -256,6 +256,57 @@ pub async fn upsert_discovered_tools(
     Ok(())
 }
 
+// ── Security: stdio command allowlist ──────────────────────────────────────
+
+/// Allowed base commands for MCP stdio transport.
+/// Only well-known package runners and interpreters are permitted.
+const ALLOWED_STDIO_COMMANDS: &[&str] = &[
+    "npx", "npx.cmd", "node", "node.exe",
+    "python", "python.exe", "python3", "python3.exe",
+    "uvx", "uvx.exe", "uv", "uv.exe",
+    "deno", "deno.exe",
+    "bun", "bun.exe",
+];
+
+/// Environment variables that must not be overridden by MCP server config.
+const BLOCKED_ENV_VARS: &[&str] = &[
+    "PATH", "Path", "PATHEXT",
+    "LD_PRELOAD", "LD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES",
+    "COMSPEC", "SHELL",
+    "HOME", "USERPROFILE", "SYSTEMROOT",
+];
+
+/// Validate stdio transport config: command must be in allowlist,
+/// env vars must not contain blocked keys.
+fn validate_stdio_config(command: &str, env_vars: Option<&Value>) -> Result<(), String> {
+    let base = std::path::Path::new(command)
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or(command);
+
+    if !ALLOWED_STDIO_COMMANDS.contains(&base) {
+        return Err(format!(
+            "Command '{}' not in allowlist. Allowed: npx, node, python, python3, uvx, uv, deno, bun",
+            command
+        ));
+    }
+
+    if let Some(env_val) = env_vars {
+        if let Some(obj) = env_val.as_object() {
+            for key in obj.keys() {
+                if BLOCKED_ENV_VARS.contains(&key.as_str()) {
+                    return Err(format!(
+                        "Environment variable '{}' is blocked for security reasons",
+                        key
+                    ));
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 // ── Axum Handlers ────────────────────────────────────────────────────────
 
 use crate::state::AppState;
@@ -292,6 +343,15 @@ pub async fn create_server_handler(
     if req.transport == "http" && req.url.is_none() {
         return Err(StatusCode::BAD_REQUEST);
     }
+    // Validate stdio command allowlist and blocked env vars
+    if req.transport == "stdio" {
+        if let Some(ref cmd) = req.command {
+            if let Err(msg) = validate_stdio_config(cmd, req.env_vars.as_ref()) {
+                tracing::warn!("mcp: create_server rejected: {}", msg);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
 
     let server = insert(&state.db, &req).await.map_err(|e| {
         tracing::error!("mcp: create_server: {}", e);
@@ -307,6 +367,27 @@ pub async fn update_server_handler(
     Path(id): Path<String>,
     Json(req): Json<UpdateMcpServerRequest>,
 ) -> Result<Json<Value>, StatusCode> {
+    // Validate stdio allowlist: check effective transport + command after merge
+    if req.transport.as_deref() == Some("stdio") || req.command.is_some() || req.env_vars.is_some() {
+        let current = get_by_id(&state.db, &id)
+            .await
+            .map_err(|e| {
+                tracing::error!("mcp: update_server prefetch: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+            .ok_or(StatusCode::NOT_FOUND)?;
+        let effective_transport = req.transport.as_deref().unwrap_or(&current.transport);
+        if effective_transport == "stdio" {
+            let effective_command = req.command.as_deref().or(current.command.as_deref());
+            if let Some(cmd) = effective_command {
+                if let Err(msg) = validate_stdio_config(cmd, req.env_vars.as_ref()) {
+                    tracing::warn!("mcp: update_server rejected: {}", msg);
+                    return Err(StatusCode::BAD_REQUEST);
+                }
+            }
+        }
+    }
+
     let server = update(&state.db, &id, &req)
         .await
         .map_err(|e| {

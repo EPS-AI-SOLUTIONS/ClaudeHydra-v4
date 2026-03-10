@@ -211,8 +211,11 @@ pub struct RuntimeState {
 /// Temporary PKCE state for an in-progress OAuth flow.
 pub struct OAuthPkceState {
     pub code_verifier: String,
-    pub state: String,
+    pub created_at: tokio::time::Instant,
 }
+
+/// TTL for OAuth CSRF state entries (10 minutes).
+pub const OAUTH_STATE_TTL: std::time::Duration = std::time::Duration::from_secs(600);
 
 // ── Shared: SystemSnapshot ───────────────────────────────────────────────────
 /// Cached system statistics snapshot, refreshed every 5s by background task.
@@ -250,13 +253,14 @@ pub struct AppState {
     pub start_time: Instant,
     pub http_client: reqwest::Client,
     pub tool_executor: Arc<ToolExecutor>,
-    pub oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
-    /// Google OAuth PKCE state (separate from Anthropic OAuth PKCE).
-    pub google_oauth_pkce: Arc<RwLock<Option<OAuthPkceState>>>,
-    /// GitHub OAuth state (CSRF protection for GitHub OAuth flow).
-    pub github_oauth_state: Arc<RwLock<Option<String>>>,
-    /// Vercel OAuth state (CSRF protection for Vercel OAuth flow).
-    pub vercel_oauth_state: Arc<RwLock<Option<String>>>,
+    /// Anthropic OAuth PKCE states keyed by state param (concurrent-safe, TTL 10min).
+    pub oauth_pkce: Arc<RwLock<HashMap<String, OAuthPkceState>>>,
+    /// Google OAuth PKCE states keyed by state param (concurrent-safe, TTL 10min).
+    pub google_oauth_pkce: Arc<RwLock<HashMap<String, OAuthPkceState>>>,
+    /// GitHub OAuth states keyed by state param (concurrent-safe, TTL 10min).
+    pub github_oauth_states: Arc<RwLock<HashMap<String, tokio::time::Instant>>>,
+    /// Vercel OAuth states keyed by state param (concurrent-safe, TTL 10min).
+    pub vercel_oauth_states: Arc<RwLock<HashMap<String, tokio::time::Instant>>>,
     /// `true` once startup_sync completes (or times out).
     pub ready: Arc<AtomicBool>,
     /// Cached system stats (CPU, memory) refreshed every 5s by background task.
@@ -350,10 +354,10 @@ impl AppState {
             start_time: Instant::now(),
             http_client,
             tool_executor,
-            oauth_pkce: Arc::new(RwLock::new(None)),
-            google_oauth_pkce: Arc::new(RwLock::new(None)),
-            github_oauth_state: Arc::new(RwLock::new(None)),
-            vercel_oauth_state: Arc::new(RwLock::new(None)),
+            oauth_pkce: Arc::new(RwLock::new(HashMap::new())),
+            google_oauth_pkce: Arc::new(RwLock::new(HashMap::new())),
+            github_oauth_states: Arc::new(RwLock::new(HashMap::new())),
+            vercel_oauth_states: Arc::new(RwLock::new(HashMap::new())),
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret,
@@ -397,10 +401,10 @@ impl AppState {
             start_time: Instant::now(),
             http_client: http_client.clone(),
             tool_executor: Arc::new(ToolExecutor::new(http_client, HashMap::new())),
-            oauth_pkce: Arc::new(RwLock::new(None)),
-            google_oauth_pkce: Arc::new(RwLock::new(None)),
-            github_oauth_state: Arc::new(RwLock::new(None)),
-            vercel_oauth_state: Arc::new(RwLock::new(None)),
+            oauth_pkce: Arc::new(RwLock::new(HashMap::new())),
+            google_oauth_pkce: Arc::new(RwLock::new(HashMap::new())),
+            github_oauth_states: Arc::new(RwLock::new(HashMap::new())),
+            vercel_oauth_states: Arc::new(RwLock::new(HashMap::new())),
             ready: Arc::new(AtomicBool::new(false)),
             system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
             auth_secret: None,
