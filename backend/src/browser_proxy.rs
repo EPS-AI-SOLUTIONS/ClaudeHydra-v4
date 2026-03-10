@@ -72,10 +72,20 @@ pub async fn generate_image(
         };
 
         let status = resp.status();
-        let resp_text = resp
-            .text()
-            .await
-            .map_err(|e| format!("Browser proxy response read error: {}", e))?;
+        let resp_text = match resp.text().await {
+            Ok(t) => t,
+            Err(e) => {
+                if attempt < 2 {
+                    tracing::warn!(
+                        "browser_proxy[{}]: body read failed on attempt {} ({}), retrying in 5s",
+                        context, attempt, e
+                    );
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    continue;
+                }
+                return Err(format!("Browser proxy response read error: {}", e));
+            }
+        };
 
         // Retry on 502/503
         if (status.as_u16() == 502 || status.as_u16() == 503) && attempt < 2 {
@@ -88,8 +98,8 @@ pub async fn generate_image(
         }
 
         if !status.is_success() {
-            let preview_len = resp_text.len().min(300);
-            let preview = &resp_text[..preview_len];
+            // UTF-8 safe truncation (no panic on multi-byte chars)
+            let preview: String = resp_text.chars().take(300).collect();
             return Err(format!(
                 "Browser proxy returned {}: {}",
                 status.as_u16(),
@@ -118,7 +128,7 @@ pub async fn generate_image(
         return Ok(image_b64);
     }
 
-    unreachable!()
+    Err("Browser proxy generate_image failed after all retries".to_string())
 }
 
 /// Return the configured proxy directory for auto-restart.
