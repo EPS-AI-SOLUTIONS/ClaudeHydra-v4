@@ -22,7 +22,8 @@ export type { ChatSession, ChatTab } from '@/shared/types/store';
 // TYPES
 // ============================================================================
 
-export type ViewStoreState = ViewSlice & SessionSlice;
+export type ViewStoreState = ViewSlice &
+  SessionSlice & { _hasHydrated: boolean; setHasHydrated: (state: boolean) => void };
 
 // Re-export types for backward compatibility
 export * from './types';
@@ -38,10 +39,15 @@ export const useViewStore = create<ViewStoreState>()(
       (...a) => ({
         ...createViewSlice(...a),
         ...createSessionSlice(...a),
+        _hasHydrated: false,
+        setHasHydrated: (state) => a[0]({ _hasHydrated: state }),
       }),
       {
         name: 'claude-hydra-v4-view',
         version: 2,
+        onRehydrateStorage: () => (state) => {
+          if (state) state.setHasHydrated(true);
+        },
         migrate: (persisted: unknown, version: number) => {
           const state = persisted as Record<string, unknown>;
           if (version < 2) {

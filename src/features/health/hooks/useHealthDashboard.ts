@@ -9,21 +9,25 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import { apiGetPolling } from '@/shared/api/client';
 import { useHealthQuery, useSystemStatsQuery } from './useHealth';
 
 // ============================================================================
-// TYPES
+// TYPES & SCHEMAS
 // ============================================================================
 
-interface AuthMode {
-  auth_required: boolean;
-}
+const AuthModeSchema = z.object({
+  auth_required: z.boolean(),
+});
+type AuthMode = z.infer<typeof AuthModeSchema>;
 
-interface ModelsResponse {
-  providers?: Record<string, unknown[]>;
-  [key: string]: unknown;
-}
+const ModelsResponseSchema = z
+  .object({
+    providers: z.record(z.array(z.unknown())).optional(),
+  })
+  .passthrough();
+type ModelsResponse = z.infer<typeof ModelsResponseSchema>;
 
 export interface HealthDashboardData {
   backendOnline: boolean;
@@ -52,17 +56,25 @@ export function useHealthDashboard(): HealthDashboardData {
 
   const authQuery = useQuery<AuthMode>({
     queryKey: ['auth', 'mode'],
-    queryFn: () => apiGetPolling<AuthMode>('/api/auth/mode'),
+    queryFn: async () => {
+      const data = await apiGetPolling<unknown>('/api/auth/mode');
+      return AuthModeSchema.parse(data);
+    },
     refetchInterval: 60_000,
-    retry: false, // refetchInterval handles recovery
+    retry: (failureCount) => failureCount < 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     enabled: backendOnline, // don't poll when backend is down
   });
 
   const modelsQuery = useQuery<ModelsResponse>({
     queryKey: ['models', 'list'],
-    queryFn: () => apiGetPolling<ModelsResponse>('/api/models'),
+    queryFn: async () => {
+      const data = await apiGetPolling<unknown>('/api/models');
+      return ModelsResponseSchema.parse(data);
+    },
     refetchInterval: 60_000,
-    retry: false, // refetchInterval handles recovery
+    retry: (failureCount) => failureCount < 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     enabled: backendOnline, // don't poll when backend is down
   });
 
@@ -70,7 +82,8 @@ export function useHealthDashboard(): HealthDashboardData {
     queryKey: ['system', 'metrics'],
     queryFn: () => apiGetPolling<unknown>('/api/system/metrics'),
     refetchInterval: 60_000,
-    retry: false,
+    retry: (failureCount) => failureCount < 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     enabled: backendOnline,
   });
 
@@ -78,7 +91,8 @@ export function useHealthDashboard(): HealthDashboardData {
     queryKey: ['system', 'audit'],
     queryFn: () => apiGetPolling<unknown>('/api/system/audit'),
     refetchInterval: 60_000,
-    retry: false,
+    retry: (failureCount) => failureCount < 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     enabled: backendOnline,
   });
   const uptimeSeconds = healthQuery.data?.uptime_seconds ?? null;

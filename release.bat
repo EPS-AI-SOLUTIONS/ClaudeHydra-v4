@@ -6,8 +6,7 @@ set "LIB=C:\Users\BIURODOM\Desktop\ClaudeDesktop\jaskier-lib.bat"
 :: Init colors
 call "%LIB%" :init_colors
 :: Kill previous instances
-taskkill /F /FI "WINDOWTITLE eq [Jaskier] ClaudeHydra*" >nul 2>&1
-powershell -NoProfile -Command "Get-Process | Where-Object { $_.Name -eq 'powershell' -and $_.CommandLine -like '*tray-minimizer.ps1*' -and $_.CommandLine -like '*ClaudeHydra Release*' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+taskkill /F /IM claudehydra-backend.exe >nul 2>&1
 title [Jaskier] ClaudeHydra v4 Release
 echo !BOLD!!MAGENTA!=== ClaudeHydra v4 Release ===!RESET!
 
@@ -45,7 +44,8 @@ call "%LIB%" :partner_check 8081 "GeminiHydra"
 :: Start backend
 echo !CYAN![START]!RESET! Backend on port 8082...
 set DATABASE_URL=postgres://claude:claude_local@localhost:5433/claudehydra
-start "[Jaskier] ClaudeHydra Backend" /B "" "%~dp0backend\target\release\claudehydra-backend.exe"
+call "%LIB%" :log_rotate "jaskier-claudehydra-backend"
+powershell -NoProfile -WindowStyle Hidden -Command "Start-Process cmd -ArgumentList '/c \"%~dp0backend\target\release\claudehydra-backend.exe\" > \"%TEMP%\jaskier-claudehydra-backend.log\" 2>&1' -WindowStyle Hidden"
 %SYSTEMROOT%\System32\timeout.exe /t 2 /nobreak >nul
 
 :: Health check
@@ -61,8 +61,6 @@ start "" chrome --app=http://localhost:4199
 :: Toast notification
 call "%LIB%" :toast "ClaudeHydra v4" "Release preview on port 4199"
 
-:: Start preview
+:: Start preview (foreground)
 echo !CYAN![PREVIEW]!RESET! Starting preview on port 4199...
-echo !YELLOW!Hiding to tray... Check the system tray icon to restore or stop.!RESET!
-start "" /B powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\BIURODOM\Desktop\ClaudeDesktop\tray-minimizer.ps1" -AppTitle "ClaudeHydra Release" -IconPath "C:\Users\BIURODOM\Desktop\ClaudeDesktop\.jaskier-icons\claudehydra.ico" -KillExe "claudehydra-backend" -KillTitle "[Jaskier] ClaudeHydra"
 endlocal && cd /d "%~dp0" && pnpm run preview

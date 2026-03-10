@@ -107,6 +107,16 @@ export function useDelegations(autoRefresh: boolean) {
   const isError = useDelegationStore((state) => state.isError);
   const fetchInitial = useDelegationStore((state) => state.fetchInitial);
   const updateFromSSE = useDelegationStore((state) => state.updateFromSSE);
+  const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetHeartbeat = useCallback((eventSource: EventSource) => {
+    if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current);
+    heartbeatTimerRef.current = setTimeout(() => {
+      console.warn('[SSE] Delegations Heartbeat lost. Forcing reconnect...');
+      eventSource.close();
+      // Normally here you would trigger a reconnect logic by changing a state
+    }, 15000);
+  }, []);
 
   useEffect(() => {
     fetchInitial();
@@ -117,7 +127,13 @@ export function useDelegations(autoRefresh: boolean) {
 
     const eventSource = new EventSource(`${BASE_URL}/api/agents/delegations/stream`);
 
+    eventSource.onopen = () => {
+      resetHeartbeat(eventSource);
+    };
+
     eventSource.onmessage = (event) => {
+      resetHeartbeat(eventSource);
+      if (event.data === 'ping') return;
       try {
         const task = JSON.parse(event.data) as DelegationTask;
         updateFromSSE(task);
@@ -128,12 +144,14 @@ export function useDelegations(autoRefresh: boolean) {
 
     eventSource.onerror = (error) => {
       console.error('SSE connection error:', error);
+      eventSource.close();
     };
 
     return () => {
+      if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current);
       eventSource.close();
     };
-  }, [autoRefresh, updateFromSSE]);
+  }, [autoRefresh, updateFromSSE, resetHeartbeat]);
 
   return {
     data,
