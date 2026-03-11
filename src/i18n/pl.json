@@ -160,6 +160,29 @@
       "toggle": "Przełącz dźwięk ukończenia",
       "volume": "Głośność"
     },
+    "customInstructions": {
+      "title": "Instrukcje niestandardowe",
+      "description": "Dodatkowe instrukcje wstrzykiwane do każdego system promptu. Służą do globalnego dostosowania zachowania agentów.",
+      "placeholder": "np. Zawsze odpowiadaj po polsku...",
+      "save": "Zapisz instrukcje",
+      "saved": "Instrukcje niestandardowe zapisane"
+    },
+    "autoUpdater": {
+      "title": "Auto-aktualizacja",
+      "description": "Automatycznie sprawdzaj i instaluj aktualizacje, gdy są dostępne.",
+      "toggle": "Przełącz auto-aktualizację",
+      "enabled": "Włączona",
+      "disabled": "Wyłączona",
+      "saved": "Ustawienie auto-aktualizacji zapisane"
+    },
+    "telemetry": {
+      "title": "Telemetria",
+      "description": "Wysyłaj anonimowe raporty o błędach, aby pomóc ulepszać aplikację. Dane osobowe nie są zbierane.",
+      "toggle": "Przełącz telemetrię",
+      "enabled": "Włączona",
+      "disabled": "Wyłączona",
+      "saved": "Ustawienie telemetrii zapisane"
+    },
     "watchdog": {
       "title": "Historia Watchdog",
       "description": "Zdarzenia monitoringu browser proxy (ostatnie 50).",

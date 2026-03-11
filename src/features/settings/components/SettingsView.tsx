@@ -7,13 +7,16 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card } from '@/components/atoms';
 import { useViewTheme } from '@/shared/hooks/useViewTheme';
+import { AutoUpdaterSection } from './AutoUpdaterSection';
 import { BrowserProxySection } from './BrowserProxySection';
 import { CompletionSoundSection } from './CompletionSoundSection';
+import { CustomInstructionsSection } from './CustomInstructionsSection';
 import { GoogleOAuthSection } from './GoogleOAuthSection';
 import { MaxIterationsSection } from './MaxIterationsSection';
 import { MaxTokensSection } from './MaxTokensSection';
 import { McpServersSection } from './McpServersSection';
 import { OAuthSection } from './OAuthSection';
+import { TelemetrySection } from './TelemetrySection';
 import { TemperatureSection } from './TemperatureSection';
 import { WatchdogHistory } from './WatchdogHistory';
 import { WorkingFolderSection } from './WorkingFolderSection';
@@ -59,6 +62,13 @@ export const SettingsView = memo(() => {
           </div>
         </Card>
 
+        {/* Custom Instructions Section */}
+        <Card>
+          <div className="p-6">
+            <CustomInstructionsSection />
+          </div>
+        </Card>
+
         {/* Temperature Section */}
         <Card>
           <div className="p-6">
@@ -84,6 +94,20 @@ export const SettingsView = memo(() => {
         <Card>
           <div className="p-6">
             <CompletionSoundSection />
+          </div>
+        </Card>
+
+        {/* Auto Updater Section */}
+        <Card>
+          <div className="p-6">
+            <AutoUpdaterSection />
+          </div>
+        </Card>
+
+        {/* Telemetry Section */}
+        <Card>
+          <div className="p-6">
+            <TelemetrySection />
           </div>
         </Card>
 

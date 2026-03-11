@@ -2,6 +2,7 @@ import { cn } from '@jaskier/ui';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '@/components/atoms';
+import { isTelemetryEnabled } from '@/shared/hooks/useSettings';
 
 interface Props {
   children: ReactNode;
@@ -29,21 +30,23 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error(`[ErrorBoundary] Caught error in ${this.props.name || 'Component'}:`, error, errorInfo);
 
-    // Telemetry - Graceful degradation logger
-    try {
-      const payload = JSON.stringify({
-        event: 'client_error',
-        name: this.props.name || 'Component',
-        error: error.message,
-        stack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-      });
-      // Wyślij bez blokowania wątku
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon('/api/telemetry/error', new Blob([payload], { type: 'application/json' }));
+    // Telemetry - Graceful degradation logger (respects telemetry setting)
+    if (isTelemetryEnabled()) {
+      try {
+        const payload = JSON.stringify({
+          event: 'client_error',
+          name: this.props.name || 'Component',
+          error: error.message,
+          stack: errorInfo.componentStack,
+          timestamp: new Date().toISOString(),
+        });
+        // Wyślij bez blokowania wątku
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/telemetry/error', new Blob([payload], { type: 'application/json' }));
+        }
+      } catch (_e) {
+        // Ignore telemetry errors to avoid infinite loops
       }
-    } catch (_e) {
-      // Ignore telemetry errors to avoid infinite loops
     }
   }
 

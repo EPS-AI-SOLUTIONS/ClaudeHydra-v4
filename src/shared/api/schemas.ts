@@ -105,6 +105,12 @@ export const settingsSchema = z.object({
   working_directory: z.string().optional().default(''),
   /** Max tool-call iterations per agent request */
   max_iterations: z.number().optional().default(10),
+  /** Custom instructions injected into system prompt */
+  custom_instructions: z.string().optional().default(''),
+  /** Auto-updater enabled */
+  auto_updater: z.boolean().optional().default(true),
+  /** Telemetry (error reporting) enabled */
+  telemetry: z.boolean().optional().default(false),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

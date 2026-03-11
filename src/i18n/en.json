@@ -160,6 +160,29 @@
       "toggle": "Toggle completion sound",
       "volume": "Volume"
     },
+    "customInstructions": {
+      "title": "Custom Instructions",
+      "description": "Additional instructions injected into every system prompt. Use this to customize agent behavior globally.",
+      "placeholder": "e.g., Always respond in Polish...",
+      "save": "Save Instructions",
+      "saved": "Custom instructions saved"
+    },
+    "autoUpdater": {
+      "title": "Auto Updater",
+      "description": "Automatically check for and apply updates when available.",
+      "toggle": "Toggle auto-updater",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "saved": "Auto-updater setting saved"
+    },
+    "telemetry": {
+      "title": "Telemetry",
+      "description": "Send anonymous error reports to help improve the application. No personal data is collected.",
+      "toggle": "Toggle telemetry",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "saved": "Telemetry setting saved"
+    },
     "watchdog": {
       "title": "Watchdog History",
       "description": "Browser proxy monitoring events (last 50).",

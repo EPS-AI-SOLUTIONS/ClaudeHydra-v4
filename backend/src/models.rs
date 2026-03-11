@@ -23,6 +23,15 @@ pub struct SettingsRow {
     /// Max output tokens (default 4096)
     #[sqlx(default)]
     pub max_tokens: i32,
+    /// Custom instructions injected into system prompt
+    #[sqlx(default)]
+    pub custom_instructions: String,
+    /// Auto-updater enabled
+    #[sqlx(default)]
+    pub auto_updater: bool,
+    /// Telemetry (error reporting) enabled
+    #[sqlx(default)]
+    pub telemetry: bool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -159,6 +168,19 @@ pub struct AppSettings {
     /// Max output tokens (default 4096)
     #[serde(default = "default_max_tokens")]
     pub max_tokens: i32,
+    /// Custom instructions injected into system prompt
+    #[serde(default)]
+    pub custom_instructions: String,
+    /// Auto-updater enabled (check for new versions)
+    #[serde(default = "default_true")]
+    pub auto_updater: bool,
+    /// Telemetry (error reporting) enabled
+    #[serde(default)]
+    pub telemetry: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_max_iterations() -> i32 {

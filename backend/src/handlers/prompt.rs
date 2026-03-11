@@ -46,7 +46,7 @@ pub(crate) struct ChatContext {
 // ═══════════════════════════════════════════════════════════════════════
 
 /// Build system prompt server-side (single source of truth).
-fn build_system_prompt(working_directory: &str, language: &str) -> String {
+fn build_system_prompt(working_directory: &str, language: &str, custom_instructions: &str) -> String {
     let lang_name = if language == "pl" {
         "Polish"
     } else {
@@ -99,6 +99,13 @@ fn build_system_prompt(working_directory: &str, language: &str) -> String {
             format!("**Current working directory**: `{}`", working_directory),
             "You can use relative paths (e.g. `src/main.rs`) — they resolve against this directory.".to_string(),
             "You do NOT need to specify absolute paths unless referencing files outside this folder.".to_string(),
+        ]);
+    }
+    if !custom_instructions.is_empty() {
+        lines.extend([
+            String::new(),
+            "## Custom Instructions".to_string(),
+            custom_instructions.to_string(),
         ]);
     }
     lines.join("\n")
@@ -160,16 +167,17 @@ pub(crate) async fn resolve_chat_context(
         .as_deref()
         .and_then(|s| uuid::Uuid::parse_str(s).ok());
 
-    // Single query: fetch session WD, global WD, language, and generation params
-    let (working_directory, language, db_temperature, db_max_tokens, db_max_iterations) =
+    // Single query: fetch session WD, global WD, language, generation params, and custom instructions
+    let (working_directory, language, db_temperature, db_max_tokens, db_max_iterations, custom_instructions) =
         if let Some(ref sid) = session_uuid {
-            let row: Option<(String, String, String, f64, i32, i32)> = sqlx::query_as(
+            let row: Option<(String, String, String, f64, i32, i32, String)> = sqlx::query_as(
                 "SELECT COALESCE(s.working_directory, '') AS session_wd, \
              COALESCE(g.working_directory, '') AS global_wd, \
              COALESCE(g.language, 'en') AS language, \
              COALESCE(g.temperature, 0.7) AS temperature, \
              COALESCE(g.max_tokens, 4096) AS max_tokens, \
-             COALESCE(g.max_iterations, 10) AS max_iterations \
+             COALESCE(g.max_iterations, 10) AS max_iterations, \
+             COALESCE(g.custom_instructions, '') AS custom_instructions \
              FROM ch_sessions s \
              CROSS JOIN ch_settings g \
              WHERE s.id = $1 AND g.id = 1",
@@ -180,41 +188,48 @@ pub(crate) async fn resolve_chat_context(
             .ok()
             .flatten();
             match row {
-                Some((session_wd, global_wd, lang, temp, mtok, miter)) => {
+                Some((session_wd, global_wd, lang, temp, mtok, miter, ci)) => {
                     let wd = if !session_wd.is_empty() {
                         session_wd
                     } else {
                         global_wd
                     };
-                    (wd, lang, temp, mtok, miter)
+                    (wd, lang, temp, mtok, miter, ci)
                 }
-                None => (String::new(), "en".to_string(), 0.7, 4096, 10),
+                None => (String::new(), "en".to_string(), 0.7, 4096, 10, String::new()),
             }
         } else {
-            let row: Option<(String, String, f64, i32, i32)> = sqlx::query_as(
+            let row: Option<(String, String, f64, i32, i32, String)> = sqlx::query_as(
                 "SELECT COALESCE(working_directory, ''), COALESCE(language, 'en'), \
-             COALESCE(temperature, 0.7), COALESCE(max_tokens, 4096), COALESCE(max_iterations, 10) \
+             COALESCE(temperature, 0.7), COALESCE(max_tokens, 4096), COALESCE(max_iterations, 10), \
+             COALESCE(custom_instructions, '') \
              FROM ch_settings WHERE id = 1",
             )
             .fetch_optional(&state.db)
             .await
             .ok()
             .flatten();
-            row.unwrap_or(("".to_string(), "en".to_string(), 0.7, 4096, 10))
+            row.unwrap_or(("".to_string(), "en".to_string(), 0.7, 4096, 10, String::new()))
         };
 
     let budget = tier_token_budget(&model);
     let max_tokens = req.max_tokens.unwrap_or(db_max_tokens as u32).min(budget);
     let temperature = req.temperature.unwrap_or(db_temperature);
 
-    // Use cached system prompt if available
-    let cache_key = format!("{}:{}", working_directory, language);
+    // Use cached system prompt if available (cache key includes custom_instructions hash)
+    let ci_hash = {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        custom_instructions.hash(&mut h);
+        h.finish()
+    };
+    let cache_key = format!("{}:{}:{}", working_directory, language, ci_hash);
     let system_prompt = {
         let cache = state.prompt_cache.read().await;
         cache.get(&cache_key).cloned()
     }
     .unwrap_or_else(|| {
-        let prompt = build_system_prompt(&working_directory, &language);
+        let prompt = build_system_prompt(&working_directory, &language, &custom_instructions);
         let prompt_clone = prompt.clone();
         let state_clone = state.prompt_cache.clone();
         let key_clone = cache_key;
@@ -241,15 +256,32 @@ pub(crate) async fn resolve_chat_context(
 
 /// Pre-warm system prompt cache for common language variants.
 pub async fn warm_prompt_cache(state: &AppState) {
+    // Fetch custom_instructions from DB for accurate cache warming
+    let custom_instructions: String = sqlx::query_scalar(
+        "SELECT COALESCE(custom_instructions, '') FROM ch_settings WHERE id = 1",
+    )
+    .fetch_optional(&state.db)
+    .await
+    .ok()
+    .flatten()
+    .unwrap_or_default();
+
+    let ci_hash = {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        custom_instructions.hash(&mut h);
+        h.finish()
+    };
+
     let languages = ["en", "pl"];
     let mut count = 0;
     for lang in &languages {
-        let prompt = build_system_prompt("", lang);
+        let prompt = build_system_prompt("", lang, &custom_instructions);
         state
             .prompt_cache
             .write()
             .await
-            .insert(format!(":{}", lang), prompt);
+            .insert(format!(":{}:{}", lang, ci_hash), prompt);
         count += 1;
     }
     tracing::info!("prompt_cache: pre-warmed {} system prompt variants", count);

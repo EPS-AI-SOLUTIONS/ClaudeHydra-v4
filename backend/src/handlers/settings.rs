@@ -19,7 +19,10 @@ pub async fn get_settings(State(state): State<AppState>) -> Result<Json<Value>, 
         "SELECT theme, language, default_model, auto_start, welcome_message, working_directory, \
          COALESCE(max_iterations, 10) AS max_iterations, \
          COALESCE(temperature, 0.7) AS temperature, \
-         COALESCE(max_tokens, 4096) AS max_tokens \
+         COALESCE(max_tokens, 4096) AS max_tokens, \
+         COALESCE(custom_instructions, '') AS custom_instructions, \
+         COALESCE(auto_updater, TRUE) AS auto_updater, \
+         COALESCE(telemetry, FALSE) AS telemetry \
          FROM ch_settings WHERE id = 1",
     )
     .fetch_one(&state.db)
@@ -39,6 +42,9 @@ pub async fn get_settings(State(state): State<AppState>) -> Result<Json<Value>, 
         max_iterations: row.max_iterations,
         temperature: row.temperature,
         max_tokens: row.max_tokens,
+        custom_instructions: row.custom_instructions,
+        auto_updater: row.auto_updater,
+        telemetry: row.telemetry,
     };
 
     Ok(Json(
@@ -67,7 +73,8 @@ pub async fn update_settings(
     sqlx::query(
         "UPDATE ch_settings SET theme = $1, language = $2, default_model = $3, \
          auto_start = $4, welcome_message = $5, working_directory = $6, max_iterations = $7, \
-         temperature = $8, max_tokens = $9, updated_at = NOW() WHERE id = 1",
+         temperature = $8, max_tokens = $9, custom_instructions = $10, \
+         auto_updater = $11, telemetry = $12, updated_at = NOW() WHERE id = 1",
     )
     .bind(&new_settings.theme)
     .bind(&new_settings.language)
@@ -78,6 +85,9 @@ pub async fn update_settings(
     .bind(new_settings.max_iterations.clamp(1, 50))
     .bind(new_settings.temperature.clamp(0.0, 2.0))
     .bind(new_settings.max_tokens.clamp(256, 16384))
+    .bind(&new_settings.custom_instructions)
+    .bind(new_settings.auto_updater)
+    .bind(new_settings.telemetry)
     .execute(&state.db)
     .await
     .map_err(|e| {

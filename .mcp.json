@@ -1,0 +1,87 @@
+{
+  "mcpServers": {
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from", "serena-agent",
+        "serena",
+        "--mode", "codex",
+        "--project-root", "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\ClaudeHydra"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-brave-search@latest"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+    "repomix": {
+      "command": "npx",
+      "args": [
+        "repomix@latest",
+        "--mcp"
+      ]
+    },
+    "github": {
+      "type": "http",
+      "url": "http://127.0.0.1:8888/sse"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem@latest",
+        "C:\\Users\\BIURODOM\\Desktop"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-memory@latest"
+      ],
+      "env": {
+        "MEMORY_FILE_PATH": "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\SharedMemory\\memory.json"
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-sequential-thinking@latest"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "desktop-commander": {
+      "command": "npx",
+      "args": [
+        "@wonderwhy-er/desktop-commander@latest"
+      ]
+    },
+    "ai-swarm-notifier": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\JaskierNotifierMCP\\index.js"
+      ]
+    },
+    "grafana": {
+      "command": "uvx",
+      "args": ["mcp-grafana"],
+      "env": {
+        "GRAFANA_URL": "https://fly-metrics.net",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+      }
+    }
+  }
+}

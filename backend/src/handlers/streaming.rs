@@ -112,6 +112,27 @@ fn sanitize_api_error(raw: &str) -> String {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Post-task MCP notification (fire-and-forget)
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Send a "success" notification via the ai-swarm-notifier MCP server (if connected).
+/// Best-effort: errors are logged but never propagate to the caller.
+async fn send_task_complete_notification(state: &AppState, model: &str) {
+    let prefixed = "mcp_ai-swarm-notifier_show_notification";
+    if let Some((server_id, tool_name)) = state.mcp_client.resolve_tool(prefixed).await {
+        let args = json!({
+            "status": "success",
+            "agent": "ClaudeHydra",
+            "message": format!("Task completed ({})", model),
+        });
+        match state.mcp_client.call_tool(&server_id, &tool_name, &args).await {
+            Ok(_) => tracing::debug!("Task completion notification sent via MCP"),
+            Err(e) => tracing::warn!("Failed to send task notification: {}", e),
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Gemini hybrid streaming
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -395,6 +416,8 @@ pub async fn claude_chat_stream(
     // Convert Anthropic SSE stream into NDJSON
     let model_for_done = model.clone();
     let model_for_usage = model.clone();
+    let model_for_notify = model.clone();
+    let state_for_notify = state.clone();
     let db_for_usage = state.db.clone();
     let stream_start = std::time::Instant::now();
     let prompt_len = req.messages.iter().map(|m| m.content.len()).sum::<usize>();
@@ -489,6 +512,13 @@ pub async fn claude_chat_stream(
                                     .bind(tier)
                                     .execute(&db)
                                     .await;
+                                });
+
+                                // Fire-and-forget: task completion notification
+                                let notify_state = state_for_notify.clone();
+                                let notify_model = model_for_notify.clone();
+                                tokio::spawn(async move {
+                                    send_task_complete_notification(&notify_state, &notify_model).await;
                                 });
                             }
                             _ => {}
@@ -1124,6 +1154,10 @@ async fn claude_chat_stream_with_tools(
                     .unwrap_or_default(),
                 )
                 .await;
+
+            // Fire-and-forget: send success notification via MCP ai-swarm-notifier
+            send_task_complete_notification(&state_clone, &model).await;
+
             break;
         }
     });
