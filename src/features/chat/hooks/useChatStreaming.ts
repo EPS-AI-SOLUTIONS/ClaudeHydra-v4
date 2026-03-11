@@ -1,5 +1,5 @@
-/**
- * useChatStreaming — NDJSON streaming hook for Claude chat.
+﻿/**
+ * useChatStreaming â€” NDJSON streaming hook for Claude chat.
  *
  * Handles sending messages, streaming responses, and dispatching tool events.
  * Extracted from ClaudeChatView.tsx to reduce component complexity.
@@ -11,8 +11,8 @@ import { useOnlineStatus } from '@/shared/hooks/useOnlineStatus';
 import { useViewStore } from '@/stores/viewStore';
 import { claudeStreamChat } from '../api/claudeStream';
 import type { Attachment } from '../components/ChatInput';
-import type { ChatMessage } from '../components/MessageBubble';
-import type { ToolInteraction } from '../components/ToolCallBlock';
+import type { ChatMessage, ToolInteraction } from '../components/MessageBubble';
+
 import type { useChatMessages } from './useChatMessages';
 
 // ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ export function useChatStreaming({
         toast.error('You are offline. Cannot send messages.');
         return;
       }
-      // Capture sessionId at send time — all updates target this session
+      // Capture sessionId at send time â€” all updates target this session
       const sessionId = useViewStore.getState().activeSessionId;
       if (!selectedModel || !sessionId) return;
       if (loadingSessionsRef.current.has(sessionId)) return;
@@ -83,7 +83,7 @@ export function useChatStreaming({
         timestamp: Date.now(),
       };
 
-      // Capture messages BEFORE adding new ones — used to build API context
+      // Capture messages BEFORE adding new ones â€” used to build API context
       const previousMessages = [...(sessionMessagesRef.current[sessionId] ?? [])];
 
       // Auto-name session on first user message
@@ -118,7 +118,7 @@ export function useChatStreaming({
       let responseBuffer = '';
 
       try {
-        // Build history for context (no frontend system prompt — backend handles it)
+        // Build history for context (no frontend system prompt â€” backend handles it)
         const HISTORY_LIMIT = 20;
         const COMPRESS_KEEP_FULL = 6;
         const chatHistory: Array<{ role: string; content: string }> = [];

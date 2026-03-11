@@ -1,4 +1,4 @@
-import { AgentAvatar, BaseMessageBubble, cn } from '@jaskier/ui';
+﻿import { AgentAvatar, BaseMessageBubble, cn } from '@jaskier/ui';
 import { Terminal } from 'lucide-react';
 import { type MouseEvent, memo, useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,15 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { MessageRating } from './MessageRating';
 import { splitToolOutput, stripParallelHeader } from './messageParser';
 
+export interface ToolInteraction {
+  id: string;
+  toolName: string;
+  toolInput?: unknown;
+  result?: string;
+  isError?: boolean;
+  status: 'pending' | 'running' | 'completed' | 'error';
+}
+
 export interface ChatMessage {
   id?: string;
   role: string;
@@ -16,14 +25,7 @@ export interface ChatMessage {
   error?: boolean;
   model?: string;
   streaming?: boolean;
-  toolInteractions?: Array<{
-    id: string;
-    toolName: string;
-    toolInput?: unknown;
-    result?: string;
-    isError?: boolean;
-    status: 'pending' | 'running' | 'completed' | 'error';
-  }>;
+  toolInteractions?: ToolInteraction[];
   attachments?: Array<{
     id: string;
     name: string;

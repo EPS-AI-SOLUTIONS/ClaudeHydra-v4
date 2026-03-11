@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
-set "LIB=C:\Users\BIURODOM\Desktop\ClaudeDesktop\jaskier-lib.bat"
+set "LIB=C:\Users\BIURODOM\Desktop\JaskierWorkspace\jaskier-lib.bat"
 
 :: Init colors
 call "%LIB%" :init_colors
@@ -50,3 +50,4 @@ call "%LIB%" :toast "ClaudeHydra v4" "DEV server starting on port 5199"
 :: Start frontend dev server
 echo !CYAN![DEV]!RESET! Starting frontend dev server on port 5199...
 endlocal && cd /d "%~dp0" && pnpm run dev
+

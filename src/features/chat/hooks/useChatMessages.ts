@@ -1,5 +1,5 @@
-/**
- * useChatMessages — Per-session message state management.
+﻿/**
+ * useChatMessages â€” Per-session message state management.
  *
  * Handles message caching across sessions, lazy loading from DB,
  * and session switching without losing state.
@@ -11,8 +11,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { apiGet } from '@/shared/api/client';
 import { useViewStore } from '@/stores/viewStore';
-import type { ChatMessage } from '../components/MessageBubble';
-import type { ToolInteraction } from '../components/ToolCallBlock';
+import type { ChatMessage, ToolInteraction } from '../components/MessageBubble';
+
 import type { SessionDetail } from './useSessions';
 
 export function useChatMessages() {

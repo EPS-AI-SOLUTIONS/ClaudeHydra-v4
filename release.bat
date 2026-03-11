@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
-set "LIB=C:\Users\BIURODOM\Desktop\ClaudeDesktop\jaskier-lib.bat"
+set "LIB=C:\Users\BIURODOM\Desktop\JaskierWorkspace\jaskier-lib.bat"
 
 :: Init colors
 call "%LIB%" :init_colors
@@ -64,3 +64,4 @@ call "%LIB%" :toast "ClaudeHydra v4" "Release preview on port 4199"
 :: Start preview (foreground)
 echo !CYAN![PREVIEW]!RESET! Starting preview on port 4199...
 endlocal && cd /d "%~dp0" && pnpm run preview
+
