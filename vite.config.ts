@@ -1,4 +1,4 @@
-﻿/// <reference types="vitest/config" />
+/// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
@@ -14,6 +14,13 @@ export default defineConfig(({ mode }) => {
   const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:8082';
   const partnerBackendUrl = env.VITE_PARTNER_BACKEND_URL || 'http://localhost:8081';
 
+  // vite-plugin-pwa 0.21 is incompatible with Vite 6+ Environment API in monorepo
+  // with mixed Vite versions (6.4 + 7.3). The secondary Rollup build picks up
+  // vite@7.3's node:module chunks and fails with "createRequire" not exported.
+  // PWA plugin is only loaded in dev mode; production builds skip it entirely.
+  // Re-enable for production when vite-plugin-pwa releases Vite 6/7 compatible version.
+  const isProd = mode === 'production';
+
   return {
     plugins: [
       wasm(),
@@ -24,35 +31,35 @@ export default defineConfig(({ mode }) => {
         },
       }),
       tailwindcss(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        // Disable SW generation during build — vite-plugin-pwa 0.21 is incompatible
-        // with Vite 6+ Environment API in monorepo with mixed Vite versions (6.4 + 7.3).
-        // The secondary Rollup build picks up vite@7.3's node:module chunks and fails.
-        // Re-enable when vite-plugin-pwa releases Vite 6/7 compatible version.
-        disable: mode === 'production',
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
+      // PWA: dev only (see comment above)
+      ...(!isProd
+        ? [
+            VitePWA({
+              registerType: 'autoUpdate',
+              workbox: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
+                runtimeCaching: [
+                  {
+                    urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+                    handler: 'CacheFirst',
+                    options: {
+                      cacheName: 'google-fonts-cache',
+                      expiration: {
+                        maxEntries: 10,
+                        maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
+                      },
+                      cacheableResponse: {
+                        statuses: [0, 200],
+                      },
+                    },
+                  },
+                ],
               },
-            },
-          ],
-        },
-      }),
-      // #38 â€” Bundle size tracking: always generate stats.html on build, auto-open in analyze mode
-      ...(mode === 'production'
+            }),
+          ]
+        : []),
+      // Bundle size tracking: always generate stats.html on build, auto-open in analyze mode
+      ...(isProd
         ? [(visualizer as any)({ open: false, filename: 'dist/stats.html', gzipSize: true, brotliSize: true })]
         : mode === 'analyze'
           ? [(visualizer as any)({ open: true, filename: 'dist/stats.html', gzipSize: true, brotliSize: true })]
