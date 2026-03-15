@@ -23,13 +23,12 @@ primary_region = 'arn'
   auto_start_machines = true
   min_machines_running = 0
 
-  [http_service.checks]
-    [http_service.checks.health]
-      interval = "30s"
-      timeout = "5s"
-      grace_period = "10s"
-      method = "GET"
-      path = "/api/health"
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
 
 [env]
   RUST_LOG = "info"

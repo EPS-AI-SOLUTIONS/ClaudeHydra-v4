@@ -212,11 +212,11 @@ fn ch_system_router(state: AppState) -> Router<AppState> {
         .route("/api/admin/rotate-key", post(handlers::rotate_key))
         .route(
             "/api/admin/rate-limits",
-            get(rate_limits::list_rate_limits),
+            get(rate_limits::list_rate_limits::<AppState>),
         )
         .route(
             "/api/admin/rate-limits/{endpoint_group}",
-            patch(rate_limits::update_rate_limit),
+            patch(rate_limits::update_rate_limit::<AppState>),
         )
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
