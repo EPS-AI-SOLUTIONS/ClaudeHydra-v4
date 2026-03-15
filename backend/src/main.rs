@@ -78,10 +78,13 @@ fn build_app(state: AppState) -> axum::Router {
             header::STRICT_TRANSPORT_SECURITY,
             header::HeaderValue::from_static("max-age=63072000; includeSubDomains"),
         ))
-        // #11 X-XSS-Protection (legacy but still used by older browsers)
+        // #11 X-XSS-Protection — set to 0 (modern best practice per OWASP).
+        // "1; mode=block" is deprecated — it can introduce XSS in older IE via
+        // content sniffing. All modern browsers removed their XSS auditor.
+        // CSP is the proper XSS mitigation.
         .layer(SetResponseHeaderLayer::overriding(
             http::HeaderName::from_static("x-xss-protection"),
-            header::HeaderValue::from_static("1; mode=block"),
+            header::HeaderValue::from_static("0"),
         ))
         // #11 Permissions-Policy — disable sensitive browser APIs
         .layer(SetResponseHeaderLayer::overriding(
@@ -89,6 +92,18 @@ fn build_app(state: AppState) -> axum::Router {
             header::HeaderValue::from_static(
                 "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
             ),
+        ))
+        // #11 Cross-Origin-Opener-Policy — isolate browsing context from
+        // cross-origin popups (mitigates Spectre-class side-channel attacks)
+        .layer(SetResponseHeaderLayer::overriding(
+            http::HeaderName::from_static("cross-origin-opener-policy"),
+            header::HeaderValue::from_static("same-origin"),
+        ))
+        // #11 Cross-Origin-Resource-Policy — prevent cross-origin reads of
+        // API responses by non-same-origin contexts (e.g. <img>, <script>)
+        .layer(SetResponseHeaderLayer::overriding(
+            http::HeaderName::from_static("cross-origin-resource-policy"),
+            header::HeaderValue::from_static("same-origin"),
         ))
         // #12 tower_governor already injects X-RateLimit-Limit, X-RateLimit-Remaining,
         // X-RateLimit-After, and Retry-After headers automatically via GovernorLayer.

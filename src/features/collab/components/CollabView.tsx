@@ -1,6 +1,7 @@
 import { Activity, FileText, Plug, PlugZap, Redo2, Undo2, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCollabDocument } from '../hooks/useCollabDocument';
 import { useCollabStats } from '../hooks/useCollabStats';
 import { CollabCursors } from './CollabCursors';
@@ -17,6 +18,7 @@ import { CollabStatusBadge } from './CollabStatusBadge';
  * - Connect/disconnect controls
  */
 export function CollabView() {
+  const { t } = useTranslation();
   const [docKey, setDocKey] = useState('default-session');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -84,8 +86,8 @@ export function CollabView() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-5 w-5 text-indigo-400" />
-          <h1 className="text-lg font-semibold text-zinc-100">Real-time Collaboration</h1>
-          <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-400">CRDT</span>
+          <h1 className="text-lg font-semibold text-zinc-100">{t('collab.title')}</h1>
+          <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-400">{t('collab.crdt')}</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -98,7 +100,7 @@ export function CollabView() {
               className="flex items-center gap-1.5 rounded-lg bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 transition-colors"
             >
               <PlugZap className="h-3.5 w-3.5" />
-              Disconnect
+              {t('collab.disconnect')}
             </button>
           ) : (
             <button
@@ -107,7 +109,7 @@ export function CollabView() {
               className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/20 transition-colors"
             >
               <Plug className="h-3.5 w-3.5" />
-              Connect
+              {t('collab.connect')}
             </button>
           )}
         </div>
@@ -117,7 +119,7 @@ export function CollabView() {
       <div className="flex items-center gap-2">
         <FileText className="h-4 w-4 text-zinc-500" />
         <label htmlFor="doc-key-input" className="text-xs text-zinc-500">
-          Document:
+          {t('collab.document')}
         </label>
         <input
           id="doc-key-input"
@@ -125,7 +127,7 @@ export function CollabView() {
           value={docKey}
           onChange={(e) => setDocKey(e.target.value)}
           className="rounded-md border border-zinc-700 bg-zinc-800/50 px-2 py-1 text-xs text-zinc-300 focus:border-indigo-500 focus:outline-none"
-          placeholder="session-id or document-key"
+          placeholder={t('collab.docKeyPlaceholder')}
         />
       </div>
 
@@ -156,7 +158,9 @@ export function CollabView() {
 
             <div className="mx-2 h-4 w-px bg-zinc-700" />
 
-            <span className="text-xs text-zinc-600">{content.length} chars</span>
+            <span className="text-xs text-zinc-600">
+              {content.length} {t('collab.chars')}
+            </span>
           </div>
 
           {/* Cursors */}
@@ -168,7 +172,7 @@ export function CollabView() {
             value={content}
             onChange={handleTextChange}
             className="flex-1 resize-none bg-transparent p-4 font-mono text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none"
-            placeholder="Start typing to collaborate in real-time..."
+            placeholder={t('collab.startTyping')}
             spellCheck={false}
           />
         </div>
@@ -177,27 +181,27 @@ export function CollabView() {
         <div className="w-64 flex-shrink-0 rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="h-4 w-4 text-zinc-400" />
-            <h2 className="text-sm font-medium text-zinc-300">Room Stats</h2>
+            <h2 className="text-sm font-medium text-zinc-300">{t('collab.roomStats')}</h2>
           </div>
 
           {stats ? (
             <div className="space-y-3 text-xs">
               <div className="flex justify-between text-zinc-400">
-                <span>Active rooms</span>
+                <span>{t('collab.activeRooms')}</span>
                 <span className="text-zinc-200">{stats.active_rooms}</span>
               </div>
               <div className="flex justify-between text-zinc-400">
-                <span>Total peers</span>
+                <span>{t('collab.totalPeers')}</span>
                 <span className="text-zinc-200">{stats.total_peers}</span>
               </div>
               <div className="flex justify-between text-zinc-400">
-                <span>Documents</span>
+                <span>{t('collab.documents')}</span>
                 <span className="text-zinc-200">{stats.total_documents}</span>
               </div>
 
               {stats.rooms.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <h3 className="text-zinc-500 font-medium">Rooms</h3>
+                  <h3 className="text-zinc-500 font-medium">{t('collab.rooms')}</h3>
                   {stats.rooms.map((room) => (
                     <div key={room.room_key} className="rounded-md border border-zinc-700/50 bg-zinc-800/30 p-2">
                       <div className="truncate text-zinc-300 font-mono">{room.room_key}</div>
@@ -212,7 +216,7 @@ export function CollabView() {
               )}
             </div>
           ) : (
-            <p className="text-xs text-zinc-600">Loading stats...</p>
+            <p className="text-xs text-zinc-600">{t('collab.loadingStats')}</p>
           )}
         </div>
       </div>

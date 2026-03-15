@@ -2,16 +2,51 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClaudeHydra v4 — AI Swarm Control Center</title>
+
+    <!-- Preconnect to font origins (eliminates DNS+TLS roundtrip ~100-200ms) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- DNS prefetch for API backend (prod) -->
+    <link rel="dns-prefetch" href="https://claudehydra-v4-backend.fly.dev" />
+
+    <!-- Critical font: JetBrains Mono + Inter with font-display: swap -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      />
+    </noscript>
+
+    <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="/icon.ico" />
+
+    <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0a0a0f" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- SEO & Open Graph -->
     <meta name="description" content="AI Swarm Control Center — orchestrate Claude agents for complex tasks" />
     <meta property="og:title" content="ClaudeHydra v4" />
     <meta property="og:description" content="AI Swarm Control Center — orchestrate Claude agents for complex tasks" />
     <meta property="og:type" content="website" />
-    <title>ClaudeHydra v4 — AI Swarm Control Center</title>
+
+    <!-- Inline critical CSS: prevent FOUC with dark background -->
+    <style>
+      html { background: #0f1419; }
+      body { margin: 0; background: transparent; }
+      #root { height: 100%; width: 100%; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

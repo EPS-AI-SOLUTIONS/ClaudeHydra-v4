@@ -38,8 +38,18 @@ COPY crates/jaskier-session-auth/Cargo.toml ./crates/jaskier-session-auth/Cargo.
 COPY crates/jaskier-semantic-cache/Cargo.toml ./crates/jaskier-semantic-cache/Cargo.toml
 COPY crates/jaskier-graph/Cargo.toml ./crates/jaskier-graph/Cargo.toml
 COPY crates/jaskier-wasm-core/Cargo.toml ./crates/jaskier-wasm-core/Cargo.toml
-# Copy this app's manifest
+# Copy ALL app backend manifests (workspace members -- cargo metadata requires all present)
 COPY ClaudeHydra/backend/Cargo.toml ./apps/ClaudeHydra/backend/Cargo.toml
+COPY apps/GeminiHydra/backend/Cargo.toml ./apps/GeminiHydra/backend/Cargo.toml
+COPY apps/Tissaia/backend/Cargo.toml ./apps/Tissaia/backend/Cargo.toml
+COPY apps/OpenAIHydra/backend/Cargo.toml ./apps/OpenAIHydra/backend/Cargo.toml
+COPY apps/GrokHydra/backend/Cargo.toml ./apps/GrokHydra/backend/Cargo.toml
+COPY apps/DeepSeekHydra/backend/Cargo.toml ./apps/DeepSeekHydra/backend/Cargo.toml
+COPY apps/LocalHydra/backend/Cargo.toml ./apps/LocalHydra/backend/Cargo.toml
+COPY apps/Regis/backend/Cargo.toml ./apps/Regis/backend/Cargo.toml
+COPY apps/FitPlanner67/backend/Cargo.toml ./apps/FitPlanner67/backend/Cargo.toml
+COPY apps/Vesemir/Cargo.toml ./apps/Vesemir/Cargo.toml
+COPY apps/JaskierTUI/Cargo.toml ./apps/JaskierTUI/Cargo.toml
 # Copy service workspace member manifests (.dockerignore excludes services/, so copy explicitly)
 COPY services/gemini-proxy-rs/Cargo.toml ./services/gemini-proxy-rs/Cargo.toml
 COPY services/JaskierRAG/proxy/Cargo.toml ./services/JaskierRAG/proxy/Cargo.toml

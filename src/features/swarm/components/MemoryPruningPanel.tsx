@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   type PruneCycleSummary,
   type PruneLogEntry,
@@ -145,18 +146,20 @@ function StatusBadge({ status }: { status: string }) {
 function CycleDetails({ cycleId }: { cycleId: string }) {
   const { data, isLoading } = usePruningDetails(cycleId);
 
+  const { t } = useTranslation();
+
   if (isLoading) {
     return (
       <div style={{ padding: '12px', color: '#8b8ba7', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Loader2 size={14} className="animate-spin" />
-        Wczytywanie szczegółów...
+        {t('pruning.loadingDetails')}
       </div>
     );
   }
 
   const entries = data?.entries ?? [];
   if (entries.length === 0) {
-    return <div style={{ padding: '12px', color: '#6b7280', fontSize: '13px' }}>Brak wpisów dla tego cyklu.</div>;
+    return <div style={{ padding: '12px', color: '#6b7280', fontSize: '13px' }}>{t('pruning.noEntries')}</div>;
   }
 
   return (
@@ -164,11 +167,11 @@ function CycleDetails({ cycleId }: { cycleId: string }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #2a2a4e', color: '#8b8ba7' }}>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Encja</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Akcja</th>
-            <th style={{ padding: '8px', textAlign: 'left' }}>Powód</th>
-            <th style={{ padding: '8px', textAlign: 'right' }}>Podobieństwo</th>
-            <th style={{ padding: '8px', textAlign: 'right' }}>Tokeny</th>
+            <th style={{ padding: '8px', textAlign: 'left' }}>{t('pruning.table.entity')}</th>
+            <th style={{ padding: '8px', textAlign: 'left' }}>{t('pruning.table.action')}</th>
+            <th style={{ padding: '8px', textAlign: 'left' }}>{t('pruning.table.reason')}</th>
+            <th style={{ padding: '8px', textAlign: 'right' }}>{t('pruning.table.similarity')}</th>
+            <th style={{ padding: '8px', textAlign: 'right' }}>{t('pruning.table.tokens')}</th>
           </tr>
         </thead>
         <tbody>
@@ -220,6 +223,7 @@ function CycleDetails({ cycleId }: { cycleId: string }) {
 // ── Main Panel ───────────────────────────────────────────────────────────────
 
 export function MemoryPruningPanel() {
+  const { t } = useTranslation();
   const { data: statsData, isLoading: statsLoading } = usePruningStats();
   const { data: historyData } = usePruningHistory(20);
   const { data: configData } = usePruningConfig();
@@ -241,10 +245,8 @@ export function MemoryPruningPanel() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Brain size={24} color="#c084fc" />
           <div>
-            <h2 style={{ margin: 0, fontSize: '20px', color: '#e0e0ff' }}>Self-Reflection & Memory Pruning</h2>
-            <p style={{ margin: 0, fontSize: '13px', color: '#8b8ba7' }}>
-              Automatyczne oczyszczanie Knowledge Graph z duplikatów i nieaktualnych wpisów
-            </p>
+            <h2 style={{ margin: 0, fontSize: '20px', color: '#e0e0ff' }}>{t('pruning.title')}</h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#8b8ba7' }}>{t('pruning.subtitle')}</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -265,7 +267,7 @@ export function MemoryPruningPanel() {
             }}
           >
             <Settings2 size={14} />
-            Konfiguracja
+            {t('pruning.config')}
           </button>
           <button
             type="button"
@@ -289,12 +291,12 @@ export function MemoryPruningPanel() {
             {isRunning ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Pruning w toku...
+                {t('pruning.pruningInProgress')}
               </>
             ) : (
               <>
                 <Play size={14} />
-                Uruchom Pruning
+                {t('pruning.triggerPruning')}
               </>
             )}
           </button>
@@ -310,18 +312,38 @@ export function MemoryPruningPanel() {
           marginBottom: '24px',
         }}
       >
-        <StatCard label="Cykli pruning" value={metrics?.total_cycles ?? 0} icon={BarChart3} color="#3b82f6" />
-        <StatCard label="Usunięte wpisy" value={metrics?.total_deleted ?? 0} icon={Trash2} color="#ef4444" />
-        <StatCard label="Scalone wpisy" value={metrics?.total_merged ?? 0} icon={GitMerge} color="#a855f7" />
         <StatCard
-          label="Tokeny zaoszczędzone"
+          label={t('pruning.stats.cycles')}
+          value={metrics?.total_cycles ?? 0}
+          icon={BarChart3}
+          color="#3b82f6"
+        />
+        <StatCard
+          label={t('pruning.stats.deleted')}
+          value={metrics?.total_deleted ?? 0}
+          icon={Trash2}
+          color="#ef4444"
+        />
+        <StatCard
+          label={t('pruning.stats.merged')}
+          value={metrics?.total_merged ?? 0}
+          icon={GitMerge}
+          color="#a855f7"
+        />
+        <StatCard
+          label={t('pruning.stats.tokensSaved')}
           value={metrics?.total_tokens_saved?.toLocaleString() ?? '0'}
           icon={Zap}
           color="#22c55e"
         />
-        <StatCard label="Klastry znalezione" value={metrics?.total_clusters_found ?? 0} icon={Layers} color="#eab308" />
         <StatCard
-          label="Ostatni cykl"
+          label={t('pruning.stats.clustersFound')}
+          value={metrics?.total_clusters_found ?? 0}
+          icon={Layers}
+          color="#eab308"
+        />
+        <StatCard
+          label={t('pruning.stats.lastCycle')}
           value={metrics?.last_cycle_duration_ms ? `${metrics.last_cycle_duration_ms}ms` : '—'}
           icon={Clock}
           color="#06b6d4"
@@ -344,7 +366,7 @@ export function MemoryPruningPanel() {
             }}
           >
             <div style={{ padding: '20px' }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: '15px', color: '#e0e0ff' }}>Konfiguracja Pruning</h3>
+              <h3 style={{ margin: '0 0 16px', fontSize: '15px', color: '#e0e0ff' }}>{t('pruning.configTitle')}</h3>
               <div
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}
               >
@@ -365,7 +387,7 @@ export function MemoryPruningPanel() {
                     onChange={(e) => updateConfig.mutate({ enabled: e.target.checked })}
                     style={{ accentColor: '#a855f7' }}
                   />
-                  Auto-pruning aktywny
+                  {t('pruning.autoPruning')}
                 </label>
 
                 {/* Similarity threshold */}
@@ -374,7 +396,7 @@ export function MemoryPruningPanel() {
                     htmlFor="prune-similarity"
                     style={{ fontSize: '12px', color: '#8b8ba7', display: 'block', marginBottom: '4px' }}
                   >
-                    Próg podobieństwa: {(config.similarity_threshold * 100).toFixed(0)}%
+                    {t('pruning.similarityThreshold')}: {(config.similarity_threshold * 100).toFixed(0)}%
                   </label>
                   <input
                     id="prune-similarity"
@@ -393,7 +415,7 @@ export function MemoryPruningPanel() {
                     htmlFor="prune-min-age"
                     style={{ fontSize: '12px', color: '#8b8ba7', display: 'block', marginBottom: '4px' }}
                   >
-                    Min. wiek wpisu (godz.): {config.min_age_hours}
+                    {t('pruning.minAge')}: {config.min_age_hours}
                   </label>
                   <input
                     id="prune-min-age"
@@ -412,7 +434,7 @@ export function MemoryPruningPanel() {
                     htmlFor="prune-max-entries"
                     style={{ fontSize: '12px', color: '#8b8ba7', display: 'block', marginBottom: '4px' }}
                   >
-                    Maks. wpisów pamięci: {config.max_memory_entries}
+                    {t('pruning.maxEntries')}: {config.max_memory_entries}
                   </label>
                   <input
                     id="prune-max-entries"
@@ -439,7 +461,7 @@ export function MemoryPruningPanel() {
                     htmlFor="prune-interval"
                     style={{ fontSize: '12px', color: '#8b8ba7', display: 'block', marginBottom: '4px' }}
                   >
-                    Interwał auto-pruning (sek.): {config.auto_prune_interval_secs}
+                    {t('pruning.autoInterval')}: {config.auto_prune_interval_secs}
                   </label>
                   <input
                     id="prune-interval"
@@ -467,7 +489,7 @@ export function MemoryPruningPanel() {
                     htmlFor="prune-max-cluster"
                     style={{ fontSize: '12px', color: '#8b8ba7', display: 'block', marginBottom: '4px' }}
                   >
-                    Maks. rozmiar klastra: {config.max_cluster_size}
+                    {t('pruning.maxCluster')}: {config.max_cluster_size}
                   </label>
                   <input
                     id="prune-max-cluster"
@@ -494,21 +516,19 @@ export function MemoryPruningPanel() {
         }}
       >
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2a4e' }}>
-          <h3 style={{ margin: 0, fontSize: '15px', color: '#e0e0ff' }}>Historia cykli pruning</h3>
+          <h3 style={{ margin: 0, fontSize: '15px', color: '#e0e0ff' }}>{t('pruning.history')}</h3>
         </div>
 
         {statsLoading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#8b8ba7' }}>
             <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px' }} />
-            <div>Wczytywanie...</div>
+            <div>{t('pruning.loading')}</div>
           </div>
         ) : cycles.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
             <Brain size={32} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
-            <div>Brak ukończonych cykli pruning</div>
-            <div style={{ fontSize: '12px', marginTop: '4px' }}>
-              Kliknij "Uruchom Pruning" aby rozpocząć analizę Knowledge Graph
-            </div>
+            <div>{t('pruning.noCycles')}</div>
+            <div style={{ fontSize: '12px', marginTop: '4px' }}>{t('pruning.noCyclesHint')}</div>
           </div>
         ) : (
           <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
@@ -541,19 +561,19 @@ export function MemoryPruningPanel() {
                     </span>
                     <span style={{ flex: 1 }} />
                     <span style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#a0a0c0' }}>
-                      <span title="Usunięte">
+                      <span title={t('pruning.tooltips.deleted')}>
                         <Trash2 size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} />
                         {cycle.deleted_count}
                       </span>
-                      <span title="Scalone">
+                      <span title={t('pruning.tooltips.merged')}>
                         <GitMerge size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} />
                         {cycle.merged_count}
                       </span>
-                      <span title="Zachowane">
+                      <span title={t('pruning.tooltips.kept')}>
                         <CheckCircle2 size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} />
                         {cycle.kept_count}
                       </span>
-                      <span title="Tokeny zaoszczędzone" style={{ color: '#4ade80' }}>
+                      <span title={t('pruning.tooltips.tokensSaved')} style={{ color: '#4ade80' }}>
                         <Zap size={12} style={{ marginRight: '2px', verticalAlign: 'middle' }} />
                         {cycle.tokens_saved.toLocaleString()}
                       </span>

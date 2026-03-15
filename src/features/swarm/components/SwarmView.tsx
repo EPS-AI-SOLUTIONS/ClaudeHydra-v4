@@ -37,6 +37,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useTranslation } from 'react-i18next';
 import { type OrchestrationPattern, type SwarmPeer, type SwarmTaskSummary, useSwarm } from '../hooks/useSwarm';
 import { MemoryPruningPanel } from './MemoryPruningPanel';
 import { SandboxPanel } from './SandboxPanel';
@@ -109,6 +110,7 @@ function PeerNode({ data }: { data: { peer: SwarmPeer; isSelf: boolean } }) {
             letterSpacing: '1px',
           }}
         >
+          {/* i18n: translated at SwarmView level via prop */}
           This Instance
         </div>
       )}
@@ -121,6 +123,7 @@ const nodeTypes = { peer: PeerNode };
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export function SwarmView() {
+  const { t } = useTranslation();
   const { peers, tasks, events, stats, isDiscovering, isDelegating, discover, delegate, loadTask, selectedTask } =
     useSwarm();
 
@@ -245,7 +248,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <Activity size={16} /> Monitoring
+          <Activity size={16} /> {t('swarm.tabs.monitoring')}
         </button>
         <button
           type="button"
@@ -263,7 +266,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <LayoutTemplate size={16} /> Swarm Builder
+          <LayoutTemplate size={16} /> {t('swarm.tabs.builder')}
         </button>
         <button
           type="button"
@@ -281,7 +284,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <Shield size={16} /> Sandbox
+          <Shield size={16} /> {t('swarm.tabs.sandbox')}
         </button>
         <button
           type="button"
@@ -299,7 +302,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <Brain size={16} /> Memory Pruning
+          <Brain size={16} /> {t('swarm.tabs.pruning')}
         </button>
       </div>
 
@@ -353,19 +356,34 @@ export function SwarmView() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Network size={16} color="#3b82f6" />
-                    <span style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: 600 }}>Swarm IPC</span>
+                    <span style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: 600 }}>{t('swarm.title')}</span>
                   </div>
                   <div style={{ width: '1px', height: '20px', background: '#334155' }} />
 
                   <Stat
                     icon={<Globe size={14} />}
-                    label="Online"
+                    label={t('swarm.stats.online')}
                     value={`${stats.onlinePeers}/${stats.totalPeers}`}
                     color="#22c55e"
                   />
-                  <Stat icon={<Activity size={14} />} label="Running" value={stats.runningTasks} color="#3b82f6" />
-                  <Stat icon={<CheckCircle2 size={14} />} label="Done" value={stats.completedTasks} color="#22c55e" />
-                  <Stat icon={<XCircle size={14} />} label="Failed" value={stats.failedTasks} color="#ef4444" />
+                  <Stat
+                    icon={<Activity size={14} />}
+                    label={t('swarm.stats.running')}
+                    value={stats.runningTasks}
+                    color="#3b82f6"
+                  />
+                  <Stat
+                    icon={<CheckCircle2 size={14} />}
+                    label={t('swarm.stats.done')}
+                    value={stats.completedTasks}
+                    color="#22c55e"
+                  />
+                  <Stat
+                    icon={<XCircle size={14} />}
+                    label={t('swarm.stats.failed')}
+                    value={stats.failedTasks}
+                    color="#ef4444"
+                  />
 
                   <div style={{ width: '1px', height: '20px', background: '#334155' }} />
 
@@ -387,7 +405,7 @@ export function SwarmView() {
                     }}
                   >
                     {isDiscovering ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                    Discover
+                    {t('swarm.discover')}
                   </button>
 
                   <button
@@ -407,7 +425,7 @@ export function SwarmView() {
                     }}
                   >
                     <Send size={14} />
-                    Delegate
+                    {t('swarm.delegate')}
                   </button>
                 </div>
               </Panel>
@@ -434,13 +452,13 @@ export function SwarmView() {
                 >
                   <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px' }}>
                     <Zap size={16} style={{ display: 'inline', marginRight: '6px' }} />
-                    Delegate Task to Swarm
+                    {t('swarm.delegateTitle')}
                   </div>
 
                   <textarea
                     value={delegatePrompt}
                     onChange={(e) => setDelegatePrompt(e.target.value)}
-                    placeholder="Enter task prompt..."
+                    placeholder={t('swarm.delegatePrompt')}
                     rows={3}
                     style={{
                       width: '100%',
@@ -480,7 +498,7 @@ export function SwarmView() {
                   {/* Target selection */}
                   <div style={{ marginTop: '10px' }}>
                     <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
-                      Targets (empty = all online):
+                      {t('swarm.delegateTargets')}
                     </div>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {peers
@@ -523,7 +541,7 @@ export function SwarmView() {
                       }}
                     >
                       <Paperclip size={12} />
-                      Attachments (image/doc URLs):
+                      {t('swarm.delegateAttachments')}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <input
@@ -556,7 +574,7 @@ export function SwarmView() {
                           cursor: attachmentUrl.trim() ? 'pointer' : 'not-allowed',
                         }}
                       >
-                        Add
+                        {t('swarm.addAttachment')}
                       </button>
                     </div>
                     {delegateAttachments.length > 0 && (
@@ -636,12 +654,12 @@ export function SwarmView() {
                     {isDelegating ? (
                       <>
                         <Loader2 size={14} className="animate-spin" />
-                        Delegating...
+                        {t('swarm.delegating')}
                       </>
                     ) : (
                       <>
                         <Play size={14} />
-                        Execute
+                        {t('swarm.executing')}
                       </>
                     )}
                   </button>
@@ -664,11 +682,11 @@ export function SwarmView() {
             {/* Tasks section */}
             <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' }}>
-                Recent Tasks
+                {t('swarm.recentTasks')}
               </div>
               {tasks.length === 0 ? (
                 <div style={{ fontSize: '12px', color: '#64748b', padding: '20px 0', textAlign: 'center' }}>
-                  No swarm tasks yet. Click "Delegate" to start.
+                  {t('swarm.noTasks')}
                 </div>
               ) : (
                 tasks
@@ -687,11 +705,11 @@ export function SwarmView() {
               }}
             >
               <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' }}>
-                Live Events
+                {t('swarm.liveEvents')}
               </div>
               {events.length === 0 ? (
                 <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '12px' }}>
-                  Waiting for events...
+                  {t('swarm.waitingEvents')}
                 </div>
               ) : (
                 events.slice(0, 30).map((event) => (
@@ -733,7 +751,7 @@ export function SwarmView() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>Task Details</div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>{t('swarm.taskDetails')}</div>
                     <button
                       type="button"
                       onClick={() => loadTask('')}

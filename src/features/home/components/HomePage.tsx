@@ -190,6 +190,8 @@ export const HomePage = memo(() => {
               alt={t('home.logoAlt', 'ClaudeHydra Logo')}
               width={512}
               height={453}
+              fetchPriority="high"
+              decoding="async"
               className="relative w-56 h-56 object-contain drop-shadow-lg"
             />
           </div>
