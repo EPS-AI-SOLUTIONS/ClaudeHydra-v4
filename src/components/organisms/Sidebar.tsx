@@ -11,7 +11,9 @@
 
 import { useIsMobile } from '@jaskier/core';
 import {
+  Activity,
   BarChart3,
+  Brain,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +28,7 @@ import {
   ScrollText,
   Settings,
   Sparkles,
+  Users,
   WifiOff,
   X,
   Zap,
@@ -52,6 +55,7 @@ import { FooterControls, LogoButton } from '@jaskier/hydra-app/components/organi
 import { cn } from '@jaskier/ui';
 import { SessionSearch } from '@/components/molecules/SessionSearch';
 import { TagChip } from '@/components/molecules/TagChip';
+import { usePredictivePrefetch } from '@/shared/hooks/usePredictivePrefetch';
 import { useViewStore, type ViewId } from '@/stores/viewStore';
 import { SessionItem } from './sidebar/SessionItem';
 import { useSidebarLogic } from './sidebar/useSidebarLogic';
@@ -114,6 +118,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   const isLight = theme.isLight;
   const isDark = !isLight;
 
+  // Predictive UI pre-fetching (Task 34)
+  const { prefetchOnHover, cancelHoverPrefetch } = usePredictivePrefetch();
+
   // Wrap base handlers with mobile drawer close
   const navigateTo = useCallback(
     (view: ViewId) => {
@@ -158,6 +165,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         { id: 'logs' as ViewId, label: t('nav.logs', 'Logs'), icon: ScrollText },
         { id: 'delegations' as ViewId, label: t('nav.delegations', 'Delegations'), icon: Network },
         { id: 'analytics' as ViewId, label: t('nav.analytics', 'Analytics'), icon: BarChart3 },
+        { id: 'swarm' as ViewId, label: t('nav.swarm', 'Swarm Dashboard'), icon: Activity },
+        { id: 'semantic-cache' as ViewId, label: t('nav.semanticCache', 'Semantic Cache'), icon: Brain },
+        { id: 'collab' as ViewId, label: t('nav.collab', 'Collaboration'), icon: Users },
         { id: 'settings', label: t('nav.settings', 'Settings'), icon: Settings },
       ],
     },
@@ -247,6 +257,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                       type="button"
                       data-testid={`nav-${item.id}`}
                       onClick={() => navigateTo(item.id)}
+                      onPointerEnter={() => prefetchOnHover(item.id)}
+                      onPointerLeave={cancelHoverPrefetch}
                       className={cn(
                         'relative w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group',
                         collapsed ? 'justify-center' : '',

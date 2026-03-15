@@ -26,7 +26,12 @@ use std::time::Instant;
 
 use crate::ai_gateway::{self, AiGatewayState, HasAiGateway};
 use crate::ai_gateway::vault_bridge::{HasVaultBridge, VaultClient};
+use crate::collab::CollabState;
+use crate::memory_pruning::{HasMemoryPruning, MemoryPruningState};
 use crate::models::WitcherAgent;
+use crate::sandbox::{HasSandboxState, SandboxState};
+use crate::semantic_cache::{HasSemanticCache, SemanticCacheState};
+use crate::swarm::SwarmState;
 use crate::tools::ToolExecutor;
 
 // ── AppState ────────────────────────────────────────────────────────────────
@@ -64,6 +69,19 @@ pub struct AppState {
     /// Unit broadcast channel required by `HasAgentState` / `HasA2aState` trait bounds
     /// (shared router delegates `()` signals; CH's real A2A uses `Sender<Value>` above).
     pub a2a_unit_tx: tokio::sync::broadcast::Sender<()>,
+    // ── Profiling (HTTP latency histogram + Web Vitals aggregator) ────
+    pub request_metrics: Arc<jaskier_core::profiling::RequestMetrics>,
+    pub web_vitals: Arc<jaskier_core::profiling::WebVitalsAggregator>,
+    // ── Swarm IPC (Cross-Agent Communication Protocol) ────────────────
+    pub swarm: SwarmState,
+    // ── CRDT Real-time Collaboration ────────────────────────────────────
+    pub collab: CollabState,
+    // ── Semantic Cache (Qdrant + Gemini Embeddings) ──────────────────────
+    pub semantic_cache: Arc<SemanticCacheState>,
+    // ── Sandbox (Isolated code execution for agents) ──────────────────────
+    pub sandbox: SandboxState,
+    // ── Memory Pruning (Self-Reflection & Knowledge Graph cleanup) ──────
+    pub memory_pruning: Arc<MemoryPruningState>,
 }
 
 impl Deref for AppState {
@@ -127,6 +145,19 @@ impl AppState {
         let http_client = base.client.clone();
         let circuit_breaker = base.gemini_circuit.clone();
 
+        // ── Swarm IPC (Cross-Agent Communication Protocol) ────────────
+        let swarm = SwarmState::new();
+
+        // ── CRDT Real-time Collaboration ─────────────────────────────
+        let collab = CollabState::new();
+
+        // ── Semantic Cache (Qdrant + Gemini Embeddings) ──────────────
+        let google_api_key = std::env::var("GOOGLE_API_KEY").ok();
+        let semantic_cache = Arc::new(SemanticCacheState::new(google_api_key).await);
+
+        // ── Sandbox (Docker-based isolated execution) ──────────────
+        let sandbox = SandboxState::new();
+
         Self {
             base,
             ai_gateway: ai_gateway_state,
@@ -137,11 +168,23 @@ impl AppState {
             circuit_breaker,
             a2a_task_tx,
             a2a_unit_tx,
+            request_metrics: Arc::new(jaskier_core::profiling::RequestMetrics::new()),
+            web_vitals: Arc::new(jaskier_core::profiling::WebVitalsAggregator::new()),
+            swarm,
+            collab,
+            semantic_cache,
+            sandbox,
+            memory_pruning: Arc::new(MemoryPruningState::new(&db).await),
         }
     }
 
     pub fn is_ready(&self) -> bool { self.base.is_ready() }
     pub fn mark_ready(&self) { self.base.mark_ready(); }
+
+    /// Access the Web Vitals aggregator (used by /api/vitals endpoint).
+    pub fn web_vitals_aggregator(&self) -> Arc<jaskier_core::profiling::WebVitalsAggregator> {
+        self.web_vitals.clone()
+    }
 
     /// Refresh agents list — loads from DB, falls back to hardcoded defaults.
     pub async fn refresh_agents(&self) {
@@ -199,6 +242,7 @@ impl AppState {
                 jaskier_hydra_state::BrowserProxyStatus::default(),
             )),
             browser_proxy_history: Arc::new(jaskier_hydra_state::ProxyHealthHistory::new(50)),
+            global_rate_limiter: Arc::new(jaskier_core::rate_limiter::GlobalRateLimiter::new()),
             a2a_semaphore: Arc::new(tokio::sync::Semaphore::new(5)),
             ws_semaphore: Arc::new(tokio::sync::Semaphore::new(20)),
             api_key_env_vars: &["ANTHROPIC_API_KEY"],
@@ -219,7 +263,47 @@ impl AppState {
             circuit_breaker,
             a2a_task_tx,
             a2a_unit_tx,
+            request_metrics: Arc::new(jaskier_core::profiling::RequestMetrics::new()),
+            web_vitals: Arc::new(jaskier_core::profiling::WebVitalsAggregator::new()),
+            swarm: SwarmState::new(),
+            collab: CollabState::new(),
+            semantic_cache: Arc::new(SemanticCacheState::new_test()),
+            sandbox: SandboxState::new(),
+            memory_pruning: Arc::new(MemoryPruningState::new_test()),
         }
+    }
+}
+
+// ── HasSemanticCache — Qdrant-backed semantic router ─────────────────────────
+
+impl HasSemanticCache for AppState {
+    fn semantic_cache(&self) -> &Arc<SemanticCacheState> {
+        &self.semantic_cache
+    }
+}
+
+// ── HasSandboxState — Docker-based isolated code execution ───────────────────
+
+impl HasSandboxState for AppState {
+    fn sandbox(&self) -> &SandboxState {
+        &self.sandbox
+    }
+    fn sandbox_db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
+}
+
+// ── HasMemoryPruning — Self-Reflection & Knowledge Graph cleanup ─────────────
+
+impl HasMemoryPruning for AppState {
+    fn memory_pruning(&self) -> &Arc<MemoryPruningState> {
+        &self.memory_pruning
+    }
+    fn pruning_db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
+    fn mcp_client(&self) -> &Arc<jaskier_hydra_state::McpClientManager> {
+        &self.base.mcp_client
     }
 }
 
@@ -239,6 +323,7 @@ jaskier_hydra_state::delegate_trait_service_tokens!(AppState, "ch");
 jaskier_hydra_state::delegate_trait_mcp!(AppState, "ch");
 jaskier_hydra_state::delegate_trait_tools!(AppState, "ch");
 jaskier_hydra_state::delegate_trait_knowledge_api!(AppState);
+jaskier_hydra_state::delegate_trait_rate_limiter!(AppState);
 
 // Extra trait: Anthropic OAuth (CH-specific)
 jaskier_hydra_state::delegate_trait_anthropic_oauth!(AppState, "ch");
@@ -284,6 +369,30 @@ impl jaskier_core::metrics::HasMetricsState for AppState {
 
     fn a2a_error_filter(&self) -> &'static str {
         "is_error = TRUE"
+    }
+
+    async fn extra_metrics_lines(&self) -> String {
+        let mut out = String::new();
+        // HTTP request latency histogram
+        out.push_str(&self.request_metrics.prometheus_output());
+        // Web Vitals aggregated metrics
+        out.push_str(&self.web_vitals.prometheus_output());
+        // Semantic cache metrics
+        out.push_str(&self.semantic_cache.metrics.prometheus_output());
+        // Memory pruning metrics
+        out.push_str(&self.memory_pruning.metrics.prometheus_output());
+        out
+    }
+}
+
+// ── HasProfilingState — HTTP latency + Web Vitals ──────────────────────────
+
+impl jaskier_core::profiling::HasProfilingState for AppState {
+    fn web_vitals(&self) -> &Arc<jaskier_core::profiling::WebVitalsAggregator> {
+        &self.web_vitals
+    }
+    fn request_metrics(&self) -> &Arc<jaskier_core::profiling::RequestMetrics> {
+        &self.request_metrics
     }
 }
 
@@ -699,5 +808,25 @@ impl jaskier_ai_modules::a2a::HasA2aState for AppState {
 
     fn build_a2a_thinking_config(&self, _model: &str, _thinking_level: &str) -> Option<serde_json::Value> {
         None
+    }
+}
+
+// ── HasCollabState — CRDT Real-time Collaboration ───────────────────────────
+
+impl jaskier_collab::HasCollabState for AppState {
+    fn collab_hub(&self) -> &Arc<jaskier_collab::CollabHub> {
+        &self.collab.hub
+    }
+
+    fn collab_db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
+
+    fn crdt_table(&self) -> &'static str {
+        "ch_crdt_documents"
+    }
+
+    fn collab_app_id(&self) -> &'static str {
+        "claudehydra"
     }
 }

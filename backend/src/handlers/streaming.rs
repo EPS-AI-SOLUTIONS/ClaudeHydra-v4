@@ -53,6 +53,10 @@ impl HasAnthropicStreamingState for AppState {
         &self.http_client
     }
 
+    fn rate_limiter(&self) -> &std::sync::Arc<jaskier_core::rate_limiter::GlobalRateLimiter> {
+        &self.base.global_rate_limiter
+    }
+
     fn send_to_anthropic(
         &self,
         body: &Value,
@@ -107,7 +111,7 @@ impl HasAnthropicStreamingState for AppState {
         async move {
             state
                 .tool_executor
-                .tool_definitions_with_mcp(&state)
+                .tool_definitions_with_mcp(&state, None)
                 .await
                 .into_iter()
                 .map(|td| AnthropicToolDef {
@@ -197,6 +201,76 @@ impl HasAnthropicStreamingState for AppState {
             "claude-sonnet-4-6".to_string(),
             "claude-haiku-4-5-20251001".to_string(),
         ]
+    }
+
+    fn send_fallback_openai_compatible(
+        &self,
+        _model: &str, // Original model
+        system: &str,
+        messages: &[Value],
+        temperature: f64,
+        max_tokens: u32,
+    ) -> impl std::future::Future<Output = Result<reqwest::Response, (StatusCode, String)>> + Send {
+        let state = self.clone();
+        let system_prompt = system.to_string();
+        let msgs = messages.to_vec();
+
+        async move {
+            let api_keys = state.base.api_keys.read().await;
+            
+            let (target_model, base_url, api_key) = if let Some(key) = api_keys.get("deepseek") {
+                ("deepseek-chat", "https://api.deepseek.com/chat/completions", key.to_string())
+            } else if let Some(key) = api_keys.get("grok") {
+                ("grok-2-1212", "https://api.x.ai/v1/chat/completions", key.to_string())
+            } else if let Ok(key) = std::env::var("DEEPSEEK_API_KEY") {
+                ("deepseek-chat", "https://api.deepseek.com/chat/completions", key)
+            } else if let Ok(key) = std::env::var("XAI_API_KEY") {
+                ("grok-2-1212", "https://api.x.ai/v1/chat/completions", key)
+            } else {
+                return Err((StatusCode::NOT_IMPLEMENTED, "No fallback API keys found (deepseek/grok)".to_string()));
+            };
+
+            let mut openai_messages = Vec::new();
+            if !system_prompt.is_empty() {
+                openai_messages.push(json!({
+                    "role": "system",
+                    "content": system_prompt
+                }));
+            }
+
+            for msg in &msgs {
+                let role = msg.get("role").unwrap_or(&json!("user")).clone();
+                let mut content_str = String::new();
+                if let Some(content_arr) = msg.get("content").and_then(|c| c.as_array()) {
+                    for block in content_arr {
+                        if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
+                            content_str.push_str(text);
+                        }
+                    }
+                } else if let Some(text) = msg.get("content").and_then(|c| c.as_str()) {
+                    content_str.push_str(text);
+                }
+                openai_messages.push(json!({
+                    "role": role,
+                    "content": content_str
+                }));
+            }
+
+            let body = json!({
+                "model": target_model,
+                "messages": openai_messages,
+                "stream": true,
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            });
+
+            state.http_client.post(base_url)
+                .header("Authorization", format!("Bearer {}", api_key))
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| (StatusCode::BAD_GATEWAY, e.to_string()))
+        }
     }
 
     fn is_retryable_status(&self, status: u16) -> bool {
@@ -493,6 +567,23 @@ fn filter_client_system_prompt(messages: &[ChatMessage]) -> Vec<Value> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Predictive Prefetch — REST endpoint for NDJSON clients
+// ═══════════════════════════════════════════════════════════════════════
+
+/// POST /api/prefetch/hints — returns view hints for a given prompt.
+/// Used by NDJSON streaming clients that can't receive WS `view_hint` events.
+pub async fn prefetch_hints(
+    Json(body): Json<Value>,
+) -> Json<Value> {
+    let prompt = body
+        .get("prompt")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let hints = detect_view_hints(prompt);
+    Json(json!({ "views": hints }))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Claude Streaming (SSE from Anthropic → NDJSON to frontend)
 //  BE-CH-003: Delegates to shared anthropic_streaming handler
 // ═══════════════════════════════════════════════════════════════════════
@@ -600,6 +691,38 @@ async fn ws_send(sender: &mut SplitSink<WebSocket, WsMessage>, msg: &WsServerMes
     if let Err(e) = sender.send(WsMessage::Text(json.into())).await {
         tracing::warn!("ws_send failed: {}", e);
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Predictive UI Pre-fetching — view hint detection from prompt text
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Keyword-to-view mapping for predictive pre-fetching.
+/// Analyzes the user prompt and returns view IDs that the user likely wants next.
+fn detect_view_hints(prompt: &str) -> Vec<String> {
+    let lower = prompt.to_lowercase();
+    let mut hints = Vec::new();
+
+    let rules: &[(&[&str], &str)] = &[
+        (&["statystyk", "analytics", "zużyci", "token", "koszt", "cost", "usage", "billing"], "analytics"),
+        (&["ustawieni", "settings", "konfiguracj", "model", "api key", "provider"], "settings"),
+        (&["log", "błęd", "error", "debug", "tracing"], "logs"),
+        (&["agent", "narzędzi", "tool", "executor"], "agents"),
+        (&["delegacj", "delegation", "przekaz", "a2a"], "delegations"),
+        (&["rój", "swarm", "orkiestracj", "multi-agent", "peer"], "swarm"),
+        (&["cache", "semantyczn", "semantic", "embedding", "qdrant"], "semantic-cache"),
+        (&["kolaboracj", "collab", "współprac", "edytor", "crdt", "yjs"], "collab"),
+    ];
+
+    for (keywords, view) in rules {
+        if keywords.iter().any(|kw| lower.contains(kw)) {
+            hints.push((*view).to_string());
+        }
+    }
+
+    // Cap at 3 hints to avoid over-fetching
+    hints.truncate(3);
+    hints
 }
 
 /// WebSocket upgrade handler for `/ws/chat`.
@@ -757,6 +880,12 @@ async fn execute_streaming_ws(
         },
     )
     .await;
+
+    // Predictive UI pre-fetching — emit view hints based on prompt keywords
+    let view_hints = detect_view_hints(&prompt);
+    if !view_hints.is_empty() {
+        ws_send(sender, &WsServerMessage::ViewHint { views: view_hints }).await;
+    }
 
     // Build initial messages — prefer DB history when session_id present
     let initial_messages: Vec<Value> = if let Some(ref sid) = ctx.session_id {
@@ -931,7 +1060,7 @@ async fn execute_streaming_ws(
 
     let tool_defs: Vec<Value> = state
         .tool_executor
-        .tool_definitions_with_mcp(state)
+        .tool_definitions_with_mcp(state, Some(&model))
         .await
         .into_iter()
         .map(|td| {
@@ -1581,7 +1710,7 @@ pub(crate) async fn execute_agent_call(
     // Build tool definitions (including MCP)
     let tool_defs: Vec<Value> = state
         .tool_executor
-        .tool_definitions_with_mcp(state)
+        .tool_definitions_with_mcp(state, Some(&model))
         .await
         .into_iter()
         .map(|td| {

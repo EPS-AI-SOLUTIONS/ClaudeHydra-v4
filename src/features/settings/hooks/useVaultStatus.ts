@@ -1,35 +1,12 @@
 /** Jaskier Shared Pattern — Vault Health Monitoring Hook */
 // useVaultStatus.ts — Hook for Jaskier Vault health & audit
 
+import type { AuditEntry, VaultHealth } from '@jaskier/vault-client';
+import { VAULT_API, VAULT_POLLING, VAULT_QUERY_KEYS } from '@jaskier/vault-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/shared/api/client';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface VaultHealth {
-  online: boolean;
-  credential_count: number;
-  namespace_count: number;
-  last_audit: string | null;
-  encryption: string;
-}
-
-export interface AuditEntry {
-  timestamp: string;
-  action: string;
-  namespace: string;
-  service: string;
-  result: 'success' | 'failed';
-}
-
-// ---------------------------------------------------------------------------
-// Query keys
-// ---------------------------------------------------------------------------
-
-const VAULT_HEALTH_KEY = ['vault-health'] as const;
-const VAULT_AUDIT_KEY = ['vault-audit'] as const;
+export type { AuditEntry, VaultHealth } from '@jaskier/vault-client';
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -40,35 +17,35 @@ export function useVaultStatus() {
 
   // Health check with 60s polling
   const { data: health = null, isLoading: isHealthLoading } = useQuery<VaultHealth | null>({
-    queryKey: VAULT_HEALTH_KEY,
-    queryFn: () => apiGet<VaultHealth>('/api/vault/health'),
-    refetchInterval: 60_000,
+    queryKey: [...VAULT_QUERY_KEYS.health],
+    queryFn: () => apiGet<VaultHealth>(VAULT_API.health),
+    refetchInterval: VAULT_POLLING.health,
     refetchOnWindowFocus: false,
   });
 
   // Audit log with 60s polling
   const { data: auditLog = [], isLoading: isAuditLoading } = useQuery<AuditEntry[]>({
-    queryKey: VAULT_AUDIT_KEY,
-    queryFn: () => apiGet<AuditEntry[]>('/api/vault/audit'),
-    refetchInterval: 60_000,
+    queryKey: [...VAULT_QUERY_KEYS.audit],
+    queryFn: () => apiGet<AuditEntry[]>(VAULT_API.audit),
+    refetchInterval: VAULT_POLLING.audit,
     refetchOnWindowFocus: false,
   });
 
   // Emergency panic mutation
   const panicMutation = useMutation({
-    mutationFn: () => apiPost<void>('/api/vault/panic'),
+    mutationFn: () => apiPost<void>(VAULT_API.panic),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: VAULT_HEALTH_KEY });
-      queryClient.invalidateQueries({ queryKey: VAULT_AUDIT_KEY });
+      queryClient.invalidateQueries({ queryKey: [...VAULT_QUERY_KEYS.health] });
+      queryClient.invalidateQueries({ queryKey: [...VAULT_QUERY_KEYS.audit] });
     },
   });
 
   // Rotate all credentials mutation
   const rotateMutation = useMutation({
-    mutationFn: () => apiPost<void>('/api/vault/rotate'),
+    mutationFn: () => apiPost<void>(VAULT_API.rotate),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: VAULT_HEALTH_KEY });
-      queryClient.invalidateQueries({ queryKey: VAULT_AUDIT_KEY });
+      queryClient.invalidateQueries({ queryKey: [...VAULT_QUERY_KEYS.health] });
+      queryClient.invalidateQueries({ queryKey: [...VAULT_QUERY_KEYS.audit] });
     },
   });
 

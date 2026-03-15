@@ -28,4 +28,14 @@ export { useCurrentSession, useCurrentChatHistory, useCurrentSessionId };
 export type { Artifact, ChatMessage, ChatSession, ChatTab, MessageRole, ViewStoreState } from '@jaskier/state';
 
 // CH-specific ViewId includes 'delegations' and 'analytics' beyond the base ViewType
-export type ViewId = 'home' | 'chat' | 'agents' | 'settings' | 'logs' | 'delegations' | 'analytics';
+export type ViewId =
+  | 'home'
+  | 'chat'
+  | 'agents'
+  | 'settings'
+  | 'logs'
+  | 'delegations'
+  | 'analytics'
+  | 'swarm'
+  | 'semantic-cache'
+  | 'collab';

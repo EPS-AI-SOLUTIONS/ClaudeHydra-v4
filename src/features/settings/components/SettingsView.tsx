@@ -23,6 +23,7 @@ import { McpServersSection } from './McpServersSection';
 import { TelemetrySection } from './TelemetrySection';
 import { TemperatureSection } from './TemperatureSection';
 import VaultStatusSection from './VaultStatusSection';
+import { WasmEdgePanel } from './WasmEdgePanel';
 import { WatchdogHistory } from './WatchdogHistory';
 import { WorkingFolderSection } from './WorkingFolderSection';
 
@@ -57,6 +58,13 @@ export const SettingsView = memo(() => {
         <Card>
           <div className="p-6">
             <VaultStatusSection />
+          </div>
+        </Card>
+
+        {/* WASM Edge Computing */}
+        <Card>
+          <div className="p-6">
+            <WasmEdgePanel />
           </div>
         </Card>
 

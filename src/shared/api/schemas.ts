@@ -282,6 +282,11 @@ const wsFallbackSchema = z.object({
   reason: z.string(),
 });
 
+const wsViewHintSchema = z.object({
+  type: z.literal('view_hint'),
+  views: z.array(z.string()),
+});
+
 export const wsServerMessageSchema = z.discriminatedUnion('type', [
   wsStartSchema,
   wsTokenSchema,
@@ -294,6 +299,7 @@ export const wsServerMessageSchema = z.discriminatedUnion('type', [
   wsPongSchema,
   wsHeartbeatSchema,
   wsFallbackSchema,
+  wsViewHintSchema,
 ]);
 
 export type WsServerMessage = z.infer<typeof wsServerMessageSchema>;
@@ -304,6 +310,7 @@ export type WsToolResultMessage = z.infer<typeof wsToolResultSchema>;
 export type WsToolProgressMessage = z.infer<typeof wsToolProgressSchema>;
 export type WsIterationMessage = z.infer<typeof wsIterationSchema>;
 export type WsFallbackMessage = z.infer<typeof wsFallbackSchema>;
+export type WsViewHintMessage = z.infer<typeof wsViewHintSchema>;
 
 export type WsClientMessage =
   | { type: 'execute'; prompt: string; model?: string; tools_enabled?: boolean; session_id?: string }

@@ -1,0 +1,16 @@
+{
+  "type": "visual_regression",
+  "title": "Fix Visual Regression (TailwindCSS)",
+  "description": "Playwright caught a visual regression. Please analyze the diffs and suggest Tailwind CSS fixes.",
+  "attachments": [
+    {
+      "path": "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\ClaudeHydra\\test-results\\visual-home-view-visual-regression-chromium\\home-diff.png",
+      "type": "image/png"
+    },
+    {
+      "path": "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\ClaudeHydra\\test-results\\visual-swarm-builder-visual-regression-chromium\\swarm-builder-diff.png",
+      "type": "image/png"
+    }
+  ],
+  "timestamp": "2026-03-15T06:10:40.932Z"
+}

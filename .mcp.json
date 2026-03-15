@@ -100,6 +100,14 @@
     "dozorca": {
       "command": "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\target\\release\\vesemir.exe",
       "args": ["mcp-server"]
+    },
+    "gemini-browser-proxy": {
+      "command": "uvx",
+      "args": [
+        "--from", "gemini-browser-proxy",
+        "gemini-browser-proxy",
+        "mcp"
+      ]
     }
   }
 }

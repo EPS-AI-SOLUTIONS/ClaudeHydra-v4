@@ -1,9 +1,12 @@
 pub mod ai_gateway;
 pub mod audit;
 pub mod auth;
+pub mod auto_qa;
 pub mod browser_proxy;
+pub mod collab;
 pub mod handlers;
 pub mod mcp;
+pub mod memory_pruning;
 pub mod model_registry;
 pub mod models;
 pub mod oauth;
@@ -12,8 +15,11 @@ pub mod oauth_google;
 pub mod oauth_vercel;
 pub mod ocr;
 pub mod rate_limits;
+pub mod sandbox;
+pub mod semantic_cache;
 pub mod service_tokens;
 pub mod state;
+pub mod swarm;
 pub mod system_monitor;
 pub mod tools;
 pub mod watchdog;
@@ -158,6 +164,7 @@ fn ch_chat_routes() -> Router<AppState> {
     Router::new()
         .route("/api/claude/chat/stream", post(handlers::claude_chat_stream))
         .route("/api/claude/chat", post(handlers::claude_chat))
+        .route("/api/prefetch/hints", post(handlers::prefetch_hints))
 }
 
 /// CH agents router — full agents CRUD + delegation monitoring (with auth).
@@ -326,6 +333,15 @@ fn ch_metrics_router() -> Router<AppState> {
     )
 }
 
+/// Web Vitals collection + profiling routes (public, no auth — beacon API).
+fn ch_profiling_routes() -> Router<AppState> {
+    Router::new()
+        .route(
+            "/api/vitals",
+            post(jaskier_core::profiling::vitals_handler::<AppState>),
+        )
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 //  Vault proxy routes — forward to Jaskier Vault MCP for the frontend
 // ═══════════════════════════════════════════════════════════════════════
@@ -489,6 +505,12 @@ fn build_ch_config(state: AppState) -> HydraRouterConfig<AppState> {
 //  Public API
 // ═══════════════════════════════════════════════════════════════════════
 
+/// Webhook routes for Grafana alerts
+fn ch_auto_qa_routes() -> Router<AppState> {
+    Router::new()
+        .route("/api/webhooks/grafana", post(auto_qa::grafana_webhook))
+}
+
 /// Build the application router with the given shared state.
 /// Extracted from `main()` so integration tests can construct the app
 /// without binding to a network port.
@@ -512,9 +534,28 @@ pub fn create_router(state: AppState) -> Router {
     let gateway_routes = ai_gateway::handlers::ai_gateway_router::<AppState>()
         .merge(ch_vault_public_routes())
         .merge(ch_vault_protected_routes(state.clone()))
-        .with_state(state);
+        // Webhooks: Grafana incidents
+        .merge(ch_auto_qa_routes())
+        // Profiling: Web Vitals collection endpoint (/api/vitals)
+        .merge(ch_profiling_routes())
+        // Swarm IPC: Cross-Agent Communication Protocol endpoints
+        .merge(jaskier_swarm::swarm_router::<AppState>())
+        // CRDT Real-time Collaboration: WebSocket sync + stats endpoints
+        .merge(jaskier_collab::collab_router::<AppState>())
+        // Semantic Cache: Qdrant-backed semantic router + AST compression
+        .merge(semantic_cache::handlers::semantic_cache_router::<AppState>())
+        // Sandbox: Isolated code execution environment for safe agent testing
+        .merge(sandbox::sandbox_router::<AppState>())
+        // Memory Pruning: Self-Reflection & Knowledge Graph cleanup
+        .merge(memory_pruning::memory_pruning_router::<AppState>())
+        .with_state(state.clone());
 
+    // PERF: HTTP latency tracking middleware — records every request duration
     gateway_routes.merge(hydra_router)
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            jaskier_core::profiling::latency_middleware::<AppState>,
+        ))
 }
 
 /// Test-only router — identical routes but **without** `GovernorLayer` rate
@@ -530,7 +571,22 @@ pub fn create_test_router(state: AppState) -> Router {
     let gateway_routes = ai_gateway::handlers::ai_gateway_router::<AppState>()
         .merge(ch_vault_public_routes())
         .merge(ch_vault_protected_routes(state.clone()))
-        .with_state(state);
+        // Webhooks: Grafana incidents
+        .merge(ch_auto_qa_routes())
+        .merge(ch_profiling_routes())
+        // CRDT Real-time Collaboration
+        .merge(jaskier_collab::collab_router::<AppState>())
+        // Semantic Cache
+        .merge(semantic_cache::handlers::semantic_cache_router::<AppState>())
+        // Sandbox (test router)
+        .merge(sandbox::sandbox_router::<AppState>())
+        // Memory Pruning (test router)
+        .merge(memory_pruning::memory_pruning_router::<AppState>())
+        .with_state(state.clone());
 
     gateway_routes.merge(hydra_router)
+        .layer(axum::middleware::from_fn_with_state(
+            state,
+            jaskier_core::profiling::latency_middleware::<AppState>,
+        ))
 }

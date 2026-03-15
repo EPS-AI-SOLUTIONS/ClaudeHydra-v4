@@ -239,12 +239,22 @@
 - **Session check**: Windows Task Scheduler `GeminiProxySessionCheck` runs every 6h to verify session validity
 - **Why persistent context**: Google sets `httpOnly` + `secure` + `SameSite` cookies that `storageState` JSON export cannot fully capture; persistent context keeps the actual Chrome cookie DB intact
 
-## Jaskier Vault (Zero-Trust Credential Management)
-- **MCP Server**: `jaskier-vault` — `services/JaskierVaultMCP/index.js` (stdio transport)
-- **Storage**: `~/.gemini/jaskier_vault.enc` (AES-256-GCM, machine-key derived)
-- **Audit log**: `~/.gemini/jaskier_vault_audit.log`
-- **UI Dashboard**: port :5190 (`npm run ui` in services/JaskierVaultMCP/)
+## Jaskier Vault v8 (Zero-Trust Dynamic Credentials)
+- **MCP Server**: `@jaskier/vault-mcp` v8.0.0 — `services/JaskierVaultMCP/index.js` (stdio transport)
+- **Storage**: `~/.gemini/sejf_krasnali.enc` (AES-256-GCM, scrypt KDF, machine-key derived)
+- **Audit log**: `~/.gemini/sejf_krasnali_audit.log` (structured JSON, optional Loki push)
+- **UI Dashboard**: port :5190 (`npm run ui` in services/JaskierVaultMCP/) — 4 tabs: Vault/Audit/ACL/Auto-Rotacja
 - **Honeypot**: port :5433 (fake PostgreSQL trap — NEVER connect to this port)
+- **Client library**: `@jaskier/vault-client` — framework-agnostic types, HTTP client, constants
+
+### Vault v8 Features (Task 10 — Dynamic Credentials)
+1. **Ephemeral Tickets (JIT)**: `vault_request_ticket` creates short-lived tickets (default TTL: 120s, max: 3600s). Tickets stored in-memory, auto-cleaned every 30s
+2. **HTTP Bouncer**: `vault_delegate` proxies HTTP requests with auto Bearer injection. Token NEVER exposed to agent. Supports ticket-based or direct namespace+service auth. SSRF protection blocks localhost/private IPs
+3. **Namespace ACL**: `vault_acl` configures per-agent namespace isolation (e.g. Claude → ch_*, Gemini → gh_*). No ACL = open access (backward compatible). Stored in `__vault_acl__` internal namespace
+4. **Auto-Rotation**: `vault_auto_rotate` registers services for scheduled credential rotation (min 60s interval). Rotation check runs every 60s. Config stored in `__vault_rotation__` internal namespace
+5. **Audit System**: All vault operations logged with structured JSON (timestamp, action, agent, namespace, service, result, meta). Optional Loki push via `LOKI_PUSH_URL` + `GRAFANA_TOKEN` env vars
+6. **SSRF Protection**: `vault_delegate` blocks requests to localhost, private IP ranges, metadata endpoints
+7. **Ticket fingerprinting**: ticketIds are SHA-256 hashed in audit logs (never stored raw)
 
 ### Vault Rules (MANDATORY for all agents)
 1. **NIGDY nie pobieraj tokenów przy użyciu `vault_get unmask=true`** — zawsze używaj `vault_delegate` (Bouncer) do komunikacji z API
@@ -254,35 +264,206 @@
 5. **Przy refaktoringu kodu DB/credentials** używaj `profile: "dummy"` — zwraca fałszywe dane, chroni produkcję
 6. **Port 5433 to Honeypot** — NIGDY nie odpytuj go diagnostycznie, prawdziwy PostgreSQL jest na porcie z `DATABASE_URL`
 7. **Jeśli Vault zwróci `ANOMALY_DETECTED`** — natychmiast przerwij operacje, zaloguj incydent, zapytaj użytkownika
+8. **Podawaj `agent` parameter** we wszystkich vault_* callach — umożliwia ACL enforcement i audyt
 
-### Vault Tools (11 narzędzi)
-- `vault_get` — odczyt sekretu (domyślnie maskowany)
+### Vault Tools (10 narzędzi MCP)
+- `vault_get` — odczyt sekretu (domyślnie maskowany, unmask=false)
 - `vault_set` — zapis sekretu (namespace/service/data)
-- `vault_delegate` — **HTTP Bouncer** (Zero-Trust proxy z auto Bearer injection)
-- `vault_request_ticket` — czasowy bilet dostępu (TTL w sekundach)
-- `vault_search` — szukanie po nazwie/wzorcu
-- `vault_sql` — zapytania AlaSQL na strukturze vault
-- `vault_context_inject` — manifest struktury (do system prompt)
-- `vault_osint_scan` — skanowanie wycieków danych
-- `vault_share` — współdzielenie między agentami (symulacja)
-- `vault_panic` — awaryjne zniszczenie vault
-- `vault_ca_issue` — generowanie certyfikatów
+- `vault_delegate` — **HTTP Bouncer** (Zero-Trust proxy z auto Bearer injection + SSRF protection)
+- `vault_request_ticket` — czasowy bilet dostępu (TTL 1-3600s, domyślnie 120s)
+- `vault_acl` — **kontrola dostępu** do namespace per agent (set/get/remove)
+- `vault_auto_rotate` — **auto-rotacja** poświadczeń (register/unregister/list/trigger)
+- `vault_list` — lista namespace + serwisów (filtrowana przez ACL)
+- `vault_backup` — zanonimizowana kopia zapasowa
+- `vault_panic` — awaryjne zniszczenie vault (nieodwracalne)
+- `vault_rotate_cookies` — odświeżanie cookies (z Zod + ACL)
 
 ### Bouncer Workflow (vault_delegate)
 ```
-Agent → vault_delegate(url, method, namespace, service)
-  → Vault decrypt → extract token → axios(url, {headers: {Authorization: Bearer <token>}})
-  → HTTP response → return JSON to agent (token NEVER exposed to agent)
+Agent → vault_delegate(url, method, namespace, service, agent="claude")
+  → SSRF check (block localhost/private IPs)
+  → ACL check (agent has namespace access?)
+  → Vault decrypt → extract token (access_token|token|api_key|bearer|cookie|jwt)
+  → axios(url, {headers: {Authorization: Bearer <token>}})
+  → HTTP response → return JSON to agent (token NEVER exposed)
 ```
 
-### Ticket Workflow (vault_request_ticket + vault_delegate)
+### JIT Ticket Workflow (vault_request_ticket + vault_delegate)
 ```
-1. vault_request_ticket(namespace, service, ttl=300) → ticketId (32-char hex)
-2. vault_delegate(url, method, ticketId=ticketId) → HTTP response (repeatable for TTL duration)
+1. vault_request_ticket(namespace, service, ttl=120, agent="claude") → ticketId (32-char hex)
+2. vault_delegate(url, method, ticketId=ticketId) → HTTP response (repeatable within TTL)
 3. Ticket auto-expires → subsequent calls fail with "Ticket expired"
+4. Expired tickets cleaned every 30s
+```
+
+### ACL Workflow (vault_acl)
+```
+1. vault_acl(action="set", agent_name="claude", namespaces=["ch_ai_providers", "default", "cookies"])
+2. vault_acl(action="set", agent_name="gemini", namespaces=["gh_credentials", "default"])
+3. vault_acl(action="set", agent_name="*", namespaces=["default"])  // wildcard
+4. vault_get(service="github_token", agent="grok") → ACL denied (grok not in rules)
+```
+
+### Auto-Rotation Workflow (vault_auto_rotate)
+```
+1. vault_auto_rotate(action="register", namespace="cookies", service="google_session", interval=21600)
+2. Background scheduler checks every 60s, rotates when interval elapsed
+3. vault_auto_rotate(action="list") → shows all registered services + status
+4. vault_auto_rotate(action="trigger", namespace="cookies", service="google_session") → manual trigger
 ```
 
 ### Skill: `/vault`
 - User-invocable skill at `.claude/skills/vault/SKILL.md`
-- Full reference for Bouncer, tickets, anomaly handling, dummy profile
+- Full reference for Bouncer, tickets, ACL, rotation, anomaly handling, dummy profile
+
+## Swarm IPC — Cross-Agent Communication Protocol (Task 14, 2026-03-14)
+- **Shared crate**: `jaskier-swarm` in `crates/jaskier-swarm/` — protocol types, registry, orchestrator, Axum handlers
+- **Protocol types**: SwarmPeer, SwarmTask, SwarmResult, SwarmEvent, SwarmMessage, DelegateRequest
+- **OrchestrationPattern**: parallel, sequential, review, hierarchical, fan_out
+- **SwarmRegistry**: Auto-discovers Hydra instances via `/api/health` probes (ports 8080-8085), JoinSet concurrent probing, 30s background loop
+- **SwarmOrchestrator**: Multi-agent task execution — parallel (all targets simultaneously), sequential (chain output→input), review (worker+reviewer), builds on A2A `/a2a/message/send`
+- **HasSwarmHub trait**: `swarm_registry()`, `swarm_orchestrator()`, `swarm_tasks()`, `swarm_event_tx()`, `swarm_db()`, `swarm_self_id()`
+- **API endpoints**: `GET /api/swarm/discover`, `GET /api/swarm/peers`, `POST /api/swarm/delegate`, `GET /api/swarm/tasks`, `GET /api/swarm/tasks/{id}`, `GET /api/swarm/events` (SSE)
+- **CH integration**: `swarm.rs` module, `SwarmState` on `AppState`, discovery loop spawned at startup
+- **MCP tool**: `swarm_delegate_task` (prompt, pattern, targets, timeout_secs)
+- **DB migration**: `033_swarm_ipc.sql` — `ch_swarm_tasks` table (pattern, source_peer, target_peers JSONB, results JSONB)
+- **Frontend**: `SwarmView.tsx` with `@xyflow/react` agent network graph, `useSwarm.ts` hook with SSE events, peer discovery, task delegation
+- **Tests**: 12 unit tests in jaskier-swarm crate
+- **Known peers**: claudehydra(:8082), geminihydra(:8081), grokhydra(:8084), openaihydra(:8083), deepseekhydra(:8085), tissaia(:8080)
+
+## CRDT Real-time Collaboration (Task 19, 2026-03-14)
+- **Shared crate**: `jaskier-collab` in `crates/jaskier-collab/` — Yrs (Rust Yjs port) CRDT engine, WebSocket sync, GC
+- **CRDT engine**: `yrs` v0.21 (Yjs for Rust) — conflict-free replicated data types, tombstone GC, state vectors
+- **CollabDocument**: thread-safe Yrs Doc wrapper with awareness tracking (cursor positions, peer presence)
+- **CollabHub**: room management, CRDT update broadcasting, debounced save every 5s to PostgreSQL
+- **HasCollabState trait**: `collab_hub()`, `collab_db()`, `crdt_table()`, `collab_app_id()`
+- **Sync protocol**: `SyncMessage` enum — `FullState`, `Update`, `SyncStep1/2`, `AwarenessUpdate`
+- **GC worker**: `CrdtGarbageCollector` — compacts documents >64KB with no active peers every 5 minutes
+- **Idle cleanup**: rooms with 0 peers for >30 minutes auto-closed
+- **DB migration**: `034_crdt_documents.sql` — `ch_crdt_documents` table (BYTEA state, version, active_peers)
+- **API endpoints**:
+  - `GET /ws/sync/{app}/{doc_key}` — WebSocket CRDT document sync
+  - `GET /api/collab/stats` — collaboration statistics (active rooms, peers, document sizes)
+  - `GET /api/collab/rooms` — list active rooms
+  - `GET /api/collab/events` — SSE stream (peer_joined, peer_left, document_saved, gc_completed)
+- **CH integration**: `collab.rs` module, `CollabState` on `AppState`, `HasCollabState` impl
+- **Frontend**:
+  - `useCollabDocument` hook — Yjs Doc + y-websocket provider, awareness, Y.UndoManager
+  - `useCollabStats` hook — TanStack Query polling (5s)
+  - `CollabView` — collaborative text editor with live cursors, undo/redo, room stats
+  - `CollabCursors` — peer presence indicators (name, color, AI badge)
+  - `CollabStatusBadge` — connection status (connected/connecting/disconnected)
+- **View**: `collab` in ViewRouter, Sidebar nav with Users icon
+- **Enterprise features**: session-isolated Y.UndoManager, awareness protocol, automatic reconnect
+- **Tests**: 10 unit tests in jaskier-collab crate (document CRUD, concurrent merges, awareness, GC, serialization)
+
+## WASM Edge Computing (Task 20, 2026-03-14)
+- **Rust crate**: `jaskier-wasm-core` in `crates/jaskier-wasm-core/` — PII masking, token counting, compiled to WebAssembly
+- **PII masking**: email, credit cards, PESEL (checksum validated), phone numbers, NIP (checksum validated), IBAN — all via compiled regex
+- **Token counter**: cl100k_base heuristic approximation (~95% accuracy), batch support
+- **WASM build**: `wasm-pack build --target web --release` → `pkg/` (1MB binary + 16KB JS glue)
+- **SIMD build**: `RUSTFLAGS="-C target-feature=+simd128" wasm-pack build --features simd` → `pkg-simd/`
+- **wasm-opt flags**: `--enable-bulk-memory --enable-simd` (required for Rust 2024 edition)
+- **TS package**: `@jaskier/wasm-worker` in `packages/wasm-worker/` — `WasmClient` class, Web Worker wrapper, Cache API
+- **Web Worker**: all WASM ops run in dedicated worker thread (0% main thread blocking, 60 FPS guaranteed)
+- **Cache**: Service Worker Cache API caching of `.wasm` binaries (0ms load on revisit)
+- **React hook**: `useWasmWorker()` in `src/shared/hooks/useWasmWorker.ts` — singleton client, ref-counted lifecycle
+- **Dashboard**: `WasmEdgePanel` in Settings — module status, PII masking demo, token counter, benchmark, cache info
+- **Vite plugins**: `vite-plugin-wasm` + `vite-plugin-top-level-await` — PWA globPatterns includes `*.wasm`
+- **Deploy**: `public/wasm/jaskier_wasm_core.js` + `jaskier_wasm_core_bg.wasm` (served as static assets)
+- **Build scripts**: `build.sh` (standard), `deploy.sh` (build + copy to all Hydra apps)
+- **Tests**: 23 Rust unit tests (PII masking, tokenizer, PESEL/NIP checksum validation, 50k char performance)
+
+## Semantic Cache & Context Compression (Task 21, 2026-03-14)
+- **Backend module**: `backend/src/semantic_cache/` — 5 files (mod.rs, qdrant.rs, embeddings.rs, compressor.rs, handlers.rs)
+- **Semantic Router**: Intercepts AI queries, checks Qdrant (port 6333) for cosine similarity
+  - **Exact hit** (>= 95%): returns cached response directly — zero LLM API cost
+  - **Partial hit** (85-95%): injects cached response as few-shot example ("Historyczny przykład rozwiązania")
+  - **Miss** (<85%): proceeds normally, caches the response for future queries
+- **Qdrant Client** (`qdrant.rs`): REST API client (reqwest-based, no external crate)
+  - Collection: `semantic_cache` (cosine distance, 3072-dim vectors)
+  - Ops: ensure_collection, search, upsert, scroll, delete_by_filter, update_payload
+  - Payload indexes: ttl_expires_at, git_commit_hash, provider, model, hit_count
+- **Embedding Client** (`embeddings.rs`): Gemini Embedding API (`gemini-embedding-2-preview`, 3072 dims)
+  - Credential chain: explicit key → GOOGLE_API_KEY → GEMINI_API_KEY env vars
+- **AST Compressor** (`compressor.rs`): Tree-Sitter based code compression
+  - Strips function/method bodies, replaces with `/* body omitted */` (Python: `... # body omitted`)
+  - Supports: Rust, TypeScript, JavaScript, Python, Go
+  - Regex fallback when Tree-Sitter parsing fails
+  - 5 unit tests (detect_language, compress_rust, compress_python, preserves_imports, unknown_language)
+- **TTL/Invalidation**: 24h default TTL, git-commit-based invalidation, background cleanup every 5 minutes
+- **Metrics**: Lock-free atomic counters (total_queries, exact_hits, partial_hits, misses, tokens_saved, cost_saved)
+  - Prometheus output integrated via `extra_metrics_lines()` in HasMetricsState
+  - EMA-smoothed average search latency tracking
+- **API endpoints** (8):
+  - `GET /api/semantic-cache/stats` — metrics + Qdrant collection info
+  - `GET /api/semantic-cache/health` — Qdrant + embedding health check
+  - `GET /api/semantic-cache/config` — current configuration
+  - `PATCH /api/semantic-cache/config` — update TTL, thresholds, enabled flag
+  - `GET /api/semantic-cache/entries` — list cached entries (paginated scroll)
+  - `DELETE /api/semantic-cache/entries/{id}` — delete specific entry
+  - `POST /api/semantic-cache/invalidate` — invalidate by git commit or flush all
+  - `POST /api/semantic-cache/compress` — compress code on demand (AST-aware)
+- **DB migration**: `034_semantic_cache.sql` — ch_semantic_cache_config (singleton), ch_semantic_cache_metrics (time-series), ch_compression_stats
+- **State**: `SemanticCacheState` on `AppState`, `HasSemanticCache` trait, `spawn_ttl_cleanup_loop()` in main.rs
+- **Frontend**: `SemanticCacheView.tsx` — dashboard with stats cards (hit rate, cost saved, latency, total queries), hit/miss distribution bar, health badges, config panel, cached entries list with delete, flush cache button
+- **Hook**: `useSemanticCache.ts` — TanStack Query (useCacheStats 10s, useCacheHealth 30s, useCacheConfig, useCacheEntries, useUpdateConfig, useDeleteEntry, useInvalidateCache, useCompressCode)
+- **View**: `semantic-cache` in ViewRouter, Sidebar nav with Brain icon
+
+## Swarm Sandbox Environment (Task 32, 2026-03-15)
+- **Architecture**: Docker-based isolation for safe code execution by AI agents, with process fallback when Docker unavailable
+- **Backend module**: `backend/src/sandbox.rs` — SandboxState, Docker container lifecycle, resource limits, cleanup loop
+- **Trait**: `HasSandboxState` on `AppState` — `sandbox()`, `sandbox_db()`
+- **Languages**: Node.js (node:22-alpine), Python (python:3.13-alpine), Rust (rust:1.87-alpine), Bash (alpine:3.21)
+- **Security**: `--cap-drop=ALL`, `--security-opt=no-new-privileges`, `--network=none`, `--pids-limit=64`, memory/CPU limits
+- **API endpoints** (7):
+  - `GET /api/sandbox/health` — Docker status, active sessions, fallback mode
+  - `POST /api/sandbox/create` — create persistent sandbox session (Docker container)
+  - `POST /api/sandbox/execute` — execute code (ephemeral or in session)
+  - `GET /api/sandbox/sessions` — list active sessions
+  - `GET /api/sandbox/sessions/{id}` — session details
+  - `DELETE /api/sandbox/sessions/{id}` — destroy session + container
+  - `GET /api/sandbox/executions` — recent execution history
+- **MCP tool**: `sandbox_execute_code` — available to AI agents for testing code before applying changes
+- **DB migration**: `035_sandbox_environment.sql` — ch_sandbox_sessions, ch_sandbox_executions
+- **Frontend**:
+  - `SandboxPanel.tsx` — code editor, language selector, execution output, session management
+  - `useSandbox.ts` — sandbox API calls, health check, session CRUD
+  - Integrated as "Sandbox" tab in SwarmView (3rd tab: Monitoring | Builder | Sandbox)
+  - `SandboxNode` in SwarmBuilder — draggable sandbox nodes (Node.js/Python/Bash)
+- **Cleanup**: background loop every 5 minutes, removes idle sessions >30 min
+- **Tests**: 9 unit tests (language images, run commands, resource limits, state lifecycle, cleanup)
+
+## Memory Pruning — Self-Reflection & Knowledge Graph Cleanup (Task 31, 2026-03-15)
+- **Architecture**: Background watchdog + manual trigger for Knowledge Graph pruning, embedding-based similarity clustering, MCP hipokamp integration
+- **Backend module**: `backend/src/memory_pruning.rs` — MemoryPruningState, PruningConfig, PruningMetrics, execute_pruning_cycle, spawn_pruning_watchdog
+- **Trait**: `HasMemoryPruning` on `AppState` — `memory_pruning()`, `pruning_db()`, `mcp_client()`
+- **Algorithm**: Fetch entities from hipokamp MCP → generate Gemini embeddings → cosine clustering (threshold-based) → merge duplicates → delete redundant → audit log + notification
+- **Self-Reflection prompt**: Builds per-cluster analysis prompt (PL) for evaluating duplicates, contradictions, obsolescence
+- **API endpoints** (5):
+  - `POST /api/memory/prune` — trigger manual pruning cycle (202 ACCEPTED, async)
+  - `GET /api/memory/prune/stats` — metrics + running status
+  - `GET /api/memory/prune/history` — pruning cycle history (limit param)
+  - `GET /api/memory/prune/details/{cycle_id}` — detailed log entries for a cycle
+  - `GET/PATCH /api/memory/prune/config` — pruning configuration (threshold, interval, max entries)
+- **DB migration**: `038_memory_pruning.sql` — ch_memory_pruning_log, ch_memory_pruning_config (singleton), ch_memory_pruning_cycles
+- **Metrics**: Lock-free atomics (total_cycles, deleted, merged, kept, tokens_saved, clusters_found, last_cycle_ms) + Prometheus output
+- **Frontend**: `MemoryPruningPanel` — 4th tab in SwarmView (Brain icon, purple accent), stat cards, config panel, cycle history with expandable details
+- **Hook**: `useMemoryPruning.ts` — TanStack Query (usePruningStats 10s, usePruningHistory 30s, usePruningConfig, usePruningDetails, useUpdatePruningConfig, useTriggerPrune)
+- **Watchdog**: Configurable interval (default 1h), auto-disabled when config.enabled=false, 60s startup delay
+- **Audit**: All pruning actions logged to ch_audit_log + MCP notification via grzankarz_show_notification
+- **Tests**: 13 unit tests (cosine similarity, clustering, token estimation, metrics, config, prompt building, Prometheus output)
+
+## Predictive UI Pre-fetching (Task 34, 2026-03-15)
+- **Two strategies**: AI-driven WS hints + hover-based nav prefetch
+- **Backend**: `detect_view_hints()` in `streaming.rs` — keyword analysis of prompt text (PL+EN), emits `WsServerMessage::ViewHint { views }` after `Start`
+- **Keywords**: statystyk→analytics, ustawieni→settings, log/błęd→logs, agent/narzędzi→agents, delegacj→delegations, rój/swarm→swarm, cache/semantyczn→semantic-cache, kolaboracj/crdt→collab
+- **REST fallback**: `POST /api/prefetch/hints` — for NDJSON streaming clients (returns `{ views: [...] }`)
+- **Frontend hook**: `usePredictivePrefetch.ts` — listens to WS `view_hint` events via CustomEvent bus, triggers `import()` + `queryClient.prefetchQuery()`
+- **Hover prefetch**: Sidebar nav buttons have `onPointerEnter`/`onPointerLeave` — 150ms debounce, dedup via `prefetchedChunks` Set
+- **Query prefetch**: analytics/summary, logs/backend, agents, settings, swarm/peers, semantic-cache/stats
+- **Zod schema**: `wsViewHintSchema` added to `wsServerMessageSchema` discriminated union
+- **WS integration**: `parseServerMessage()` in `useWebSocketChat.ts` dispatches `viewhint` CustomEvent on `view_hint` type
+- **Import map**: `viewImports` in `main.tsx` — shared factory functions for `lazy()` calls, duplicated in hook to avoid circular dep
+- **Zero overhead**: chunks fetched at most once (Set tracking), queries respect staleTime, no network waste
 

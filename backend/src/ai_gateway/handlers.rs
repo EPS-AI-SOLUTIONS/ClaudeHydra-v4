@@ -823,109 +823,175 @@ async fn proxy_chat<S>(
 where
     S: HasAiGateway + HasVaultBridge + Clone + Send + Sync + 'static,
 {
-    let provider_enum = match parse_provider(&provider) {
+    let current_provider = match parse_provider(&provider) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };
 
+    let router = super::model_router::ModelRouter::new();
+    let fallback_chain = router.fallback_chain(current_provider);
+    
+    let original_model = body.model.clone();
     let gateway = state.ai_gateway();
-    let config = match gateway.providers.get(&provider_enum) {
-        Some(cfg) => cfg,
-        None => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": "provider_not_configured" })),
-            )
-                .into_response();
-        }
-    };
-
-    let model = body
-        .model
-        .clone()
-        .unwrap_or_else(|| config.model_tiers.coordinator.clone());
-
-    tracing::info!(
-        provider = %provider_enum,
-        model = %model,
-        messages = body.messages.len(),
-        "proxy_chat: routing request",
-    );
-
-    // Build the provider-specific request body
-    let upstream_body = build_chat_payload(&provider_enum, &model, &body);
-    let upstream_url = resolve_upstream_url(&config.upstream_url, &model);
-
     let vault = state.vault_client();
-    let started = Instant::now();
+    
+    let mut last_error_response = None;
+    let mut last_latency = 0;
 
-    // Ollama doesn't need Vault — direct HTTP call
-    if config.auth_type == AuthType::None {
-        return proxy_direct_call(&upstream_url, upstream_body, &provider_enum, &model, started)
+    for (attempt, provider_enum) in fallback_chain.iter().enumerate() {
+        let config = match gateway.providers.get(provider_enum) {
+            Some(cfg) => cfg,
+            None => continue,
+        };
+
+        // If fallback, we need to map to the new provider's model for the same tier
+        let model = if attempt == 0 {
+            original_model.clone().unwrap_or_else(|| config.model_tiers.coordinator.clone())
+        } else {
+            let tier = original_model.as_ref()
+                .map(|m| super::model_router::ModelRouter::detect_tier(m))
+                .unwrap_or(super::model_router::ModelTier::Coordinator);
+            
+            match tier {
+                super::model_router::ModelTier::Commander => config.model_tiers.commander.clone(),
+                super::model_router::ModelTier::Coordinator => config.model_tiers.coordinator.clone(),
+                super::model_router::ModelTier::Executor => config.model_tiers.executor.clone(),
+            }
+        };
+
+        tracing::info!(
+            provider = %provider_enum,
+            model = %model,
+            attempt = attempt + 1,
+            "proxy_chat: routing request",
+        );
+
+        let upstream_body = build_chat_payload(provider_enum, &model, &body);
+        let upstream_url = resolve_upstream_url(&config.upstream_url, &model);
+        let started = Instant::now();
+
+        if config.auth_type == AuthType::None {
+            // Direct call for Ollama
+            let client = reqwest::Client::new();
+            match client.post(&upstream_url).json(&upstream_body).timeout(std::time::Duration::from_secs(120)).send().await {
+                Ok(resp) => {
+                    let status = resp.status().as_u16();
+                    last_latency = started.elapsed().as_millis() as u64;
+                    if let Ok(json_body) = resp.json::<Value>().await {
+                        if (200..300).contains(&(status as usize)) {
+                            return Json(json!({
+                                "provider": provider_enum.to_string(),
+                                "model": model,
+                                "latency_ms": last_latency,
+                                "response": json_body,
+                                "fallback_attempts": attempt,
+                            })).into_response();
+                        } else {
+                            last_error_response = Some((
+                                StatusCode::BAD_GATEWAY,
+                                Json(json!({
+                                    "error": "upstream_error",
+                                    "provider": provider_enum.to_string(),
+                                    "upstream_status": status,
+                                    "upstream_body": json_body,
+                                    "latency_ms": last_latency,
+                                })),
+                            ).into_response());
+                        }
+                    }
+                }
+                Err(e) => {
+                    last_latency = started.elapsed().as_millis() as u64;
+                    last_error_response = Some((
+                        StatusCode::BAD_GATEWAY,
+                        Json(json!({
+                            "error": "upstream_connection_failed",
+                            "provider": provider_enum.to_string(),
+                            "message": e.to_string(),
+                            "latency_ms": last_latency,
+                        })),
+                    ).into_response());
+                }
+            }
+            continue;
+        }
+
+        // Vault Bouncer
+        match vault
+            .delegate(
+                &upstream_url,
+                "POST",
+                &config.vault_namespace,
+                &config.vault_service,
+                Some(upstream_body),
+            )
             .await
-            .into_response();
-    }
-
-    // Use Vault Bouncer for all credentialed providers
-    match vault
-        .delegate(
-            &upstream_url,
-            "POST",
-            &config.vault_namespace,
-            &config.vault_service,
-            Some(upstream_body),
-        )
-        .await
-    {
-        Ok(resp) => {
-            let latency_ms = started.elapsed().as_millis() as u64;
-
-            if (200..300).contains(&(resp.status as usize)) {
-                tracing::info!(
-                    provider = %provider_enum,
-                    model = %model,
-                    latency_ms = latency_ms,
-                    "proxy_chat: upstream success",
-                );
-                Json(json!({
-                    "provider": provider_enum.to_string(),
-                    "model": model,
-                    "latency_ms": latency_ms,
-                    "response": resp.body,
-                }))
-                .into_response()
-            } else {
-                tracing::warn!(
-                    provider = %provider_enum,
-                    model = %model,
-                    status = resp.status,
-                    latency_ms = latency_ms,
-                    "proxy_chat: upstream error",
-                );
-
-                // TODO: attempt fallback via ModelRouter once model_router.rs is created
-                (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({
-                        "error": "upstream_error",
+        {
+            Ok(resp) => {
+                last_latency = started.elapsed().as_millis() as u64;
+                if (200..300).contains(&(resp.status as usize)) {
+                    tracing::info!(
+                        provider = %provider_enum,
+                        model = %model,
+                        latency_ms = last_latency,
+                        "proxy_chat: upstream success",
+                    );
+                    return Json(json!({
                         "provider": provider_enum.to_string(),
-                        "upstream_status": resp.status,
-                        "upstream_body": resp.body,
-                        "latency_ms": latency_ms,
-                    })),
-                )
-                    .into_response()
+                        "model": model,
+                        "latency_ms": last_latency,
+                        "response": resp.body,
+                        "fallback_attempts": attempt,
+                    })).into_response();
+                } else {
+                    tracing::warn!(
+                        provider = %provider_enum,
+                        model = %model,
+                        status = resp.status,
+                        latency_ms = last_latency,
+                        "proxy_chat: upstream error, trying fallback",
+                    );
+                    
+                    // If it's auth error from vault or limit error, fallback makes sense
+                    last_error_response = Some((
+                        StatusCode::BAD_GATEWAY,
+                        Json(json!({
+                            "error": "upstream_error",
+                            "provider": provider_enum.to_string(),
+                            "upstream_status": resp.status,
+                            "upstream_body": resp.body,
+                            "latency_ms": last_latency,
+                        })),
+                    ).into_response());
+                }
+            }
+            Err(err) => {
+                tracing::error!(
+                    provider = %provider_enum,
+                    error = %err,
+                    "proxy_chat: vault delegate failed",
+                );
+                
+                // For Vault anomalies we shouldn't fallback, we should halt
+                if err.is_anomaly() {
+                    return vault_error_response(provider_enum, err).into_response();
+                }
+                
+                last_error_response = Some(vault_error_response(provider_enum, err).into_response());
             }
         }
-        Err(err) => {
-            tracing::error!(
-                provider = %provider_enum,
-                error = %err,
-                "proxy_chat: vault delegate failed",
-            );
-            vault_error_response(&provider_enum, err).into_response()
-        }
     }
+
+    // If we exhaust the fallback chain, return the last error
+    last_error_response.unwrap_or_else(|| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "error": "all_providers_failed",
+                "message": "All AI providers in the fallback chain failed.",
+            })),
+        ).into_response()
+    })
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -945,130 +1011,173 @@ async fn proxy_stream<S>(
 where
     S: HasAiGateway + HasVaultBridge + Clone + Send + Sync + 'static,
 {
-    let provider_enum = match parse_provider(&provider) {
+    let current_provider = match parse_provider(&provider) {
         Ok(p) => p,
         Err(e) => return e.into_response(),
     };
 
-    let gateway = state.ai_gateway();
-    let config = match gateway.providers.get(&provider_enum) {
-        Some(cfg) => cfg.clone(),
-        None => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({ "error": "provider_not_configured" })),
-            )
-                .into_response();
-        }
-    };
+    let router = super::model_router::ModelRouter::new();
+    let fallback_chain = router.fallback_chain(current_provider);
 
-    let model = body
-        .model
-        .clone()
-        .unwrap_or_else(|| config.model_tiers.coordinator.clone());
-
-    tracing::info!(
-        provider = %provider_enum,
-        model = %model,
-        messages = body.messages.len(),
-        "proxy_stream: initiating SSE stream",
-    );
-
-    // Build the upstream payload with stream=true
-    let mut upstream_body = build_chat_payload(&provider_enum, &model, &body);
-    if let Some(obj) = upstream_body.as_object_mut() {
-        obj.insert("stream".to_string(), json!(true));
-    }
-
-    let upstream_url = resolve_upstream_url(&config.upstream_url, &model);
+    let original_model = body.model.clone();
+    let cloned_state = state.clone();
     let vault_client = state.vault_client().clone();
-    let provider_for_stream = provider_enum;
 
-    // Create the SSE stream
     let stream = async_stream::stream! {
-        let started = Instant::now();
+        let mut last_error_response = None;
 
-        // Send initial SSE event
-        yield Ok::<_, Infallible>(Event::default()
-            .event("stream_start")
-            .data(json!({
-                "provider": provider_for_stream.to_string(),
-                "model": model,
-            }).to_string()));
+        for (attempt, provider_enum) in fallback_chain.into_iter().enumerate() {
+            let config = match cloned_state.ai_gateway().providers.get(&provider_enum) {
+                Some(cfg) => cfg.clone(),
+                None => continue,
+            };
 
-        // Use Vault Bouncer for the streaming delegate
-        let delegate_result = vault_client.delegate(
-            &upstream_url,
-            "POST",
-            &config.vault_namespace,
-            &config.vault_service,
-            Some(upstream_body),
-        ).await;
-
-        match delegate_result {
-            Ok(resp) => {
-                if (200..300).contains(&(resp.status as usize)) {
-                    // For the Bouncer delegate response, the streaming data is in
-                    // the body. Emit it as SSE chunks.
-                    // NOTE: true streaming requires Vault to support streaming delegate
-                    // (pass-through SSE). Until then, we chunk the full response.
-                    let content = extract_content_text(&provider_for_stream, &resp.body);
-                    let latency_ms = started.elapsed().as_millis() as u64;
-
-                    // Emit content tokens (chunked for progressive rendering)
-                    for chunk in chunk_text(&content, 20) {
-                        yield Ok(Event::default()
-                            .event("token")
-                            .data(json!({
-                                "text": chunk,
-                            }).to_string()));
-                    }
-
-                    // Emit completion event
-                    yield Ok(Event::default()
-                        .event("stream_end")
-                        .data(json!({
-                            "provider": provider_for_stream.to_string(),
-                            "model": model,
-                            "latency_ms": latency_ms,
-                            "finish_reason": "end_turn",
-                        }).to_string()));
-                } else {
-                    yield Ok(Event::default()
-                        .event("error")
-                        .data(json!({
-                            "error": "upstream_error",
-                            "provider": provider_for_stream.to_string(),
-                            "upstream_status": resp.status,
-                            "message": format!("Upstream returned HTTP {}", resp.status),
-                        }).to_string()));
+            let model = if attempt == 0 {
+                original_model.clone().unwrap_or_else(|| config.model_tiers.coordinator.clone())
+            } else {
+                let tier = original_model.as_ref()
+                    .map(|m| super::model_router::ModelRouter::detect_tier(m))
+                    .unwrap_or(super::model_router::ModelTier::Coordinator);
+                
+                match tier {
+                    super::model_router::ModelTier::Commander => config.model_tiers.commander.clone(),
+                    super::model_router::ModelTier::Coordinator => config.model_tiers.coordinator.clone(),
+                    super::model_router::ModelTier::Executor => config.model_tiers.executor.clone(),
                 }
+            };
+
+            tracing::info!(
+                provider = %provider_enum,
+                model = %model,
+                attempt = attempt + 1,
+                "proxy_stream: initiating SSE stream / upstream request",
+            );
+
+            let mut upstream_body = build_chat_payload(&provider_enum, &model, &body);
+            if let Some(obj) = upstream_body.as_object_mut() {
+                obj.insert("stream".to_string(), json!(true));
             }
-            Err(err) => {
-                tracing::error!(
-                    provider = %provider_for_stream,
-                    error = %err,
-                    "proxy_stream: vault delegate failed",
-                );
 
-                let (error_type, message) = match &err {
-                    VaultError::AnomalyDetected(msg) => ("anomaly_detected", format!("ANOMALY: {}", msg)),
-                    VaultError::NotFound => ("provider_not_connected", "No credentials found".to_string()),
-                    VaultError::Unauthorized => ("vault_unauthorized", "Vault rejected request".to_string()),
-                    VaultError::Timeout => ("vault_timeout", "Vault request timed out".to_string()),
-                    VaultError::ConnectionFailed(msg) => ("vault_unavailable", msg.clone()),
-                    VaultError::InvalidResponse(msg) => ("vault_error", msg.clone()),
-                };
+            let upstream_url = resolve_upstream_url(&config.upstream_url, &model);
+            let started = Instant::now();
 
-                yield Ok(Event::default()
-                    .event("error")
+            if attempt == 0 {
+                yield Ok::<_, Infallible>(Event::default()
+                    .event("stream_start")
                     .data(json!({
-                        "error": error_type,
-                        "provider": provider_for_stream.to_string(),
-                        "message": message,
+                        "provider": provider_enum.to_string(),
+                        "model": model,
+                    }).to_string()));
+            } else {
+                yield Ok::<_, Infallible>(Event::default()
+                    .event("fallback")
+                    .data(json!({
+                        "provider": provider_enum.to_string(),
+                        "model": model,
+                        "attempt": attempt,
                     }).to_string()));
             }
+
+            if config.auth_type == AuthType::None {
+                // Direct call for Ollama
+                let client = reqwest::Client::new();
+                match client.post(&upstream_url).json(&upstream_body).timeout(std::time::Duration::from_secs(120)).send().await {
+                    Ok(resp) => {
+                        let status = resp.status().as_u16();
+                        let latency_ms = started.elapsed().as_millis() as u64;
+                        if let Ok(json_body) = resp.json::<Value>().await {
+                            if (200..300).contains(&(status as usize)) {
+                                let content = extract_content_text(&provider_enum, &json_body);
+                                for chunk in chunk_text(&content, 20) {
+                                    yield Ok(Event::default()
+                                        .event("token")
+                                        .data(json!({ "text": chunk }).to_string()));
+                                }
+                                yield Ok(Event::default()
+                                    .event("stream_end")
+                                    .data(json!({
+                                        "provider": provider_enum.to_string(),
+                                        "model": model,
+                                        "latency_ms": latency_ms,
+                                        "finish_reason": "end_turn",
+                                    }).to_string()));
+                                return;
+                            } else {
+                                last_error_response = Some(format!("Upstream returned HTTP {} (direct)", status));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        last_error_response = Some(e.to_string());
+                    }
+                }
+                continue;
+            }
+
+            let delegate_result = vault_client.delegate(
+                &upstream_url,
+                "POST",
+                &config.vault_namespace,
+                &config.vault_service,
+                Some(upstream_body),
+            ).await;
+
+            match delegate_result {
+                Ok(resp) => {
+                    let latency_ms = started.elapsed().as_millis() as u64;
+                    if (200..300).contains(&(resp.status as usize)) {
+                        let content = extract_content_text(&provider_enum, &resp.body);
+
+                        for chunk in chunk_text(&content, 20) {
+                            yield Ok(Event::default()
+                                .event("token")
+                                .data(json!({ "text": chunk }).to_string()));
+                        }
+
+                        yield Ok(Event::default()
+                            .event("stream_end")
+                            .data(json!({
+                                "provider": provider_enum.to_string(),
+                                "model": model,
+                                "latency_ms": latency_ms,
+                                "finish_reason": "end_turn",
+                            }).to_string()));
+                        return; // Successfully completed
+                    } else {
+                        last_error_response = Some(format!("Upstream returned HTTP {}", resp.status));
+                    }
+                }
+                Err(err) => {
+                    tracing::error!(
+                        provider = %provider_enum,
+                        error = %err,
+                        "proxy_stream: vault delegate failed",
+                    );
+
+                    if err.is_anomaly() {
+                        let (error_type, message) = ("anomaly_detected", format!("ANOMALY: {}", err));
+                        yield Ok(Event::default()
+                            .event("error")
+                            .data(json!({
+                                "error": error_type,
+                                "provider": provider_enum.to_string(),
+                                "message": message,
+                            }).to_string()));
+                        return;
+                    }
+                    
+                    last_error_response = Some(err.to_string());
+                }
+            }
         }
+
+        // Exhausted fallback chain
+        yield Ok(Event::default()
+            .event("error")
+            .data(json!({
+                "error": "all_providers_failed",
+                "message": format!("All AI providers in the fallback chain failed. Last error: {}", last_error_response.unwrap_or_default()),
+            }).to_string()));
     };
 
     Sse::new(stream)
@@ -1312,82 +1421,8 @@ fn chunk_text(text: &str, chunk_size: usize) -> Vec<&str> {
     chunks
 }
 
-/// Direct HTTP call for no-auth providers (Ollama).
-async fn proxy_direct_call(
-    url: &str,
-    body: Value,
-    provider: &AiProvider,
-    model: &str,
-    started: Instant,
-) -> impl IntoResponse {
-    let client = reqwest::Client::new();
-    match client
-        .post(url)
-        .json(&body)
-        .timeout(std::time::Duration::from_secs(120))
-        .send()
-        .await
-    {
-        Ok(resp) => {
-            let status = resp.status().as_u16();
-            let latency_ms = started.elapsed().as_millis() as u64;
+// proxy_direct_call removed as it is now inlined with fallback mechanisms
 
-            match resp.json::<Value>().await {
-                Ok(upstream_body) => {
-                    if (200..300).contains(&(status as usize)) {
-                        Json(json!({
-                            "provider": provider.to_string(),
-                            "model": model,
-                            "latency_ms": latency_ms,
-                            "response": upstream_body,
-                        }))
-                        .into_response()
-                    } else {
-                        (
-                            StatusCode::BAD_GATEWAY,
-                            Json(json!({
-                                "error": "upstream_error",
-                                "provider": provider.to_string(),
-                                "upstream_status": status,
-                                "upstream_body": upstream_body,
-                                "latency_ms": latency_ms,
-                            })),
-                        )
-                            .into_response()
-                    }
-                }
-                Err(e) => (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({
-                        "error": "upstream_parse_error",
-                        "provider": provider.to_string(),
-                        "message": e.to_string(),
-                        "latency_ms": latency_ms,
-                    })),
-                )
-                    .into_response(),
-            }
-        }
-        Err(e) => {
-            let latency_ms = started.elapsed().as_millis() as u64;
-            tracing::error!(
-                provider = %provider,
-                error = %e,
-                "direct proxy call failed",
-            );
-            (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({
-                    "error": "upstream_connection_failed",
-                    "provider": provider.to_string(),
-                    "message": e.to_string(),
-                    "latency_ms": latency_ms,
-                })),
-            )
-                .into_response()
-        }
-    }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Tests

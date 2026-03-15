@@ -8,13 +8,15 @@ publish = false
 workspace = true
 
 [dependencies]
-jaskier-core = { path = "../../../crates/jaskier-core" }
+jaskier-core = { path = "../../../crates/jaskier-core", features = ["otel"] }
 jaskier-hydra-state = { path = "../../../crates/jaskier-hydra-state" }
 jaskier-oauth = { path = "../../../crates/jaskier-oauth" }
 jaskier-browser = { path = "../../../crates/jaskier-browser" }
 jaskier-tools = { path = "../../../crates/jaskier-tools" }
 jaskier-db = { path = "../../../crates/jaskier-db" }
 jaskier-ai-modules = { path = "../../../crates/jaskier-ai-modules" }
+jaskier-swarm = { path = "../../../crates/jaskier-swarm" }
+jaskier-collab = { path = "../../../crates/jaskier-collab" }
 axum = { workspace = true, features = ["ws"] }
 tokio = { workspace = true }
 tower-http = { workspace = true }
@@ -63,7 +65,7 @@ shuttle-axum = { version = "0.57.0", optional = true }
 shuttle-runtime = { version = "0.57.0", optional = true }
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.62", features = ["Win32_System_Threading", "Win32_Foundation", "Win32_System_Console"] }
+windows = { workspace = true }
 rfd = { workspace = true }
 
 [features]

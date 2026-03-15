@@ -2,6 +2,15 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
+import type { AuditEntry, NamespaceInfo, VaultHealth } from '@jaskier/vault-client';
+import {
+  resolveVaultStatus,
+  VAULT_API,
+  VAULT_DASHBOARD_URL,
+  VAULT_POLLING,
+  VAULT_QUERY_KEYS,
+  VAULT_STATUS_CONFIG,
+} from '@jaskier/vault-client';
 import { useQuery } from '@tanstack/react-query';
 import {
   ChevronDown,
@@ -22,46 +31,6 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge, Button, Input } from '@/components/atoms';
 import { apiGet, apiPost } from '@/shared/api/client';
-
-// ── Types ──────────────────────────────────────────────────────────────
-
-interface VaultHealth {
-  online: boolean;
-  credential_count: number;
-  namespace_count: number;
-  last_audit: string | null;
-  encryption: string;
-}
-
-interface AuditEntry {
-  timestamp: string;
-  action: string;
-  namespace: string;
-  service: string;
-  result: 'success' | 'failed';
-}
-
-interface NamespaceInfo {
-  name: string;
-  services: { name: string; connected: boolean }[];
-}
-
-type VaultStatus = 'online' | 'offline' | 'degraded';
-
-// ── Helpers ────────────────────────────────────────────────────────────
-
-function resolveVaultStatus(health: VaultHealth | undefined): VaultStatus {
-  if (!health) return 'offline';
-  if (!health.online) return 'offline';
-  if (health.credential_count === 0) return 'degraded';
-  return 'online';
-}
-
-const STATUS_CONFIG: Record<VaultStatus, { color: string; pulseClass: string; label: string }> = {
-  online: { color: 'bg-emerald-500', pulseClass: 'animate-pulse', label: 'Online' },
-  offline: { color: 'bg-red-500', pulseClass: '', label: 'Offline' },
-  degraded: { color: 'bg-amber-500', pulseClass: 'animate-pulse', label: 'Degraded' },
-};
 
 function formatTimestamp(iso: string): string {
   try {
@@ -98,28 +67,28 @@ export default function VaultStatusSection() {
   // ── Data fetching ──
 
   const { data: vaultHealth } = useQuery<VaultHealth>({
-    queryKey: ['vault-health'],
-    queryFn: () => apiGet<VaultHealth>('/api/vault/health'),
-    refetchInterval: 60000,
+    queryKey: [...VAULT_QUERY_KEYS.health],
+    queryFn: () => apiGet<VaultHealth>(VAULT_API.health),
+    refetchInterval: VAULT_POLLING.health,
   });
 
   const { data: auditEntries } = useQuery<AuditEntry[]>({
-    queryKey: ['vault-audit'],
-    queryFn: () => apiGet<AuditEntry[]>('/api/vault/audit?limit=5'),
-    refetchInterval: 60000,
+    queryKey: [...VAULT_QUERY_KEYS.audit],
+    queryFn: () => apiGet<AuditEntry[]>(`${VAULT_API.audit}?limit=5`),
+    refetchInterval: VAULT_POLLING.audit,
   });
 
   const { data: namespaces } = useQuery<NamespaceInfo[]>({
-    queryKey: ['vault-namespaces'],
-    queryFn: () => apiGet<NamespaceInfo[]>('/api/vault/namespaces'),
-    refetchInterval: 120000,
+    queryKey: [...VAULT_QUERY_KEYS.namespaces],
+    queryFn: () => apiGet<NamespaceInfo[]>(VAULT_API.namespaces),
+    refetchInterval: VAULT_POLLING.namespaces,
     enabled: namespacesOpen,
   });
 
   // ── Derived state ──
 
   const status = useMemo(() => resolveVaultStatus(vaultHealth), [vaultHealth]);
-  const statusCfg = STATUS_CONFIG[status];
+  const statusCfg = VAULT_STATUS_CONFIG[status];
 
   // ── Handlers ──
 
@@ -127,7 +96,7 @@ export default function VaultStatusSection() {
     if (panicInput !== 'PANIC') return;
     setPanicLoading(true);
     try {
-      await apiPost('/api/vault/panic', {});
+      await apiPost(VAULT_API.panic, {});
       toast.success(t('settings.vault.panicSuccess', 'Vault destroyed'));
       setPanicInput('');
     } catch (err) {
@@ -140,7 +109,7 @@ export default function VaultStatusSection() {
   const handleRotate = useCallback(async () => {
     setRotateLoading(true);
     try {
-      await apiPost('/api/vault/rotate', {});
+      await apiPost(VAULT_API.rotate, {});
       toast.success(t('settings.vault.rotateSuccess', 'Credentials rotated'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Rotation failed');
@@ -198,6 +167,29 @@ export default function VaultStatusSection() {
           label={t('settings.vault.encryption', 'Encryption')}
           value={vaultHealth?.encryption ?? 'AES-256-GCM'}
           icon={<Lock size={14} />}
+          badge
+        />
+      </div>
+
+      {/* ── Zero-Trust indicators ── */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard
+          theme={theme}
+          label={t('settings.vault.activeTickets', 'Bilety JIT')}
+          value={vaultHealth?.active_tickets ?? 0}
+          icon={<Shield size={14} />}
+        />
+        <StatCard
+          theme={theme}
+          label={t('settings.vault.rotationServices', 'Auto-rotacja')}
+          value={vaultHealth?.rotation_services ?? 0}
+          icon={<RefreshCw size={14} />}
+        />
+        <StatCard
+          theme={theme}
+          label="ACL"
+          value={vaultHealth?.acl_enabled ? 'ON' : 'OFF'}
+          icon={<ShieldAlert size={14} />}
           badge
         />
       </div>
@@ -339,7 +331,7 @@ export default function VaultStatusSection() {
 
       {/* ── Footer link ── */}
       <a
-        href="http://localhost:5190"
+        href={VAULT_DASHBOARD_URL}
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
@@ -410,6 +402,7 @@ const AuditRow = memo(({ entry, theme }: { entry: AuditEntry; theme: ReturnType<
     <Badge variant={entry.action === 'DELEGATE' ? 'accent' : 'default'} size="sm">
       {entry.action}
     </Badge>
+    {entry.agent && entry.agent !== 'unknown' && <span className="text-[9px] text-blue-400/80">{entry.agent}</span>}
     <span className={cn('flex-1 truncate', theme.text)}>
       {entry.namespace}/{entry.service}
     </span>

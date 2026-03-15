@@ -13,18 +13,54 @@ import { queryClient } from '@/shared/api/queryClient';
 import { useViewStore } from '@/stores/viewStore';
 import '@/i18n';
 import './styles/globals.css';
+// @ts-expect-error
+import { registerSW } from 'virtual:pwa-register';
+import { initTelemetry } from '@jaskier/core';
+
+initTelemetry({
+  serviceName: 'claudehydra-frontend',
+});
+
+// Register Service Worker for PWA
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('Nowa wersja aplikacji jest dostępna. Czy chcesz odświeżyć?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('Aplikacja jest gotowa do działania w trybie offline.');
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded views — each chunk is fetched on demand
 // ---------------------------------------------------------------------------
 
-const HomePage = lazy(() => import('@/features/home/components/HomePage'));
-const ClaudeChatView = lazy(() => import('@/features/chat/components/ClaudeChatView'));
-const AgentsView = lazy(() => import('@/features/agents/components/AgentsView'));
-const SettingsView = lazy(() => import('@/features/settings/components/SettingsView'));
-const LazyLogsView = lazy(() => import('@/features/logs/components/LogsView'));
-const LazyDelegationsView = lazy(() => import('@/features/delegations/components/DelegationsView'));
-const LazyAnalyticsView = lazy(() => import('@/features/analytics/components/AnalyticsView'));
+// Import factories — reusable for both lazy() and prefetch
+const viewImports = {
+  home: () => import('@/features/home/components/HomePage'),
+  chat: () => import('@/features/chat/components/ClaudeChatView'),
+  agents: () => import('@/features/agents/components/AgentsView'),
+  settings: () => import('@/features/settings/components/SettingsView'),
+  logs: () => import('@/features/logs/components/LogsView'),
+  delegations: () => import('@/features/delegations/components/DelegationsView'),
+  analytics: () => import('@/features/analytics/components/AnalyticsView'),
+  swarm: () => import('@/features/swarm/components/SwarmView').then((m) => ({ default: m.SwarmView })),
+  'semantic-cache': () => import('@/features/semantic-cache/components/SemanticCacheView'),
+  collab: () => import('@/features/collab/components/CollabView').then((m) => ({ default: m.CollabView })),
+} as const;
+
+const HomePage = lazy(viewImports.home);
+const ClaudeChatView = lazy(viewImports.chat);
+const AgentsView = lazy(viewImports.agents);
+const SettingsView = lazy(viewImports.settings);
+const LazyLogsView = lazy(viewImports.logs);
+const LazyDelegationsView = lazy(viewImports.delegations);
+const LazyAnalyticsView = lazy(viewImports.analytics);
+const LazySwarmView = lazy(viewImports.swarm);
+const LazySemanticCacheView = lazy(viewImports['semantic-cache']);
+const LazyCollabView = lazy(viewImports.collab);
 
 // ---------------------------------------------------------------------------
 // ViewRouter — maps the current view id to the correct lazy component
@@ -73,6 +109,28 @@ function ViewRouter() {
             fallback={<FeatureErrorFallback feature="Analytics" onRetry={() => window.location.reload()} />}
           >
             <LazyAnalyticsView />
+          </ErrorBoundary>
+        );
+      case 'swarm':
+        return (
+          <ErrorBoundary fallback={<FeatureErrorFallback feature="Swarm" onRetry={() => window.location.reload()} />}>
+            <LazySwarmView />
+          </ErrorBoundary>
+        );
+      case 'semantic-cache':
+        return (
+          <ErrorBoundary
+            fallback={<FeatureErrorFallback feature="Semantic Cache" onRetry={() => window.location.reload()} />}
+          >
+            <LazySemanticCacheView />
+          </ErrorBoundary>
+        );
+      case 'collab':
+        return (
+          <ErrorBoundary
+            fallback={<FeatureErrorFallback feature="Collaboration" onRetry={() => window.location.reload()} />}
+          >
+            <LazyCollabView />
           </ErrorBoundary>
         );
     }
@@ -187,6 +245,12 @@ if (rootElement) {
       <App />
     </StrictMode>,
   );
+
+  // Web Vitals collection — CLS, LCP, FCP, TTFB, INP
+  // Metrics are batched and sent to /api/vitals every 10s
+  import('@jaskier/core').then(({ reportWebVitals }) => {
+    reportWebVitals();
+  });
 
   // HMR cleanup: unmount root before hot reload to prevent double-mount
   if (import.meta.hot) {

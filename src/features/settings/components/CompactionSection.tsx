@@ -94,6 +94,10 @@ export const CompactionSection = memo(() => {
             onChange={(e) => save(Number(e.target.value), keep)}
             disabled={saving}
             className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-[var(--matrix-accent)] bg-[var(--matrix-glass)]"
+            aria-label={t('settings.compaction.threshold', 'Compress after N messages')}
+            aria-valuemin={THRESHOLD_MIN}
+            aria-valuemax={THRESHOLD_MAX}
+            aria-valuenow={threshold}
           />
 
           <Button
@@ -139,6 +143,10 @@ export const CompactionSection = memo(() => {
             onChange={(e) => save(threshold, Number(e.target.value))}
             disabled={saving}
             className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-[var(--matrix-accent)] bg-[var(--matrix-glass)]"
+            aria-label={t('settings.compaction.keep', 'Keep last N messages')}
+            aria-valuemin={KEEP_MIN}
+            aria-valuemax={Math.min(KEEP_MAX, threshold - 1)}
+            aria-valuenow={keep}
           />
 
           <Button

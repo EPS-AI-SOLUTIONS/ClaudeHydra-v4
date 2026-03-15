@@ -422,6 +422,14 @@ impl ToolExecutor {
         defs.extend(fly_tools::tool_definitions());
         defs.extend(web::tool_definitions());
 
+        // Sandbox tool — isolated code execution for safe testing
+        let sandbox_def = crate::sandbox::sandbox_execute_tool_def();
+        defs.push(ToolDefinition {
+            name: sandbox_def["name"].as_str().unwrap_or("sandbox_execute_code").to_string(),
+            description: sandbox_def["description"].as_str().unwrap_or("").to_string(),
+            input_schema: sandbox_def["input_schema"].clone(),
+        });
+
         defs
     }
 
@@ -488,6 +496,44 @@ impl ToolExecutor {
         if tool_name == "fetch_webpage" || tool_name == "crawl_website" {
             return web::execute(tool_name, input, state).await;
         }
+        // Sandbox — isolated code execution
+        if tool_name == "sandbox_execute_code" {
+            let code = input.get("code").and_then(|v| v.as_str()).unwrap_or("");
+            let language_str = input.get("language").and_then(|v| v.as_str()).unwrap_or("node");
+            let timeout_secs = input.get("timeout_secs").and_then(|v| v.as_u64()).unwrap_or(30).min(120) as u32;
+
+            let language = match language_str {
+                "python" => crate::sandbox::SandboxLanguage::Python,
+                "rust" => crate::sandbox::SandboxLanguage::Rust,
+                "bash" => crate::sandbox::SandboxLanguage::Bash,
+                _ => crate::sandbox::SandboxLanguage::Node,
+            };
+
+            // Use process-level isolation (always available).
+            // For full Docker isolation, agents should use the /api/sandbox/execute HTTP endpoint.
+            let execution = crate::sandbox::execute_without_docker_for_tool(
+                language, code, timeout_secs,
+            ).await;
+
+            let output = format!(
+                "## Sandbox Execution Result\n\n\
+                 **Status**: {:?}\n\
+                 **Exit code**: {}\n\
+                 **Duration**: {}ms\n\
+                 **Language**: {:?}\n\n\
+                 ### stdout\n```\n{}\n```\n\n\
+                 ### stderr\n```\n{}\n```",
+                execution.status,
+                execution.exit_code.map_or("N/A".to_string(), |c| c.to_string()),
+                execution.duration_ms,
+                execution.language,
+                execution.stdout,
+                execution.stderr,
+            );
+
+            let is_error = execution.status != crate::sandbox::ExecutionStatus::Success;
+            return (output, is_error);
+        }
         // Image generation via browser proxy
         if tool_name == "generate_image" {
             let image_path = input
@@ -520,12 +566,30 @@ impl ToolExecutor {
 
     /// Return tool definitions including MCP tools (for Anthropic API tool_use).
     /// This is async because it needs to read from the MCP client manager.
-    pub async fn tool_definitions_with_mcp(&self, state: &AppState) -> Vec<ToolDefinition> {
+    pub async fn tool_definitions_with_mcp(&self, state: &AppState, agent_id: Option<&str>) -> Vec<ToolDefinition> {
         let mut defs = self.tool_definitions();
+
+        // Retrieve allowed MCP servers for the agent
+        let mut allowed_servers: Option<std::collections::HashSet<String>> = None;
+        if let Some(aid) = agent_id {
+            use jaskier_core::mcp::config::HasMcpState;
+            if let Ok(perms) = jaskier_core::mcp::permissions::get_agent_permissions_t(state.db(), state.mcp_permissions_table(), aid).await {
+                // To nie musi być surowe "deny_all" póki nie przydzielimy ról,
+                // ale według zero-trust tak powinno być. Narazie filtrujemy jeśli cokolwiek pobierzemy,
+                // albo jeśli wolisz miękkie wdrażanie:
+                // if !perms.is_empty() { ... }
+                allowed_servers = Some(perms.into_iter().map(|p| p.server_id).collect());
+            }
+        }
 
         // Append MCP tools from connected servers (shared McpTool has prefixed_name field)
         let mcp_tools = state.mcp_client.list_all_tools().await;
         for tool in mcp_tools {
+            if let Some(ref allowed) = allowed_servers {
+                if !allowed.contains(&tool.server_id) {
+                    continue; // Skip tools from non-permitted servers
+                }
+            }
             defs.push(ToolDefinition {
                 name: tool.prefixed_name,
                 description: tool.description.unwrap_or_default(),

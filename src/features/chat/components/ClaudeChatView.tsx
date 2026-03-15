@@ -6,6 +6,14 @@
  * inline as collapsible ToolCallBlock panels.
  */
 
+import {
+  type AgentActivity,
+  AgentActivityPanel,
+  type Artifact,
+  ArtifactPanel,
+  EMPTY_ACTIVITY,
+  usePromptHistory,
+} from '@jaskier/chat-module';
 import { useCompletionFeedback, useOnlineStatus } from '@jaskier/core';
 import { AnimatePresence } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,9 +30,6 @@ import { useViewStore } from '@/stores/viewStore';
 import { claudeHealthCheck, DEFAULT_MODEL } from '../api/claudeStream';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { type FallbackInfo, useChatStreaming } from '../hooks/useChatStreaming';
-import { usePromptHistory } from '../hooks/usePromptHistory';
-import { type AgentActivity, AgentActivityPanel, EMPTY_ACTIVITY } from './AgentActivityPanel';
-import { ArtifactPanel } from './ArtifactPanel';
 import { ChatHeader } from './ChatHeader';
 import { type Attachment, ChatInput, type ChatInputHandle } from './ChatInput';
 import { CompletionFeedback } from './CompletionFeedback';
@@ -74,6 +79,8 @@ export function ClaudeChatView() {
   const currentSessionId = useViewStore(useShallow((s) => s.currentSessionId));
   const activeSession = useViewStore(useShallow((s) => s.sessions.find((cs) => cs.id === s.currentSessionId)));
   const setSessionWorkingDirectory = useViewStore(useShallow((s) => s.setSessionWorkingDirectory));
+  const activeArtifact = useViewStore(useShallow((s) => s.activeArtifact)) as Artifact | null;
+  const setActiveArtifact = useViewStore(useShallow((s) => s.setActiveArtifact));
 
   // Settings (for welcome message)
   const { data: settings } = useSettingsQuery();
@@ -152,6 +159,12 @@ export function ClaudeChatView() {
     },
     [currentSessionId, setSessionWorkingDirectory],
   );
+
+  // ----- Artifact panel close handler (shared ArtifactPanel takes props) ---
+
+  const handleCloseArtifact = useCallback(() => {
+    setActiveArtifact(null);
+  }, [setActiveArtifact]);
 
   // ----- Prompt history for arrow-key navigation (global, SQL-backed) ------
 
@@ -512,7 +525,7 @@ export function ClaudeChatView() {
           onRetry={handleRetry}
         />
 
-        <ArtifactPanel />
+        <ArtifactPanel activeArtifact={activeArtifact} onClose={handleCloseArtifact} />
       </div>
 
       {/* Streaming indicator bar */}

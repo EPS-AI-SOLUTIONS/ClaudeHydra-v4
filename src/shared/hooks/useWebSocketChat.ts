@@ -28,6 +28,7 @@ import type {
 } from '@/shared/api/schemas';
 import { wsServerMessageSchema } from '@/shared/api/schemas';
 import { env } from '@/shared/config/env';
+import { dispatchViewHint } from '@/shared/hooks/usePredictivePrefetch';
 
 // Re-export shared constants for backward compatibility
 export { MAX_RECONNECT_ATTEMPTS } from '@jaskier/chat-module';
@@ -75,7 +76,14 @@ function parseServerMessage(
 ): { type: string; content?: string; message?: string; [key: string]: unknown } | null {
   const parsed = wsServerMessageSchema.safeParse(raw);
   if (!parsed.success) return null;
-  return parsed.data as WsServerMessage & { [key: string]: unknown };
+  const msg = parsed.data as WsServerMessage & { [key: string]: unknown };
+
+  // Predictive UI pre-fetching: dispatch view hints to prefetch hook
+  if (msg.type === 'view_hint' && 'views' in msg) {
+    dispatchViewHint(msg.views as string[]);
+  }
+
+  return msg;
 }
 
 // ============================================================================

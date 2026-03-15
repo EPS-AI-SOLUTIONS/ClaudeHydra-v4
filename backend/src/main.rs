@@ -223,6 +223,19 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    // ── Spawn Swarm IPC discovery loop (probes peers every 30s) ──
+    state.swarm.start_discovery();
+
+    // ── Sandbox: check Docker availability + spawn cleanup loop ──
+    state.sandbox.check_docker().await;
+    claudehydra_backend::sandbox::spawn_cleanup_loop(state.sandbox.clone());
+
+    // ── Spawn Semantic Cache TTL cleanup loop (every 5 minutes) ──
+    claudehydra_backend::semantic_cache::spawn_ttl_cleanup_loop(state.semantic_cache.clone());
+
+    // ── Spawn Memory Pruning watchdog (configurable interval, default 1h) ──
+    claudehydra_backend::memory_pruning::spawn_pruning_watchdog(state.clone());
+
     // ── Browser proxy mode logging ──
     if claudehydra_backend::browser_proxy::is_enabled() {
         let auto_restart = claudehydra_backend::browser_proxy::proxy_dir().is_some();

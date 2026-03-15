@@ -10,10 +10,10 @@
  *  - Card atom + lucide-react icons for consistent styling
  */
 
+import i18n from '@jaskier/i18n';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button, Card } from '@/components/atoms';
-import i18n from '@jaskier/i18n';
 
 // ============================================================================
 // TYPES

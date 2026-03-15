@@ -1,5 +1,5 @@
+import { splitToolOutput, stripParallelHeader } from '@jaskier/chat-module';
 import { describe, expect, it } from 'vitest';
-import { splitToolOutput, stripParallelHeader } from './messageParser';
 
 describe('messageParser', () => {
   describe('stripParallelHeader', () => {

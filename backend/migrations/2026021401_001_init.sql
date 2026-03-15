@@ -1,6 +1,6 @@
 -- ClaudeHydra v4 — initial schema
 -- ch_settings (singleton)
-CREATE TABLE ch_settings (
+CREATE TABLE IF NOT EXISTS ch_settings (
     id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     theme TEXT NOT NULL DEFAULT 'dark',
     language TEXT NOT NULL DEFAULT 'en',
@@ -11,16 +11,16 @@ CREATE TABLE ch_settings (
 INSERT INTO ch_settings (id) VALUES (1) ON CONFLICT DO NOTHING;
 
 -- ch_sessions
-CREATE TABLE ch_sessions (
+CREATE TABLE IF NOT EXISTS ch_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_ch_sess_updated ON ch_sessions (updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ch_sess_updated ON ch_sessions (updated_at DESC);
 
 -- ch_messages
-CREATE TABLE ch_messages (
+CREATE TABLE IF NOT EXISTS ch_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES ch_sessions(id) ON DELETE CASCADE,
     role TEXT NOT NULL,
@@ -29,4 +29,4 @@ CREATE TABLE ch_messages (
     agent TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_ch_msg_session ON ch_messages (session_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_ch_msg_session ON ch_messages (session_id, created_at ASC);

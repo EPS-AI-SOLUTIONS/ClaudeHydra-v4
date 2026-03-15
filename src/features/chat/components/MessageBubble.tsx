@@ -1,4 +1,4 @@
-﻿import { useViewTheme } from '@jaskier/chat-module';
+﻿import { splitToolOutput, stripParallelHeader, type ToolSegment, useViewTheme } from '@jaskier/chat-module';
 import { AgentAvatar, BaseMessageBubble, cn } from '@jaskier/ui';
 import { RefreshCw } from 'lucide-react';
 import { type MouseEvent, memo, useDeferredValue, useMemo } from 'react';
@@ -6,8 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useCurrentSession } from '@/stores/viewStore';
 import { ErrorBoundary } from './ErrorBoundary';
 import { MessageRating } from './MessageRating';
-import type { ToolSegment } from './messageParser';
-import { splitToolOutput, stripParallelHeader } from './messageParser';
 import { ToolResultRenderer } from './ToolResultRenderer';
 
 export interface ToolInteraction {
