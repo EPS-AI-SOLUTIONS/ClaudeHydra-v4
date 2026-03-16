@@ -296,7 +296,13 @@ export default defineConfig(({ mode }) => {
             }
             // ── @jaskier/* workspace packages (shared app code) ─────
             // These resolve through symlinks to ../packages/*
-            if (id.includes('/packages/core/') || id.includes('/packages/state/') || id.includes('/packages/i18n/')) {
+            // IMPORTANT: telemetry.ts is excluded — it pulls in ~131KB of @opentelemetry/*
+            // and must stay in its own async chunk (loaded via dynamic import() in main.tsx).
+            if (
+              (id.includes('/packages/core/') && !id.includes('/telemetry')) ||
+              id.includes('/packages/state/') ||
+              id.includes('/packages/i18n/')
+            ) {
               return 'shared-core';
             }
             // MarkdownRenderer is dynamically imported by BaseMessageBubble.
