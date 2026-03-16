@@ -154,8 +154,10 @@ export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabD
 
       states.forEach((state, clientId) => {
         if (clientId === doc.clientID) return;
+        // biome-ignore lint/complexity/useLiteralKeys: index signature requires bracket notation (TS4111)
         const user = state['user'] as { name?: string; color?: string; isAgent?: boolean } | undefined;
         if (user) {
+          // biome-ignore lint/complexity/useLiteralKeys: index signature requires bracket notation (TS4111)
           const cursor = state['cursor'] as { anchor?: number; head?: number } | undefined;
           peerList.push({
             clientId,

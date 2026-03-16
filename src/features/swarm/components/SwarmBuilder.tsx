@@ -475,6 +475,7 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
     const currentEdges = reactFlowInstance.getEdges();
 
     // Find all agent nodes in the graph
+    // biome-ignore lint/complexity/useLiteralKeys: index signature requires bracket notation (TS4111)
     const agentNodes = currentNodes.filter((n: Node) => n.type === 'agent' && n.data?.['peerId']);
 
     if (agentNodes.length === 0) {
@@ -482,6 +483,7 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
       return;
     }
 
+    // biome-ignore lint/complexity/useLiteralKeys: index signature requires bracket notation (TS4111)
     const targets = agentNodes.map((n: Node) => n.data['peerId']);
     const prompt = window.prompt('Enter task prompt for the selected agents:');
 

@@ -85,11 +85,7 @@ export const ConnectionStatusBadge = memo(function ConnectionStatusBadge({
         <span className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
       )}
 
-      {connectionStatus === 'reconnecting' ? (
-        <RefreshCw size={12} className="animate-spin" />
-      ) : (
-        <WifiOff size={12} />
-      )}
+      {connectionStatus === 'reconnecting' ? <RefreshCw size={12} className="animate-spin" /> : <WifiOff size={12} />}
 
       <span>{config.label}</span>
 

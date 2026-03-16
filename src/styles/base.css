@@ -220,6 +220,7 @@ pre,
   box-shadow: 0 0 6px rgba(45, 106, 79, 0.3);
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: scrollbar-color must apply to all children under data-theme, specificity order is intentional */
 [data-theme="light"] * {
   scrollbar-color: rgba(45, 106, 79, 0.4) transparent;
 }
