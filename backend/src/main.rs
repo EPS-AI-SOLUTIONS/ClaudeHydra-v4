@@ -1,57 +1,24 @@
-use http::{Method, header};
+use http::header;
 use tower_http::compression::CompressionLayer;
 use tower_http::compression::predicate::{DefaultPredicate, NotForContentType, Predicate};
-use tower_http::cors::CorsLayer;
 use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 
 use claudehydra_backend::handlers;
 use claudehydra_backend::model_registry;
+use claudehydra_backend::state::AppState;
 #[cfg(feature = "shuttle")]
 use claudehydra_backend::state::LogRingBuffer;
-use claudehydra_backend::state::AppState;
 use claudehydra_backend::watchdog;
 
 use jaskier_core::app_builder;
 
 fn build_app(state: AppState) -> axum::Router {
-    // CORS — allow Vite dev server + Vercel production
-    let cors = CorsLayer::new()
-        .allow_origin([
-            "http://localhost:4173"
-                .parse()
-                .expect("localhost:4173 is a valid hardcoded URL"),
-            "http://localhost:5199"
-                .parse()
-                .expect("localhost:5199 is a valid hardcoded URL"),
-            "http://127.0.0.1:5199"
-                .parse()
-                .expect("127.0.0.1:5199 is a valid hardcoded URL"),
-            // GeminiHydra frontend (partner app cross-session access)
-            "http://localhost:5176"
-                .parse()
-                .expect("localhost:5176 is a valid hardcoded URL"),
-            "http://127.0.0.1:5176"
-                .parse()
-                .expect("127.0.0.1:5176 is a valid hardcoded URL"),
-            "https://claudehydra-v4.vercel.app"
-                .parse()
-                .expect("claudehydra-v4.vercel.app is a valid hardcoded URL"),
-            "https://claudehydra-v4-pawelserkowskis-projects.vercel.app"
-                .parse()
-                .expect(
-                    "claudehydra-v4-pawelserkowskis-projects.vercel.app is a valid hardcoded URL",
-                ),
-        ])
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION])
-        .max_age(std::time::Duration::from_secs(86_400));
+    // CORS — centralized via jaskier-auth, Vercel production origins as extras
+    let cors = jaskier_auth::build_cors_layer(&[
+        "https://claudehydra-v4.vercel.app",
+        "https://claudehydra-v4-pawelserkowskis-projects.vercel.app",
+    ]);
 
     // Rate limiting: per-endpoint governors configured in lib.rs (#21)
     claudehydra_backend::create_router(state)

@@ -22,6 +22,7 @@ jaskier-sandbox = { path = "../../../crates/jaskier-sandbox" }
 jaskier-memory-pruning = { path = "../../../crates/jaskier-memory-pruning" }
 jaskier-model-router = { path = "../../../crates/jaskier-model-router" }
 jaskier-session-auth = { path = "../../../crates/jaskier-session-auth" }
+jaskier-auth = { path = "../../../crates/jaskier-auth" }
 jaskier-semantic-cache = { path = "../../../crates/jaskier-semantic-cache", features = ["compressor"] }
 axum = { workspace = true, features = ["ws"] }
 tokio = { workspace = true }
