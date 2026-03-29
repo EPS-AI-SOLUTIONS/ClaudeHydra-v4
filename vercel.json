@@ -1,7 +1,7 @@
 {
   "framework": "vite",
-  "installCommand": "rm -f package-lock.json && bun install --no-save --ignore-workspace && node scripts/create-shims.js",
-  "buildCommand": "bun run build",
+  "installCommand": "rm -f package-lock.json bun.lock && node scripts/strip-workspace-deps.js && bun install --no-save && node scripts/create-shims.js",
+  "buildCommand": "vite build",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
