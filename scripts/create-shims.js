@@ -73,6 +73,7 @@ export const Skeleton = () => null;
 export const AgentAvatar = () => null;
 export const BaseArtifactView = () => null;
 export const BaseChatInput = () => null;
+export const BaseMetricsDashboard = () => null;
 export const CommandPalette = () => null;
 export const EmptyState = () => null;
 export const FooterControls = () => null;
@@ -81,9 +82,23 @@ export const SessionItem = () => null;
 export const SessionSearch = () => null;
 export const TabBar = () => null;
 export const ViewSkeleton = () => null;
+export const ThemeContext = null;
 export const ThemeProvider = ({ children }) => children;
 export const useTheme = () => ({ theme: 'dark', resolvedTheme: 'dark', setTheme: () => {} });
 export class ErrorBoundary { constructor(p) { this.props = p; } render() { return this.props.children; } }
+`,
+  {
+    "./markdown": "markdown/index.js",
+  },
+);
+
+// Write stub for @jaskier/ui/markdown subpath
+fs.writeFileSync(
+  path.join(basePath, "@jaskier/ui/markdown/index.js"),
+  `export const BaseMessageBubble = () => null;
+export const BaseCodeBlock = () => null;
+export const MarkdownRenderer = () => null;
+export {};
 `,
 );
 
@@ -223,7 +238,7 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.join(basePath, "@jaskier/hydra-app/components/organisms/index.js"),
-  featureStub(["AppShell", "Sidebar", "StatusFooter", "TabBar"]),
+  featureStub(["AppShell", "Sidebar", "StatusFooter", "TabBar", "FooterControls", "LogoButton"]),
 );
 
 fs.writeFileSync(
@@ -244,6 +259,16 @@ export {};
 fs.writeFileSync(
   path.join(basePath, "@jaskier/hydra-app/shared/api/client.js"),
   `export const initApiClient = () => ({});
+export const BASE_URL = '';
+export const getBaseUrl = () => '';
+export const apiGet = async () => ({});
+export const apiPost = async () => ({});
+export const apiPatch = async () => ({});
+export const apiDelete = async () => ({});
+export const apiGetPolling = async () => ({});
+export const apiPostFormData = async () => ({});
+export const checkHealth = async () => ({});
+export class ApiError extends Error { constructor(m) { super(m); } }
 export {};
 `,
 );
