@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo",
     "paths": {
       "@/*": [
         "./src/*"
@@ -15,6 +16,7 @@
       "DOM",
       "DOM.Iterable"
     ],
+    "jsx": "react-jsx",
     "skipLibCheck": true,
     "strict": true
   },
