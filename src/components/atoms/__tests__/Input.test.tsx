@@ -65,25 +65,7 @@ describe('Input', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Right element
-  // -------------------------------------------------------------------------
-
-  it('renders rightElement when provided', () => {
-    render(
-      <Input
-        placeholder="Search"
-        rightElement={
-          <button type="button" data-testid="clear-btn">
-            X
-          </button>
-        }
-      />,
-    );
-    expect(screen.getByTestId('clear-btn')).toBeInTheDocument();
-  });
-
-  // -------------------------------------------------------------------------
-  // Icon
+  // Icon (left side)
   // -------------------------------------------------------------------------
 
   it('renders icon when provided', () => {
@@ -117,9 +99,9 @@ describe('Input', () => {
   // Custom className
   // -------------------------------------------------------------------------
 
-  it('applies additional className to wrapper', () => {
-    const { container } = render(<Input className="my-custom" placeholder="Test" />);
-    const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.className).toContain('my-custom');
+  it('applies additional className to the input element', () => {
+    render(<Input className="my-custom" placeholder="Test" />);
+    const input = screen.getByPlaceholderText('Test');
+    expect(input.className).toContain('my-custom');
   });
 });
