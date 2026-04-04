@@ -204,10 +204,7 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
         </span>
         <ChevronDown
           size={16}
-          className={cn(
-            'text-[var(--matrix-text-secondary)] transition-transform shrink-0',
-            isOpen && 'rotate-180',
-          )}
+          className={cn('text-[var(--matrix-text-secondary)] transition-transform shrink-0', isOpen && 'rotate-180')}
         />
       </button>
 

@@ -526,6 +526,12 @@ fn build_ch_config(state: AppState) -> HydraRouterConfig<AppState> {
 
         // OpenAPI spec
         openapi: ApiDoc::openapi(),
+        // B13: Mount jaskier-auth unified auth routes at /api/auth/*
+        jaskier_auth_routes: Some(
+            Router::new().nest("/api/auth", jaskier_auth::auth_router::<AppState>()),
+        ),
+        // B13: Skip legacy Google/GitHub/Vercel OAuth routes — jaskier-auth handles all auth
+        skip_provider_oauth: true,
     }
 }
 

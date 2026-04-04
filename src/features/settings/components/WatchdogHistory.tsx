@@ -102,9 +102,7 @@ export const WatchdogHistory = memo(() => {
               >
                 <Icon size={13} className={cn('shrink-0', cfg.color)} />
                 <span className={cn('w-16 shrink-0', theme.textMuted)}>{formatTime(evt.timestamp)}</span>
-                <span className={cn('w-12 shrink-0 text-[10px]', theme.textMuted)}>
-                  {formatDate(evt.timestamp)}
-                </span>
+                <span className={cn('w-12 shrink-0 text-[10px]', theme.textMuted)}>{formatDate(evt.timestamp)}</span>
                 <span className={cn('font-medium', cfg.color)}>{cfg.label}</span>
                 <span className={cn('shrink-0', theme.textMuted)}>{workerInfo}</span>
                 {evt.error && (

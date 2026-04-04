@@ -57,10 +57,13 @@ pub(crate) async fn google_chat_stream(
         }
     });
 
-    let request =
-        jaskier_net_sec::oauth::google::apply_google_auth(state.http_client.post(&url), &api_key, is_oauth)
-            .json(&body)
-            .timeout(std::time::Duration::from_secs(300));
+    let request = jaskier_net_sec::oauth::google::apply_google_auth(
+        state.http_client.post(&url),
+        &api_key,
+        is_oauth,
+    )
+    .json(&body)
+    .timeout(std::time::Duration::from_secs(300));
 
     let resp = request.send().await.map_err(|e| {
         tracing::error!("Google API request failed: {}", e);

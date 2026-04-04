@@ -9,8 +9,8 @@
 //! user authentication.
 
 use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
 use axum::http::StatusCode;
+use axum::http::request::Parts;
 use tracing::{debug, warn};
 
 use crate::state::AppState;

@@ -507,10 +507,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                   )}
                   title={ps.title}
                 >
-                  <MessageSquare
-                    size={14}
-                    className={cn('shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')}
-                  />
+                  <MessageSquare size={14} className={cn('shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{ps.title}</p>
                     <p className="text-xs text-[var(--matrix-text-secondary)] truncate">

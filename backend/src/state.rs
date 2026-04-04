@@ -281,10 +281,7 @@ impl AppState {
             semantic_cache: Arc::new(SemanticCacheState::new_test()),
             sandbox: SandboxState::new(),
             memory_pruning: Arc::new(MemoryPruningState::new_test()),
-            auth: jaskier_auth::AuthState::new(
-                db,
-                jaskier_auth::AuthConfig::default(),
-            ),
+            auth: jaskier_auth::AuthState::new(db, jaskier_auth::AuthConfig::default()),
         }
     }
 }
@@ -655,9 +652,7 @@ impl jaskier_core::sessions::HasAnthropicCredential for AppState {
         // 3. Last resort: env var
         let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
         if !key.is_empty() {
-            tracing::info!(
-                "Falling back to ANTHROPIC_API_KEY env var for Anthropic (title gen)"
-            );
+            tracing::info!("Falling back to ANTHROPIC_API_KEY env var for Anthropic (title gen)");
             return Some((key, false));
         }
 
