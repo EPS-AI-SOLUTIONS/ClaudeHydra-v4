@@ -4,7 +4,7 @@ import { ApiError, apiDelete, apiGet, apiPatch, apiPost } from '../client';
 // ---------------------------------------------------------------------------
 // In test env (jsdom, non-PROD) BASE_URL resolves to '' (empty — Vite proxy)
 // ---------------------------------------------------------------------------
-const BASE = '';
+const BASE = 'http://localhost:8082';
 
 /** Helper — create a minimal Response-like object for the fetch mock. */
 function mockResponse(

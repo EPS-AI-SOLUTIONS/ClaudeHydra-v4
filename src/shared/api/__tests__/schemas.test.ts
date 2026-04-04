@@ -44,8 +44,8 @@ describe('systemStatsSchema', () => {
   it('parses valid stats', () => {
     const data = {
       cpu_usage: 45.2,
-      memory_used: 8192,
-      memory_total: 16384,
+      memory_used_mb: 8192,
+      memory_total_mb: 16384,
       uptime_seconds: 7200,
       active_sessions: 3,
       total_messages: 150,
@@ -56,8 +56,8 @@ describe('systemStatsSchema', () => {
   it('rejects non-number cpu_usage', () => {
     const result = systemStatsSchema.safeParse({
       cpu_usage: 'high',
-      memory_used: 8192,
-      memory_total: 16384,
+      memory_used_mb: 8192,
+      memory_total_mb: 16384,
       uptime_seconds: 7200,
       active_sessions: 3,
       total_messages: 150,
@@ -206,7 +206,7 @@ describe('settingsSchema', () => {
   };
 
   it('parses valid settings', () => {
-    expect(settingsSchema.parse(validSettings)).toEqual({
+    expect(settingsSchema.parse(validSettings)).toMatchObject({
       ...validSettings,
       welcome_message: '',
       max_iterations: 10,

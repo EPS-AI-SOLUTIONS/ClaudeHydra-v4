@@ -14,7 +14,7 @@ const providerInfoSchema = z.object({
   available: z.boolean(),
 });
 
-const healthSchema = z.object({
+export const healthSchema = z.object({
   status: z.string(),
   version: z.string(),
   uptime_seconds: z.number(),
@@ -27,7 +27,7 @@ export type Health = z.infer<typeof healthSchema>;
 // System Stats
 // ---------------------------------------------------------------------------
 
-const systemStatsSchema = z.object({
+export const systemStatsSchema = z.object({
   cpu_usage: z.number(),
   memory_used_mb: z.number(),
   memory_total_mb: z.number(),
@@ -42,7 +42,7 @@ export type SystemStats = z.infer<typeof systemStatsSchema>;
 // Agents
 // ---------------------------------------------------------------------------
 
-const agentSchema = z.object({
+export const agentSchema = z.object({
   id: z.string(),
   name: z.string(),
   role: z.string(),
@@ -61,7 +61,7 @@ export const agentsListSchema = z.array(agentSchema);
 // Claude Models
 // ---------------------------------------------------------------------------
 
-const claudeModelSchema = z.object({
+export const claudeModelSchema = z.object({
   id: z.string(),
   name: z.string(),
   tier: z.string(),
@@ -77,7 +77,7 @@ export const claudeModelsSchema = z.array(claudeModelSchema);
 // Claude Chat
 // ---------------------------------------------------------------------------
 
-const usageSchema = z.object({
+export const usageSchema = z.object({
   input_tokens: z.number(),
   output_tokens: z.number(),
 });
@@ -94,7 +94,7 @@ export const claudeChatResponseSchema = z.object({
 // Settings
 // ---------------------------------------------------------------------------
 
-const settingsSchema = z.object({
+export const settingsSchema = z.object({
   default_model: z.string(),
   temperature: z.number(),
   max_tokens: z.number(),
@@ -151,7 +151,7 @@ export type OAuthCallbackResponse = z.infer<typeof oauthCallbackResponseSchema>;
 // Messages
 // ---------------------------------------------------------------------------
 
-const messageSchema = z.object({
+export const messageSchema = z.object({
   role: z.string(),
   content: z.string(),
   model: z.string().optional(),
@@ -163,7 +163,7 @@ export type Message = z.infer<typeof messageSchema>;
 // Sessions
 // ---------------------------------------------------------------------------
 
-const sessionSummarySchema = z.object({
+export const sessionSummarySchema = z.object({
   id: z.string(),
   title: z.string(),
   created_at: z.string(),
@@ -179,7 +179,7 @@ const sessionsListSchema = z.array(sessionSummarySchema);
 
 export type SessionsList = z.infer<typeof sessionsListSchema>;
 
-const sessionSchema = z.object({
+export const sessionSchema = z.object({
   id: z.string(),
   title: z.string(),
   created_at: z.string(),
