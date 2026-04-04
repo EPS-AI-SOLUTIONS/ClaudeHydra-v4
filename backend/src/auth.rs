@@ -6,7 +6,7 @@
 // `api_keys` DB table (not present in other Hydras).
 
 pub use jaskier_core::auth::{
-    HasAuthSecret, HasJwtSecret, check_bearer_token, jaskier_auth_require_auth, validate_ws_token,
+    HasAuthSecret, HasJwtSecret, jaskier_auth_require_auth, validate_ws_token,
 };
 
 use axum::{
