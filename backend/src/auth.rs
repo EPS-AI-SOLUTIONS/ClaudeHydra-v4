@@ -5,7 +5,9 @@
 // ClaudeHydra-specific: `require_api_key_auth` validates against the
 // `api_keys` DB table (not present in other Hydras).
 
-pub use jaskier_core::auth::{HasAuthSecret, check_bearer_token, require_auth, validate_ws_token};
+pub use jaskier_core::auth::{
+    HasAuthSecret, HasJwtSecret, check_bearer_token, jaskier_auth_require_auth, validate_ws_token,
+};
 
 use axum::{
     extract::{Request, State},

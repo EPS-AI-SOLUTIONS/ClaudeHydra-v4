@@ -203,7 +203,7 @@ fn ch_agents_router(state: AppState) -> Router<AppState> {
         )
         .route_layer(axum::middleware::from_fn_with_state(
             state,
-            auth::require_auth::<AppState>,
+            auth::jaskier_auth_require_auth::<AppState>,
         ))
 }
 
@@ -214,7 +214,7 @@ fn ch_files_router(state: AppState) -> Router<AppState> {
         .route("/api/files/browse", post(handlers::browse_directory))
         .route_layer(axum::middleware::from_fn_with_state(
             state,
-            auth::require_auth::<AppState>,
+            auth::jaskier_auth_require_auth::<AppState>,
         ))
 }
 
@@ -238,7 +238,7 @@ fn ch_system_router(state: AppState) -> Router<AppState> {
         )
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
-            auth::require_auth::<AppState>,
+            auth::jaskier_auth_require_auth::<AppState>,
         ));
 
     // API key auth required for metrics/audit
@@ -379,7 +379,7 @@ fn ch_vault_protected_routes(state: AppState) -> Router<AppState> {
         .route("/api/vault/rotate", post(vault_proxy::vault_rotate))
         .route_layer(axum::middleware::from_fn_with_state(
             state,
-            auth::require_auth::<AppState>,
+            auth::jaskier_auth_require_auth::<AppState>,
         ))
 }
 
