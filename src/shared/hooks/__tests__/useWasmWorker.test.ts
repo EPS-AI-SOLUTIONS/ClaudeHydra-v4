@@ -2,37 +2,38 @@ import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock the WasmClient since WASM can't load in jsdom
-vi.mock('@jaskier/wasm-worker', () => ({
-  WasmClient: vi.fn().mockImplementation(() => ({
-    initialized: false,
-    wasmVersion: '0.2.0',
-    ready: vi.fn().mockResolvedValue('0.2.0'),
-    dispose: vi.fn(),
-    maskPii: vi.fn().mockResolvedValue({ masked: '***', detections: [] }),
-    maskEmails: vi.fn().mockResolvedValue('***'),
-    maskCards: vi.fn().mockResolvedValue('***'),
-    maskPesel: vi.fn().mockResolvedValue('***'),
-    maskPhones: vi.fn().mockResolvedValue('***'),
-    maskNip: vi.fn().mockResolvedValue('***'),
-    maskIban: vi.fn().mockResolvedValue('***'),
-    countTokens: vi.fn().mockResolvedValue(10),
-    countTokensBatch: vi.fn().mockResolvedValue([10, 20]),
-    cosineSimilarity: vi.fn().mockResolvedValue(0.9),
-    cosineSimilarityNgram: vi.fn().mockResolvedValue(0.85),
-    levenshteinDistance: vi.fn().mockResolvedValue(3),
-    levenshteinSimilarity: vi.fn().mockResolvedValue(0.7),
-    jaccardSimilarity: vi.fn().mockResolvedValue(0.5),
-    fuzzySearch: vi.fn().mockResolvedValue([]),
-    batchSimilarity: vi.fn().mockResolvedValue([]),
-    analyzeText: vi.fn().mockResolvedValue({ wordCount: 5 }),
-    wordFrequency: vi.fn().mockResolvedValue([]),
-    hashText: vi.fn().mockResolvedValue('abc123'),
-    smartTruncate: vi.fn().mockResolvedValue('hello...'),
-    extractKeywords: vi.fn().mockResolvedValue([]),
-    benchmark: vi.fn().mockResolvedValue(1.5),
-    benchmarkSimilarity: vi.fn().mockResolvedValue(2.0),
-  })),
-}));
+vi.mock('@jaskier/wasm-worker', () => {
+  class MockWasmClient {
+    initialized = false;
+    wasmVersion = '0.2.0';
+    ready = vi.fn().mockResolvedValue('0.2.0');
+    dispose = vi.fn();
+    maskPii = vi.fn().mockResolvedValue({ masked: '***', detections: [] });
+    maskEmails = vi.fn().mockResolvedValue('***');
+    maskCards = vi.fn().mockResolvedValue('***');
+    maskPesel = vi.fn().mockResolvedValue('***');
+    maskPhones = vi.fn().mockResolvedValue('***');
+    maskNip = vi.fn().mockResolvedValue('***');
+    maskIban = vi.fn().mockResolvedValue('***');
+    countTokens = vi.fn().mockResolvedValue(10);
+    countTokensBatch = vi.fn().mockResolvedValue([10, 20]);
+    cosineSimilarity = vi.fn().mockResolvedValue(0.9);
+    cosineSimilarityNgram = vi.fn().mockResolvedValue(0.85);
+    levenshteinDistance = vi.fn().mockResolvedValue(3);
+    levenshteinSimilarity = vi.fn().mockResolvedValue(0.7);
+    jaccardSimilarity = vi.fn().mockResolvedValue(0.5);
+    fuzzySearch = vi.fn().mockResolvedValue([]);
+    batchSimilarity = vi.fn().mockResolvedValue([]);
+    analyzeText = vi.fn().mockResolvedValue({ wordCount: 5 });
+    wordFrequency = vi.fn().mockResolvedValue([]);
+    hashText = vi.fn().mockResolvedValue('abc123');
+    smartTruncate = vi.fn().mockResolvedValue('hello...');
+    extractKeywords = vi.fn().mockResolvedValue([]);
+    benchmark = vi.fn().mockResolvedValue(1.5);
+    benchmarkSimilarity = vi.fn().mockResolvedValue(2.0);
+  }
+  return { WasmClient: MockWasmClient };
+});
 
 const { useWasmWorker } = await import('../useWasmWorker');
 

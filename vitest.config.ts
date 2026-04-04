@@ -9,6 +9,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      // Deduplicate React for @jaskier/ui (prevents dual-instance hooks error)
+      react: resolve(__dirname, '../../node_modules/react'),
+      'react-dom': resolve(__dirname, '../../node_modules/react-dom'),
     },
   },
   test: {
