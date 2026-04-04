@@ -9,9 +9,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      // Deduplicate React for @jaskier/ui (prevents dual-instance hooks error)
-      react: resolve(__dirname, '../../node_modules/react'),
+      // Deduplicate React for all workspace packages (prevents dual-instance hooks error)
+      'react': resolve(__dirname, '../../node_modules/react'),
+      'react/jsx-runtime': resolve(__dirname, '../../node_modules/react/jsx-runtime'),
+      'react/jsx-dev-runtime': resolve(__dirname, '../../node_modules/react/jsx-dev-runtime'),
       'react-dom': resolve(__dirname, '../../node_modules/react-dom'),
+      'react-dom/client': resolve(__dirname, '../../node_modules/react-dom/client'),
     },
   },
   test: {
@@ -21,5 +24,10 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     css: false,
     restoreMocks: true,
+    server: {
+      deps: {
+        inline: [/@jaskier\//],
+      },
+    },
   },
 });

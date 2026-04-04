@@ -1,6 +1,13 @@
 // ClaudeHydra v4 - Sidebar component tests
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+);
 
 // Mock dependencies before importing Sidebar
 vi.mock('react-i18next', () => ({
@@ -82,6 +89,25 @@ vi.mock('@/features/chat/components/PartnerChatModal', () => ({
   default: () => <div data-testid="partner-chat-modal" />,
 }));
 
+// Mock hydra-app resolved paths
+vi.mock('../../../../../../packages/hydra-app/src/shared/hooks/useViewTheme', () => ({
+  useViewTheme: () => ({
+    accent: '#ffffff',
+    bg: 'rgba(10,10,30,0.95)',
+    text: '#ffffff',
+    border: 'rgba(255,255,255,0.3)',
+    isLight: false,
+  }),
+}));
+
+vi.mock('../../../../../../packages/hydra-app/src/contexts/HydraAppConfig', () => ({
+  useHydraAppConfig: () => ({ appName: 'ClaudeHydra', logoSrc: '', appVersion: '1.0.0' }),
+}));
+
+vi.mock('../../../../../../packages/hydra-app/src/contexts/ThemeContext', () => ({
+  useTheme: () => ({ theme: 'dark', setTheme: () => {}, resolvedTheme: 'dark' }),
+}));
+
 describe('Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -102,13 +128,13 @@ describe('Sidebar', () => {
 
   it('renders without crashing', async () => {
     const { Sidebar } = await import('../Sidebar');
-    const { container } = render(<Sidebar />);
+    const { container } = render(<Sidebar />, { wrapper });
     expect(container.firstChild).toBeTruthy();
   });
 
   it('renders a navigation element or sidebar container', async () => {
     const { Sidebar } = await import('../Sidebar');
-    const { container } = render(<Sidebar />);
+    const { container } = render(<Sidebar />, { wrapper });
     // Sidebar renders as <motion.aside> which becomes <aside>
     const aside = container.querySelector('aside');
     const nav = container.querySelector('nav');
@@ -117,7 +143,7 @@ describe('Sidebar', () => {
 
   it('displays session titles when expanded', async () => {
     const { Sidebar } = await import('../Sidebar');
-    render(<Sidebar />);
+    render(<Sidebar />, { wrapper });
     // Sessions should be visible in expanded state
     const sessionElements = screen.queryAllByText(/Test Session/);
     expect(sessionElements.length).toBeGreaterThanOrEqual(0);
