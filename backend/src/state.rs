@@ -18,14 +18,14 @@ use jaskier_hydra_state::{BaseHydraConfig, BaseHydraState};
 // ── Re-exports for backward compatibility ───────────────────────────────
 // Existing code (main.rs, handlers, streaming.rs, etc.) imports these from crate::state.
 pub use jaskier_hydra_state::{
-    CircuitBreaker, LogEntry, LogRingBuffer, ModelCache, OAuthPkceState,
-    RuntimeState, SystemSnapshot, OAUTH_STATE_TTL,
+    CircuitBreaker, LogEntry, LogRingBuffer, ModelCache, OAUTH_STATE_TTL, OAuthPkceState,
+    RuntimeState, SystemSnapshot,
 };
 
 use std::time::Instant;
 
-use crate::ai_gateway::{self, AiGatewayState, HasAiGateway};
 use crate::ai_gateway::vault_bridge::{HasVaultBridge, VaultClient};
+use crate::ai_gateway::{self, AiGatewayState, HasAiGateway};
 use crate::collab::CollabState;
 use crate::memory_pruning::{HasMemoryPruning, MemoryPruningState};
 use crate::models::WitcherAgent;
@@ -82,6 +82,8 @@ pub struct AppState {
     pub sandbox: SandboxState,
     // ── Memory Pruning (Self-Reflection & Knowledge Graph cleanup) ──────
     pub memory_pruning: Arc<MemoryPruningState>,
+    // ── Unified user authentication (jaskier-auth) ──────────────────────
+    pub auth: Arc<jaskier_auth::AuthState>,
 }
 
 impl Deref for AppState {
@@ -95,16 +97,22 @@ impl Deref for AppState {
 
 impl AppState {
     pub async fn new(db: PgPool, log_buffer: Arc<LogRingBuffer>) -> Self {
-        let base = BaseHydraState::new(db.clone(), log_buffer, BaseHydraConfig {
-            app_name: "ClaudeHydra",
-            google_auth_table: "ch_google_auth",
-            agents_table: "ch_agents_config",
-            circuit_provider: "anthropic",
-            // ClaudeHydra uses Anthropic OAuth — env vars loaded below separately.
-            api_key_env_vars: &["ANTHROPIC_API_KEY"],
-            mcp_servers_table: "ch_mcp_servers",
-            mcp_tools_table: "ch_mcp_discovered_tools",
-        }).await;
+        let db_for_auth = db.clone();
+        let base = BaseHydraState::new(
+            db.clone(),
+            log_buffer,
+            BaseHydraConfig {
+                app_name: "ClaudeHydra",
+                google_auth_table: "ch_google_auth",
+                agents_table: "ch_agents_config",
+                circuit_provider: "anthropic",
+                // ClaudeHydra uses Anthropic OAuth — env vars loaded below separately.
+                api_key_env_vars: &["ANTHROPIC_API_KEY"],
+                mcp_servers_table: "ch_mcp_servers",
+                mcp_tools_table: "ch_mcp_discovered_tools",
+            },
+        )
+        .await;
 
         // ── Inject legacy key names for backward compatibility ──────
         // BaseHydraState inserts as "anthropic" / "google", but CH handlers
@@ -162,6 +170,10 @@ impl AppState {
         // ── Sandbox (Docker-based isolated execution) ──────────────
         let sandbox = SandboxState::new();
 
+        // ── Unified user authentication (jaskier-auth) ──────────────
+        let auth_config = jaskier_auth::AuthConfig::from_env();
+        let auth = jaskier_auth::AuthState::new(db_for_auth, auth_config);
+
         Self {
             base,
             ai_gateway: ai_gateway_state,
@@ -179,11 +191,16 @@ impl AppState {
             semantic_cache,
             sandbox,
             memory_pruning: Arc::new(MemoryPruningState::new(&db).await),
+            auth,
         }
     }
 
-    pub fn is_ready(&self) -> bool { self.base.is_ready() }
-    pub fn mark_ready(&self) { self.base.mark_ready(); }
+    pub fn is_ready(&self) -> bool {
+        self.base.is_ready()
+    }
+    pub fn mark_ready(&self) {
+        self.base.mark_ready();
+    }
 
     /// Access the Web Vitals aggregator (used by /api/vitals endpoint).
     pub fn web_vitals_aggregator(&self) -> Arc<jaskier_core::profiling::WebVitalsAggregator> {
@@ -201,6 +218,7 @@ impl AppState {
 
     /// Test-only constructor — uses `connect_lazy` so no real DB is needed.
     #[doc(hidden)]
+    #[allow(clippy::expect_used, clippy::unwrap_used)]
     pub fn new_test() -> Self {
         let agents = Arc::new(RwLock::new(init_witcher_agents()));
 
@@ -210,49 +228,33 @@ impl AppState {
             .expect("Failed to build HTTP client");
 
         let db = PgPool::connect_lazy("postgres://test@localhost:19999/test").expect("lazy pool");
-        let mcp_client = Arc::new(jaskier_hydra_state::McpClientManager::with_tables(
-            db.clone(), http_client.clone(), "ch_mcp_servers", "ch_mcp_discovered_tools",
+        let _mcp_client = Arc::new(jaskier_hydra_state::McpClientManager::with_tables(
+            db.clone(),
+            http_client.clone(),
+            "ch_mcp_servers",
+            "ch_mcp_discovered_tools",
         ));
         let circuit_breaker = Arc::new(CircuitBreaker::new("anthropic"));
-        let (a2a_task_tx_base, _) = tokio::sync::broadcast::channel(100);
-        let (a2a_task_tx, _) = tokio::sync::broadcast::channel(100);
-        let (a2a_unit_tx, _) = tokio::sync::broadcast::channel(100);
+        let (a2a_task_tx, _) = tokio::sync::broadcast::channel::<serde_json::Value>(100);
+        let (a2a_unit_tx, _) = tokio::sync::broadcast::channel::<()>(100);
 
-        let base = BaseHydraState {
-            db: db.clone(),
-            agents: Arc::new(RwLock::new(vec![])), // base agents unused by CH
-            runtime: Arc::new(RwLock::new(RuntimeState { api_keys: HashMap::new() })),
-            api_keys: Arc::new(RwLock::new(HashMap::new())),
-            model_cache: Arc::new(RwLock::new(ModelCache::new())),
-            start_time: std::time::Instant::now(),
-            client: http_client.clone(),
-            oauth_pkce: Arc::new(RwLock::new(HashMap::new())),
-            system_monitor: Arc::new(RwLock::new(SystemSnapshot::default())),
-            ready: Arc::new(std::sync::atomic::AtomicBool::new(false)),
-            auth_secret: None,
-            gemini_circuit: circuit_breaker.clone(),
-            prompt_cache: Arc::new(RwLock::new(HashMap::new())),
-            a2a_cancel_tokens: Arc::new(RwLock::new(HashMap::new())),
-            oauth_gemini_valid: Arc::new(std::sync::atomic::AtomicBool::new(true)),
-            log_buffer: Arc::new(LogRingBuffer::new(1000)),
-            tool_defs_cache: Arc::new(std::sync::OnceLock::new()),
-            mcp_client,
-            google_oauth_pkce: Arc::new(RwLock::new(HashMap::new())),
-            github_oauth_states: Arc::new(RwLock::new(HashMap::new())),
-            vercel_oauth_states: Arc::new(RwLock::new(HashMap::new())),
-            knowledge_api_url: None,
-            knowledge_auth_secret: None,
-            swarm_tx: tokio::sync::broadcast::channel(100).0,
-            a2a_task_tx: a2a_task_tx_base,
-            browser_proxy_status: Arc::new(RwLock::new(
-                jaskier_hydra_state::BrowserProxyStatus::default(),
-            )),
-            browser_proxy_history: Arc::new(jaskier_hydra_state::ProxyHealthHistory::new(50)),
-            global_rate_limiter: Arc::new(jaskier_core::rate_limiter::GlobalRateLimiter::new()),
-            a2a_semaphore: Arc::new(tokio::sync::Semaphore::new(5)),
-            ws_semaphore: Arc::new(tokio::sync::Semaphore::new(20)),
-            api_key_env_vars: &["ANTHROPIC_API_KEY"],
-        };
+        let log_buffer = Arc::new(jaskier_hydra_state::LogRingBuffer::new(1000));
+        let base = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            BaseHydraState::new(
+                db.clone(),
+                log_buffer,
+                BaseHydraConfig {
+                    app_name: "ClaudeHydra_Test",
+                    google_auth_table: "ch_google_auth",
+                    agents_table: "ch_agents_config",
+                    mcp_servers_table: "ch_mcp_servers",
+                    mcp_tools_table: "ch_mcp_discovered_tools",
+                    api_key_env_vars: &["ANTHROPIC_API_KEY"],
+                    circuit_provider: "anthropic",
+                },
+            )
+            .await
+        });
 
         let ai_gateway_state = Arc::new(AiGatewayState {
             providers: ai_gateway::default_provider_configs(),
@@ -265,7 +267,9 @@ impl AppState {
             ai_gateway: ai_gateway_state,
             agents,
             tool_executor: Arc::new(ToolExecutor::new(http_client.clone(), HashMap::new())),
-            rate_limit_config: crate::rate_limits::RateLimitConfig { groups: std::collections::HashMap::new() },
+            rate_limit_config: crate::rate_limits::RateLimitConfig {
+                groups: std::collections::HashMap::new(),
+            },
             http_client,
             circuit_breaker,
             a2a_task_tx,
@@ -277,6 +281,10 @@ impl AppState {
             semantic_cache: Arc::new(SemanticCacheState::new_test()),
             sandbox: SandboxState::new(),
             memory_pruning: Arc::new(MemoryPruningState::new_test()),
+            auth: jaskier_auth::AuthState::new(
+                db,
+                jaskier_auth::AuthConfig::default(),
+            ),
         }
     }
 }
@@ -357,11 +365,47 @@ impl HasVaultBridge for AppState {
     }
 }
 
+// ── HasAuthState — jaskier-auth user authentication integration ──────────────
+
+impl jaskier_auth::HasAuthState for AppState {
+    fn auth_state(&self) -> &jaskier_auth::AuthState {
+        &self.auth
+    }
+
+    fn jwt_secret(&self) -> &[u8] {
+        self.base
+            .auth_secret
+            .as_deref()
+            .unwrap_or("claudehydra-default-dev-secret-change-me")
+            .as_bytes()
+    }
+
+    fn db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
+
+    fn google_client_id(&self) -> &str {
+        self.auth
+            .config
+            .google_oauth_client_id
+            .as_deref()
+            .unwrap_or("")
+    }
+
+    fn app_id(&self) -> &str {
+        "claudehydra"
+    }
+}
+
 // ── HasMetricsState — manual impl (CH overrides a2a_agent_column/error_filter)
 impl jaskier_core::metrics::HasMetricsState for AppState {
-    fn metrics_db(&self) -> &sqlx::PgPool { &self.base.db }
+    fn metrics_db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
 
-    fn metrics_start_time(&self) -> std::time::Instant { self.base.start_time }
+    fn metrics_start_time(&self) -> std::time::Instant {
+        self.base.start_time
+    }
 
     async fn metrics_snapshot(&self) -> jaskier_core::metrics::MetricsSnapshot {
         let snap = self.base.system_monitor.read().await;
@@ -411,28 +455,43 @@ impl jaskier_core::profiling::HasProfilingState for AppState {
 
 // ── HasSessionsState — manual impl (CH uses different table names + Anthropic title gen)
 impl jaskier_core::sessions::HasSessionsState for AppState {
-    fn db(&self) -> &sqlx::PgPool { &self.base.db }
+    fn db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
 
     // ── Table names ──────────────────────────────────────────────────────
     // CH uses "ch_messages" (not "ch_chat_messages" like Quad Hydras).
-    fn sessions_table(&self) -> &'static str { "ch_sessions" }
-    fn messages_table(&self) -> &'static str { "ch_messages" }
-    fn settings_table(&self) -> &'static str { "ch_settings" }
-    fn memory_table(&self) -> &'static str { "ch_memories" }
-    fn knowledge_nodes_table(&self) -> &'static str { "ch_knowledge_nodes" }
-    fn knowledge_edges_table(&self) -> &'static str { "ch_knowledge_edges" }
-    fn prompt_history_table(&self) -> &'static str { "ch_prompt_history" }
-    fn ratings_table(&self) -> &'static str { "ch_ratings" }
-    fn audit_log_table(&self) -> &'static str { "ch_audit_log" }
+    fn sessions_table(&self) -> &'static str {
+        "ch_sessions"
+    }
+    fn messages_table(&self) -> &'static str {
+        "ch_messages"
+    }
+    fn settings_table(&self) -> &'static str {
+        "ch_settings"
+    }
+    fn memory_table(&self) -> &'static str {
+        "ch_memories"
+    }
+    fn knowledge_nodes_table(&self) -> &'static str {
+        "ch_knowledge_nodes"
+    }
+    fn knowledge_edges_table(&self) -> &'static str {
+        "ch_knowledge_edges"
+    }
+    fn prompt_history_table(&self) -> &'static str {
+        "ch_prompt_history"
+    }
+    fn ratings_table(&self) -> &'static str {
+        "ch_ratings"
+    }
+    fn audit_log_table(&self) -> &'static str {
+        "ch_audit_log"
+    }
 
     // ── Delegated operations ─────────────────────────────────────────────
 
-    async fn log_audit_entry(
-        &self,
-        action: &str,
-        data: serde_json::Value,
-        ip: Option<&str>,
-    ) {
+    async fn log_audit_entry(&self, action: &str, data: serde_json::Value, ip: Option<&str>) {
         crate::audit::log_audit(&self.base.db, action, data, ip).await;
     }
 
@@ -456,31 +515,52 @@ impl jaskier_core::sessions::HasSessionsState for AppState {
 // ── HasMcpServerState — app-specific (CH version, name, tool_executor) ──────
 
 impl jaskier_core::mcp::server::HasMcpServerState for AppState {
-    fn mcp_server_name(&self) -> &'static str { "ClaudeHydra" }
-    fn mcp_server_version(&self) -> &'static str { "4.0.0" }
+    fn mcp_server_name(&self) -> &'static str {
+        "ClaudeHydra"
+    }
+    fn mcp_server_version(&self) -> &'static str {
+        "4.0.0"
+    }
     fn mcp_server_instructions(&self) -> &'static str {
         "ClaudeHydra AI Swarm Control Center — Anthropic Claude-powered multi-agent system"
     }
-    fn mcp_uri_scheme(&self) -> &'static str { "claudehydra" }
+    fn mcp_uri_scheme(&self) -> &'static str {
+        "claudehydra"
+    }
 
-    fn mcp_settings_table(&self) -> &'static str { "ch_settings" }
-    fn mcp_sessions_table(&self) -> &'static str { "ch_sessions" }
+    fn mcp_settings_table(&self) -> &'static str {
+        "ch_settings"
+    }
+    fn mcp_sessions_table(&self) -> &'static str {
+        "ch_sessions"
+    }
 
     async fn mcp_agents_json(&self) -> serde_json::Value {
         let agents = self.agents.read().await;
-        serde_json::json!(agents.iter().map(|a| {
-            serde_json::json!({
-                "id": a.id,
-                "name": a.name,
-                "role": a.role,
-                "status": a.status,
-                "tier": a.tier,
-            })
-        }).collect::<Vec<_>>())
+        serde_json::json!(
+            agents
+                .iter()
+                .map(|a| {
+                    serde_json::json!({
+                        "id": a.id,
+                        "name": a.name,
+                        "role": a.role,
+                        "status": a.status,
+                        "tier": a.tier,
+                    })
+                })
+                .collect::<Vec<_>>()
+        )
     }
-    fn mcp_model_cache(&self) -> &Arc<RwLock<crate::model_registry::ModelCache>> { &self.base.model_cache }
-    fn mcp_start_time(&self) -> std::time::Instant { self.base.start_time }
-    fn mcp_is_ready(&self) -> bool { self.base.is_ready() }
+    fn mcp_model_cache(&self) -> &Arc<RwLock<crate::model_registry::ModelCache>> {
+        &self.base.model_cache
+    }
+    fn mcp_start_time(&self) -> std::time::Instant {
+        self.base.start_time
+    }
+    fn mcp_is_ready(&self) -> bool {
+        self.base.is_ready()
+    }
 
     async fn mcp_system_snapshot_json(&self) -> serde_json::Value {
         let snap = self.base.system_monitor.read().await;
@@ -522,68 +602,66 @@ impl jaskier_core::mcp::server::HasMcpServerState for AppState {
     }
 }
 
-// ── HasAnthropicCredential — CH uses Vault → DB OAuth → API key chain ───────
+// ── HasAnthropicCredential — CH uses Vault → API key chain ──────────────────
 //
-// Dual resolution strategy for backward compatibility during Vault migration:
+// B13: Simplified resolution strategy (DB OAuth removed):
 // 1. First try: Jaskier Vault (ai_providers/anthropic_max)
-// 2. Fallback: Old DB path (jaskier_oauth::anthropic::get_valid_anthropic_access_token)
-// 3. Last resort: Runtime API keys / ANTHROPIC_API_KEY env var
+// 2. Fallback: Runtime API keys (hot-loaded)
+// 3. Last resort: ANTHROPIC_API_KEY env var
 //
 // NOTE: This trait is used by `generate_title_via_anthropic` in jaskier-core::sessions.
-// Unlike the handler path (which can use vault_delegate for zero-trust Bouncer calls),
-// title generation needs an actual token string for the Authorization header.
-// When Vault returns is_connected=true but we don't have the raw token, we fall through
-// to the DB OAuth path — Vault Bouncer delegation happens at the handler level only.
 
 impl jaskier_core::sessions::HasAnthropicCredential for AppState {
-    fn http_client(&self) -> &reqwest::Client { &self.http_client }
+    fn http_client(&self) -> &reqwest::Client {
+        &self.http_client
+    }
 
     async fn get_anthropic_credential(&self) -> Option<(String, bool)> {
         // 1. Try Vault first (ai_providers/anthropic_max)
-        //    For this trait (title generation), we need the actual token.
-        //    Vault.get() returns a masked credential — we can't use it directly.
-        //    BUT: if Vault is connected, it confirms the credential exists and is valid,
-        //    so we can trust the DB OAuth fallback more confidently.
-        let vault_connected = match self.ai_gateway.vault_client.get("ai_providers", "anthropic_max").await {
+        match self
+            .ai_gateway
+            .vault_client
+            .get("ai_providers", "anthropic_max")
+            .await
+        {
             Ok(cred) if cred.is_connected => {
-                tracing::debug!("Vault confirms Anthropic credential is connected (title gen path)");
-                true
+                tracing::debug!(
+                    "Vault confirms Anthropic credential is connected (title gen path)"
+                );
+                // Vault-managed: we can't extract the raw token from Vault.get(),
+                // but confirm presence for downstream callers.
             }
-            Ok(_) => false,
+            Ok(_) => {}
             Err(crate::ai_gateway::vault_bridge::VaultError::AnomalyDetected(msg)) => {
-                tracing::error!("ANOMALY DETECTED from Vault during title gen credential resolution: {}", msg);
+                tracing::error!(
+                    "ANOMALY DETECTED from Vault during title gen credential resolution: {}",
+                    msg
+                );
                 return None;
             }
-            Err(_) => false,
-        };
-
-        // 2. Fallback: Old DB OAuth path (will be removed after full Vault migration)
-        if let Some(token) = jaskier_oauth::anthropic::get_valid_anthropic_access_token(self).await {
-            if vault_connected {
-                tracing::info!("Using DB OAuth token for title gen (Vault confirmed connected)");
-            } else {
-                tracing::info!("Falling back to DB OAuth for Anthropic (title gen)");
-            }
-            return Some((token, true));
+            Err(_) => {}
         }
-        // 3. Try runtime state (hot-loaded API key)
+
+        // 2. Try runtime state (hot-loaded API key)
         {
             let rt = self.base.runtime.read().await;
             if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY")
                 && !key.is_empty()
             {
-                tracing::info!("Falling back to runtime API key for Anthropic (title gen)");
+                tracing::info!("Using runtime API key for Anthropic (title gen)");
                 return Some((key.clone(), false));
             }
         }
-        // 4. Last resort: env var
-        std::env::var("ANTHROPIC_API_KEY")
-            .ok()
-            .filter(|k| !k.is_empty())
-            .map(|k| {
-                tracing::info!("Falling back to ANTHROPIC_API_KEY env var for Anthropic (title gen)");
-                (k, false)
-            })
+        // 3. Last resort: env var
+        let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
+        if !key.is_empty() {
+            tracing::info!(
+                "Falling back to ANTHROPIC_API_KEY env var for Anthropic (title gen)"
+            );
+            return Some((key, false));
+        }
+
+        None
     }
 }
 
@@ -608,7 +686,10 @@ async fn load_agents_from_db(db: &PgPool) -> Vec<WitcherAgent> {
             init_witcher_agents()
         }
         Err(e) => {
-            tracing::warn!("Failed to load agents from DB ({}), using hardcoded defaults", e);
+            tracing::warn!(
+                "Failed to load agents from DB ({}), using hardcoded defaults",
+                e
+            );
             init_witcher_agents()
         }
     }
@@ -647,18 +728,33 @@ fn init_witcher_agents() -> Vec<WitcherAgent> {
 // satisfies the HydraState bound without routing through the shared health handlers.
 
 impl jaskier_core::handlers::system::HasHealthState for AppState {
-    fn version(&self) -> &'static str { env!("CARGO_PKG_VERSION") }
-    fn app_name(&self) -> &'static str { "ClaudeHydra" }
-    fn start_time(&self) -> Instant { self.base.start_time }
-    fn is_ready(&self) -> bool { self.base.is_ready() }
-    fn has_auth_secret(&self) -> bool { self.base.auth_secret.is_some() }
+    fn version(&self) -> &'static str {
+        env!("CARGO_PKG_VERSION")
+    }
+    fn app_name(&self) -> &'static str {
+        "ClaudeHydra"
+    }
+    fn start_time(&self) -> Instant {
+        self.base.start_time
+    }
+    fn is_ready(&self) -> bool {
+        self.base.is_ready()
+    }
+    fn has_auth_secret(&self) -> bool {
+        self.base.auth_secret.is_some()
+    }
 
     fn api_keys_snapshot(&self) -> std::collections::HashMap<String, String> {
-        self.base.api_keys.try_read().map(|g| g.clone()).unwrap_or_default()
+        self.base
+            .api_keys
+            .try_read()
+            .map(|g| g.clone())
+            .unwrap_or_default()
     }
 
     fn google_models_snapshot(&self) -> Vec<jaskier_core::model_registry::ModelInfo> {
-        self.base.model_cache
+        self.base
+            .model_cache
             .try_read()
             .map(|c| c.models.get("google").cloned().unwrap_or_default())
             .unwrap_or_default()
@@ -710,7 +806,9 @@ impl jaskier_core::handlers::system::HasHealthState for AppState {
 // are in `self.agents` and served by CH's own route group.
 
 impl jaskier_core::handlers::agents::HasAgentState for AppState {
-    fn db(&self) -> &sqlx::PgPool { &self.base.db }
+    fn db(&self) -> &sqlx::PgPool {
+        &self.base.db
+    }
 
     fn agents(&self) -> &Arc<RwLock<Vec<jaskier_core::models::WitcherAgent>>> {
         &self.base.agents
@@ -720,7 +818,9 @@ impl jaskier_core::handlers::agents::HasAgentState for AppState {
         &self.a2a_unit_tx
     }
 
-    fn agent_table_prefix(&self) -> &'static str { "ch" }
+    fn agent_table_prefix(&self) -> &'static str {
+        "ch"
+    }
 
     async fn refresh_agents(&self) {
         // Refresh base agents (shared WitcherAgent type used by shared router)
@@ -755,13 +855,25 @@ impl jaskier_ai_modules::a2a::HasA2aState for AppState {
         &self.base.agents
     }
 
-    fn a2a_app_name(&self) -> &str { "ClaudeHydra" }
-    fn a2a_app_url(&self) -> &str { "http://localhost:8082" }
-    fn a2a_app_version(&self) -> &str { env!("CARGO_PKG_VERSION") }
+    fn a2a_app_name(&self) -> &str {
+        "ClaudeHydra"
+    }
+    fn a2a_app_url(&self) -> &str {
+        "http://localhost:8082"
+    }
+    fn a2a_app_version(&self) -> &str {
+        env!("CARGO_PKG_VERSION")
+    }
 
-    fn a2a_semaphore(&self) -> &Arc<tokio::sync::Semaphore> { &self.base.a2a_semaphore }
-    fn a2a_task_tx(&self) -> &tokio::sync::broadcast::Sender<()> { &self.a2a_unit_tx }
-    fn a2a_cancel_tokens(&self) -> &Arc<RwLock<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>> {
+    fn a2a_semaphore(&self) -> &Arc<tokio::sync::Semaphore> {
+        &self.base.a2a_semaphore
+    }
+    fn a2a_task_tx(&self) -> &tokio::sync::broadcast::Sender<()> {
+        &self.a2a_unit_tx
+    }
+    fn a2a_cancel_tokens(
+        &self,
+    ) -> &Arc<RwLock<std::collections::HashMap<String, tokio_util::sync::CancellationToken>>> {
         &self.base.a2a_cancel_tokens
     }
 
@@ -776,8 +888,12 @@ impl jaskier_ai_modules::a2a::HasA2aState for AppState {
     async fn circuit_check(&self) -> Result<(), String> {
         self.base.gemini_circuit.check().await
     }
-    async fn circuit_success(&self) { self.base.gemini_circuit.record_success().await; }
-    async fn circuit_failure(&self) { self.base.gemini_circuit.record_failure().await; }
+    async fn circuit_success(&self) {
+        self.base.gemini_circuit.record_success().await;
+    }
+    async fn circuit_failure(&self) {
+        self.base.gemini_circuit.record_failure().await;
+    }
 
     async fn prepare_a2a_context(
         &self,
@@ -818,7 +934,11 @@ impl jaskier_ai_modules::a2a::HasA2aState for AppState {
         Err("A2A protocol not supported by ClaudeHydra".to_string())
     }
 
-    fn build_a2a_thinking_config(&self, _model: &str, _thinking_level: &str) -> Option<serde_json::Value> {
+    fn build_a2a_thinking_config(
+        &self,
+        _model: &str,
+        _thinking_level: &str,
+    ) -> Option<serde_json::Value> {
         None
     }
 }
@@ -840,5 +960,9 @@ impl jaskier_collab::HasCollabState for AppState {
 
     fn collab_app_id(&self) -> &'static str {
         "claudehydra"
+    }
+
+    fn jwt_secret(&self) -> &[u8] {
+        b"dummy_test_secret"
     }
 }

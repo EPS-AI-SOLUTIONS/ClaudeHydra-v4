@@ -96,21 +96,31 @@ pub(crate) fn sanitize_json_strings(value: &mut Value) {
 
 // ── Anthropic API helpers ─────────────────────────────────────────────────
 
-/// Get the Anthropic credential with dual resolution strategy:
+/// Get the Anthropic credential with resolution strategy:
 /// 1. First try: Jaskier Vault (`ai_providers/anthropic_max`)
-/// 2. Fallback: Old DB path (`jaskier_oauth::anthropic::get_valid_anthropic_access_token`)
-/// 3. Last resort: Runtime API keys / `ANTHROPIC_API_KEY` env var
+/// 2. Fallback: Runtime API keys (hot-loaded)
+/// 3. Last resort: `ANTHROPIC_API_KEY` env var
+///
+/// B13: Removed old DB OAuth path (`get_valid_anthropic_access_token`).
+/// Credentials now come from Vault or environment variables.
 ///
 /// Returns `(token_or_key, is_oauth)`.
 async fn get_anthropic_credential(state: &AppState) -> Option<(String, bool)> {
     // 1. Try Vault first (ai_providers/anthropic_max)
-    match state.vault_client().get("ai_providers", "anthropic_max").await {
+    match state
+        .vault_client()
+        .get("ai_providers", "anthropic_max")
+        .await
+    {
         Ok(cred) if cred.is_connected => {
             // Vault has a connected credential — use delegate for actual API calls.
             // For header injection (non-delegate path), extract the masked value
             // as a signal that Vault is the active source. The actual token is
             // injected by the Vault Bouncer in `send_to_anthropic_via_vault`.
-            tracing::info!("Using Vault credential for Anthropic (plan: {:?})", cred.plan_tier);
+            tracing::info!(
+                "Using Vault credential for Anthropic (plan: {:?})",
+                cred.plan_tier
+            );
             // Return a sentinel that tells build_anthropic_request to use OAuth Bearer.
             // The real token was already validated by Vault — masked_value is proof of connection.
             // For direct API calls, callers should prefer vault_delegate() instead.
@@ -123,24 +133,22 @@ async fn get_anthropic_credential(state: &AppState) -> Option<(String, bool)> {
             );
         }
         Err(crate::ai_gateway::vault_bridge::VaultError::NotFound) => {
-            tracing::debug!("Vault has no Anthropic credential, falling back to DB OAuth");
+            tracing::debug!("Vault has no Anthropic credential, falling back to env var");
         }
         Err(crate::ai_gateway::vault_bridge::VaultError::AnomalyDetected(msg)) => {
-            tracing::error!("ANOMALY DETECTED from Vault during credential resolution: {}", msg);
+            tracing::error!(
+                "ANOMALY DETECTED from Vault during credential resolution: {}",
+                msg
+            );
             // On anomaly, do NOT fall through — fail safe
             return None;
         }
         Err(e) => {
-            tracing::debug!("Vault unavailable ({}), falling back to DB OAuth", e);
+            tracing::debug!("Vault unavailable ({}), falling back to env var", e);
         }
     }
 
-    // 2. Fallback: Old DB OAuth path (will be removed after full Vault migration)
-    if let Some(token) = jaskier_oauth::anthropic::get_valid_anthropic_access_token(state).await {
-        tracing::info!("Falling back to DB OAuth for Anthropic");
-        return Some((token, true));
-    }
-    // 3. Try runtime state (hot-loaded API key)
+    // 2. Try runtime state (hot-loaded API key)
     {
         let rt = state.runtime.read().await;
         if let Some(key) = rt.api_keys.get("ANTHROPIC_API_KEY")
@@ -150,11 +158,9 @@ async fn get_anthropic_credential(state: &AppState) -> Option<(String, bool)> {
             return Some((key.clone(), false));
         }
     }
-    // 4. Last resort: env var
-    if let Some(key) = std::env::var("ANTHROPIC_API_KEY")
-        .ok()
-        .filter(|k| !k.is_empty())
-    {
+    // 3. Last resort: env var
+    let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
+    if !key.is_empty() {
         tracing::info!("Falling back to ANTHROPIC_API_KEY env var for Anthropic");
         return Some((key, false));
     }
@@ -303,23 +309,12 @@ async fn send_to_anthropic_via_vault(
             ))
         }
         Err(e) => {
-            tracing::warn!("Vault Bouncer delegate failed ({}), falling back to direct path", e);
+            tracing::warn!(
+                "Vault Bouncer delegate failed ({}), falling back to direct path",
+                e
+            );
 
-            // Fallback: try DB OAuth or API key directly
-            if let Some(token) = jaskier_oauth::anthropic::get_valid_anthropic_access_token(state).await {
-                tracing::info!("Vault delegate failed — falling back to DB OAuth token");
-                return build_anthropic_request(state, body, &token, _timeout_secs, true)
-                    .send()
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("anthropic proxy (vault fallback): {}", e);
-                        (
-                            StatusCode::BAD_GATEWAY,
-                            Json(json!({ "error": "AI provider request failed" })),
-                        )
-                    });
-            }
-
+            // B13: DB OAuth removed — fallback to API key only
             if let Some((api_key, false)) = get_anthropic_api_key_only(state).await {
                 tracing::info!("Vault delegate failed — falling back to API key");
                 return build_anthropic_request(state, body, &api_key, _timeout_secs, false)
@@ -336,7 +331,9 @@ async fn send_to_anthropic_via_vault(
 
             Err((
                 StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": format!("Vault delegate failed and no fallback available: {}", e) })),
+                Json(
+                    json!({ "error": format!("Vault delegate failed and no fallback available: {}", e) }),
+                ),
             ))
         }
     }

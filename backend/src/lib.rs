@@ -4,6 +4,7 @@ pub mod auth;
 pub mod auto_qa;
 pub mod browser_proxy;
 pub mod collab;
+pub mod extractor;
 pub mod handlers;
 pub mod mcp;
 pub mod memory_pruning;
@@ -21,7 +22,9 @@ pub mod watchdog;
 
 use axum::Router;
 use axum::routing::{delete, get, patch, post};
-use jaskier_core::router_builder::{HydraRouterConfig, build_hydra_router, build_hydra_test_router};
+use jaskier_core::router_builder::{
+    HydraRouterConfig, build_hydra_router, build_hydra_test_router,
+};
 use utoipa::OpenApi;
 
 use state::AppState;
@@ -133,20 +136,32 @@ pub struct ApiDoc;
 //  Route group builders — CH-specific fragments
 // ═══════════════════════════════════════════════════════════════════════
 
-/// CH primary auth routes — Anthropic OAuth (PKCE).
+/// CH primary auth routes — Anthropic OAuth (PKCE) for AI provider credentials.
 ///
-/// These are provided via `HydraRouterConfig.primary_auth_override` to replace
-/// the shared router's default Google OAuth handlers at `/api/auth/status`,
-/// `/api/auth/login`, and `/api/auth/logout`. The `/api/auth/callback` path
-/// (Anthropic PKCE callback) is CH-specific and has no conflict.
-fn ch_primary_auth_routes() -> Router<AppState> {
+/// B13 migration: these routes were previously at `/api/auth/*` but are now
+/// namespaced under `/api/auth/anthropic/*` to avoid conflicts with
+/// jaskier-auth user authentication routes at `/api/auth/login`, `/api/auth/logout`, etc.
+///
+/// The `primary_auth_override` is set to `None` since jaskier-auth now owns `/api/auth/*`.
+fn ch_anthropic_provider_auth_routes() -> Router<AppState> {
     Router::new()
-        // Anthropic OAuth PKCE — replaces shared Google OAuth at these paths.
-        // Uses jaskier_oauth shared crate directly (local oauth.rs removed).
-        .route("/api/auth/status", get(jaskier_oauth::anthropic::anthropic_auth_status::<AppState>))
-        .route("/api/auth/login", post(jaskier_oauth::anthropic::anthropic_auth_login::<AppState>))
-        .route("/api/auth/callback", post(jaskier_oauth::anthropic::anthropic_auth_callback::<AppState>))
-        .route("/api/auth/logout", post(jaskier_oauth::anthropic::anthropic_auth_logout::<AppState>))
+        // Anthropic OAuth PKCE — provider credential management (NOT user auth).
+        .route(
+            "/api/auth/anthropic/status",
+            get(jaskier_net_sec::oauth::anthropic::anthropic_auth_status::<AppState>),
+        )
+        .route(
+            "/api/auth/anthropic/login",
+            post(jaskier_net_sec::oauth::anthropic::anthropic_auth_login::<AppState>),
+        )
+        .route(
+            "/api/auth/anthropic/callback",
+            post(jaskier_net_sec::oauth::anthropic::anthropic_auth_callback::<AppState>),
+        )
+        .route(
+            "/api/auth/anthropic/logout",
+            post(jaskier_net_sec::oauth::anthropic::anthropic_auth_logout::<AppState>),
+        )
 }
 
 /// CH WebSocket chat route (maps to `ws_route` config slot).
@@ -158,7 +173,10 @@ fn ch_ws_route() -> Router<AppState> {
 /// The shared router applies `require_auth` and rate limiting to this group.
 fn ch_chat_routes() -> Router<AppState> {
     Router::new()
-        .route("/api/claude/chat/stream", post(handlers::claude_chat_stream))
+        .route(
+            "/api/claude/chat/stream",
+            post(handlers::claude_chat_stream),
+        )
         .route("/api/claude/chat", post(handlers::claude_chat))
         .route("/api/prefetch/hints", post(handlers::prefetch_hints))
 }
@@ -246,7 +264,10 @@ fn ch_browser_proxy_routes() -> Router<AppState> {
             "/api/browser-proxy/status",
             get(browser_proxy::proxy_status::<AppState>),
         )
-        .route("/api/browser-proxy/login", post(browser_proxy::proxy_login::<AppState>))
+        .route(
+            "/api/browser-proxy/login",
+            post(browser_proxy::proxy_login::<AppState>),
+        )
         .route(
             "/api/browser-proxy/login/status",
             get(browser_proxy::proxy_login_status::<AppState>),
@@ -317,7 +338,10 @@ fn ch_app_protected_routes() -> Router<AppState> {
             "/api/analytics/success-rate",
             get(handlers::analytics_success_rate),
         )
-        .route("/api/analytics/top-tools", get(handlers::analytics_top_tools))
+        .route(
+            "/api/analytics/top-tools",
+            get(handlers::analytics_top_tools),
+        )
         .route("/api/analytics/cost", get(handlers::analytics_cost))
 }
 
@@ -331,11 +355,10 @@ fn ch_metrics_router() -> Router<AppState> {
 
 /// Web Vitals collection + profiling routes (public, no auth — beacon API).
 fn ch_profiling_routes() -> Router<AppState> {
-    Router::new()
-        .route(
-            "/api/vitals",
-            post(jaskier_core::profiling::vitals_handler::<AppState>),
-        )
+    Router::new().route(
+        "/api/vitals",
+        post(jaskier_core::profiling::vitals_handler::<AppState>),
+    )
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -366,11 +389,11 @@ fn ch_vault_protected_routes(state: AppState) -> Router<AppState> {
 /// The frontend calls these CH backend endpoints instead of hitting Vault directly,
 /// keeping the Vault URL internal to the backend.
 mod vault_proxy {
+    use axum::Json;
     use axum::extract::State;
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
-    use axum::Json;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
 
     use super::state::AppState;
     use crate::ai_gateway::vault_bridge::HasVaultBridge;
@@ -413,7 +436,10 @@ mod vault_proxy {
 
         match client.post(&url).send().await {
             Ok(resp) if resp.status().is_success() => {
-                let body: Value = resp.json().await.unwrap_or(json!({"status": "panic_executed"}));
+                let body: Value = resp
+                    .json()
+                    .await
+                    .unwrap_or(json!({"status": "panic_executed"}));
                 (StatusCode::OK, Json(body))
             }
             Ok(resp) => {
@@ -438,7 +464,10 @@ mod vault_proxy {
 
         match client.post(&url).send().await {
             Ok(resp) if resp.status().is_success() => {
-                let body: Value = resp.json().await.unwrap_or(json!({"status": "rotate_executed"}));
+                let body: Value = resp
+                    .json()
+                    .await
+                    .unwrap_or(json!({"status": "rotate_executed"}));
                 (StatusCode::OK, Json(body))
             }
             Ok(resp) => {
@@ -462,9 +491,12 @@ mod vault_proxy {
 
 fn build_ch_config(state: AppState) -> HydraRouterConfig<AppState> {
     HydraRouterConfig {
-        // Primary auth override: Anthropic OAuth replaces shared Google OAuth
-        // at /api/auth/status, /api/auth/login, /api/auth/logout.
-        primary_auth_override: Some(ch_primary_auth_routes()),
+        // B13: jaskier-auth now owns /api/auth/* for user authentication.
+        // Provide an empty override to suppress the shared router's default
+        // Google OAuth routes at /api/auth/{status,login,logout,apikey},
+        // which would conflict with jaskier-auth routes on gateway_routes.
+        // Anthropic provider OAuth is served at /api/auth/anthropic/* instead.
+        primary_auth_override: Some(Router::new()),
 
         // WebSocket streaming (Anthropic-native via claude_chat_stream fallback)
         ws_route: ch_ws_route(),
@@ -503,8 +535,10 @@ fn build_ch_config(state: AppState) -> HydraRouterConfig<AppState> {
 
 /// Webhook routes for Grafana alerts
 fn ch_auto_qa_routes() -> Router<AppState> {
-    Router::new()
-        .route("/api/webhooks/grafana", post(auto_qa::grafana_webhook::<AppState>))
+    Router::new().route(
+        "/api/webhooks/grafana",
+        post(auto_qa::grafana_webhook::<AppState>),
+    )
 }
 
 /// Build the application router with the given shared state.
@@ -513,17 +547,24 @@ fn ch_auto_qa_routes() -> Router<AppState> {
 ///
 /// Uses `build_hydra_router` from jaskier-core as the foundation.
 /// CH-specific routes are injected via `HydraRouterConfig`:
-/// - `primary_auth_override`: Anthropic OAuth replaces shared Google OAuth at `/api/auth/*`
+/// - `primary_auth_override`: `None` (B13: jaskier-auth now owns `/api/auth/*`)
 /// - `execute_routes`: claude_chat + claude_chat_stream (with auth + rate limiting)
 /// - `agents_router`, `files_router`, `system_router`: CH-specific CRUD + admin
 /// - `app_protected_routes`: analytics, tags, settings/api-key, OCR, claude/models
 ///
 /// The ai_gateway router is merged BEFORE the HydraRouter (higher priority) to
 /// ensure `/api/ai/*` and `/api/vault/*` routes take precedence.
-/// NOTE: Old auth routes coexist with ai_gateway during migration period.
-/// Tracked in: https://github.com/EPS-AI-SOLUTIONS/ClaudeHydra/issues/42
+///
+/// B13: Unified user auth via jaskier-auth. Anthropic provider OAuth routes
+/// moved to `/api/auth/anthropic/*` to avoid conflicts with user auth at
+/// `/api/auth/login`, `/api/auth/logout`, etc.
 pub fn create_router(state: AppState) -> Router {
     let hydra_router = build_hydra_router(state.clone(), build_ch_config(state.clone()));
+
+    // jaskier-auth unified user authentication routes (register, login, Google OAuth,
+    // token refresh, logout, profile, sessions, passkeys, 2FA).
+    let jaskier_auth_routes: Router<AppState> =
+        Router::new().nest("/api/auth", jaskier_auth::auth_router::<AppState>());
 
     // ai_gateway routes merged first — higher priority than old auth routes.
     // .with_state() converts Router<AppState> → Router<()> so it can merge
@@ -531,6 +572,10 @@ pub fn create_router(state: AppState) -> Router {
     let gateway_routes = ai_gateway::handlers::ai_gateway_router::<AppState>()
         .merge(ch_vault_public_routes())
         .merge(ch_vault_protected_routes(state.clone()))
+        // Unified user auth (jaskier-auth): /api/auth/*
+        .merge(jaskier_auth_routes)
+        // Anthropic provider OAuth (moved from /api/auth/* to /api/auth/anthropic/*)
+        .merge(ch_anthropic_provider_auth_routes())
         // Webhooks: Grafana incidents
         .merge(ch_auto_qa_routes())
         // Profiling: Web Vitals collection endpoint (/api/vitals)
@@ -549,8 +594,11 @@ pub fn create_router(state: AppState) -> Router {
 
     // PERF: HTTP latency tracking middleware — records every request duration
     // PERF: ETag/If-None-Match — returns 304 Not Modified for unchanged GET responses
-    gateway_routes.merge(hydra_router)
-        .layer(axum::middleware::from_fn(jaskier_core::etag::etag_middleware))
+    gateway_routes
+        .merge(hydra_router)
+        .layer(axum::middleware::from_fn(
+            jaskier_core::etag::etag_middleware,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             state,
             jaskier_core::profiling::latency_middleware::<AppState>,
@@ -566,10 +614,18 @@ pub fn create_router(state: AppState) -> Router {
 pub fn create_test_router(state: AppState) -> Router {
     let hydra_router = build_hydra_test_router(state.clone(), build_ch_config(state.clone()));
 
+    // jaskier-auth unified user authentication routes (test router)
+    let jaskier_auth_routes: Router<AppState> =
+        Router::new().nest("/api/auth", jaskier_auth::auth_router::<AppState>());
+
     // ai_gateway routes merged first — higher priority than old auth routes.
     let gateway_routes = ai_gateway::handlers::ai_gateway_router::<AppState>()
         .merge(ch_vault_public_routes())
         .merge(ch_vault_protected_routes(state.clone()))
+        // Unified user auth (jaskier-auth): /api/auth/*
+        .merge(jaskier_auth_routes)
+        // Anthropic provider OAuth (moved to /api/auth/anthropic/*)
+        .merge(ch_anthropic_provider_auth_routes())
         // Webhooks: Grafana incidents
         .merge(ch_auto_qa_routes())
         .merge(ch_profiling_routes())
@@ -583,8 +639,11 @@ pub fn create_test_router(state: AppState) -> Router {
         .merge(memory_pruning::memory_pruning_router::<AppState>())
         .with_state(state.clone());
 
-    gateway_routes.merge(hydra_router)
-        .layer(axum::middleware::from_fn(jaskier_core::etag::etag_middleware))
+    gateway_routes
+        .merge(hydra_router)
+        .layer(axum::middleware::from_fn(
+            jaskier_core::etag::etag_middleware,
+        ))
         .layer(axum::middleware::from_fn_with_state(
             state,
             jaskier_core::profiling::latency_middleware::<AppState>,

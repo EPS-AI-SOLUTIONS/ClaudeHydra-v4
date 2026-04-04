@@ -19,7 +19,10 @@ pub fn spawn(state: AppState) -> tokio::task::JoinHandle<()> {
 
     // Spawn ClaudeHydra-specific Anthropic API check on the same interval
     tokio::spawn(async move {
-        tracing::info!("watchdog: Anthropic API health check started (interval={}s)", CHECK_INTERVAL.as_secs());
+        tracing::info!(
+            "watchdog: Anthropic API health check started (interval={}s)",
+            CHECK_INTERVAL.as_secs()
+        );
 
         loop {
             tokio::time::sleep(CHECK_INTERVAL).await;
@@ -39,7 +42,11 @@ pub fn spawn(state: AppState) -> tokio::task::JoinHandle<()> {
 async fn check_anthropic_api(state: &AppState) -> bool {
     // Check if we have a credential configured from ANY source:
     // 1. Vault (ai_providers/anthropic_max)
-    let has_vault = match state.vault_client().get("ai_providers", "anthropic_max").await {
+    let has_vault = match state
+        .vault_client()
+        .get("ai_providers", "anthropic_max")
+        .await
+    {
         Ok(cred) => {
             if cred.is_connected {
                 tracing::debug!("watchdog: Vault has connected Anthropic credential");
@@ -53,16 +60,16 @@ async fn check_anthropic_api(state: &AppState) -> bool {
         Err(_) => false,
     };
 
-    // 2. DB OAuth path
-    let has_oauth = jaskier_oauth::anthropic::get_valid_anthropic_access_token(state).await.is_some();
-
-    // 3. API key (runtime or env var)
+    // 2. API key (runtime or env var) — B13: DB OAuth removed
     let has_key = {
         let rt = state.runtime.read().await;
         rt.api_keys.contains_key("ANTHROPIC_API_KEY")
-    } || std::env::var("ANTHROPIC_API_KEY").ok().filter(|k| !k.is_empty()).is_some();
+    } || std::env::var("ANTHROPIC_API_KEY")
+        .ok()
+        .filter(|k| !k.is_empty())
+        .is_some();
 
-    if !has_vault && !has_oauth && !has_key {
+    if !has_vault && !has_key {
         // No credential from any source -- skip check (not an error)
         return true;
     }
