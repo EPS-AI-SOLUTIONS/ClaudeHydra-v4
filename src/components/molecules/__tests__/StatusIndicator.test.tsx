@@ -5,7 +5,9 @@ import { StatusIndicator } from '../StatusIndicator';
 // motion/react auto-mock: framer-motion animations are NOPs in jsdom
 vi.mock('motion/react', () => ({
   motion: {
-    span: ({ children, ...props }: Record<string, unknown>) => <span {...props}>{children as React.ReactNode}</span>,
+    span: ({ children, ...props }: Record<string, unknown>) => (
+      <span {...props}>{children as React.ReactNode}</span>
+    ),
   },
 }));
 
@@ -22,13 +24,18 @@ describe('StatusIndicator', () => {
 
   it('sets aria-label from label prop', () => {
     render(<StatusIndicator status="error" label="Error detected" />);
-    expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Error detected');
+    expect(screen.getByRole('status')).toHaveAttribute(
+      'aria-label',
+      'Error detected',
+    );
   });
 
   it('renders all status states without crashing', () => {
     const states = ['online', 'offline', 'pending', 'error'] as const;
     for (const status of states) {
-      const { unmount } = render(<StatusIndicator status={status} label={status} />);
+      const { unmount } = render(
+        <StatusIndicator status={status} label={status} />,
+      );
       expect(screen.getByText(status)).toBeInTheDocument();
       unmount();
     }

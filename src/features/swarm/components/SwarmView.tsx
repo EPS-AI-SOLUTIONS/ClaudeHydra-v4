@@ -38,14 +38,22 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
-import { type OrchestrationPattern, type SwarmPeer, type SwarmTaskSummary, useSwarm } from '../hooks/useSwarm';
+import {
+  type OrchestrationPattern,
+  type SwarmPeer,
+  type SwarmTaskSummary,
+  useSwarm,
+} from '../hooks/useSwarm';
 import { MemoryPruningPanel } from './MemoryPruningPanel';
 import { SandboxPanel } from './SandboxPanel';
 import { SwarmBuilder } from './SwarmBuilder';
 
 // ── Provider colors ──────────────────────────────────────────────────────────
 
-const PROVIDER_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+const PROVIDER_COLORS: Record<
+  string,
+  { bg: string; border: string; text: string }
+> = {
   anthropic: { bg: '#1a1a2e', border: '#d97706', text: '#fbbf24' },
   google: { bg: '#1a2e1a', border: '#22c55e', text: '#4ade80' },
   xai: { bg: '#2e1a1a', border: '#ef4444', text: '#f87171' },
@@ -77,7 +85,9 @@ function PeerNode({ data }: { data: { peer: SwarmPeer; isSelf: boolean } }) {
         borderRadius: '12px',
         padding: '16px 20px',
         minWidth: '160px',
-        boxShadow: isSelf ? '0 0 20px rgba(255,255,255,0.15)' : `0 0 12px ${colors.border}33`,
+        boxShadow: isSelf
+          ? '0 0 20px rgba(255,255,255,0.15)'
+          : `0 0 12px ${colors.border}33`,
         position: 'relative',
       }}
     >
@@ -91,15 +101,24 @@ function PeerNode({ data }: { data: { peer: SwarmPeer; isSelf: boolean } }) {
           height: '10px',
           borderRadius: '50%',
           background: STATUS_COLORS[peer.status] || '#6b7280',
-          boxShadow: peer.status === 'online' ? `0 0 8px ${STATUS_COLORS['online']}` : 'none',
+          boxShadow:
+            peer.status === 'online'
+              ? `0 0 8px ${STATUS_COLORS['online']}`
+              : 'none',
         }}
       />
 
-      <div style={{ fontSize: '14px', fontWeight: 700, color: colors.text }}>{peer.name}</div>
+      <div style={{ fontSize: '14px', fontWeight: 700, color: colors.text }}>
+        {peer.name}
+      </div>
       <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
         {peer.provider.toUpperCase()} · :{peer.port}
       </div>
-      {peer.version && <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>v{peer.version}</div>}
+      {peer.version && (
+        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+          v{peer.version}
+        </div>
+      )}
       {isSelf && (
         <div
           style={{
@@ -124,18 +143,31 @@ const nodeTypes = { peer: PeerNode };
 
 export function SwarmView() {
   const { t } = useTranslation();
-  const { peers, tasks, events, stats, isDiscovering, isDelegating, discover, delegate, loadTask, selectedTask } =
-    useSwarm();
+  const {
+    peers,
+    tasks,
+    events,
+    stats,
+    isDiscovering,
+    isDelegating,
+    discover,
+    delegate,
+    loadTask,
+    selectedTask,
+  } = useSwarm();
 
   const [showDelegatePanel, setShowDelegatePanel] = useState(false);
   const [delegatePrompt, setDelegatePrompt] = useState('');
-  const [delegatePattern, setDelegatePattern] = useState<OrchestrationPattern>('parallel');
+  const [delegatePattern, setDelegatePattern] =
+    useState<OrchestrationPattern>('parallel');
   const [delegateTargets, setDelegateTargets] = useState<string[]>([]);
-  const [delegateAttachments, setDelegateAttachments] = useState<{ contentType: string; url: string; name?: string }[]>(
-    [],
-  );
+  const [delegateAttachments, setDelegateAttachments] = useState<
+    { contentType: string; url: string; name?: string }[]
+  >([]);
   const [attachmentUrl, setAttachmentUrl] = useState('');
-  const [activeTab, setActiveTab] = useState<'monitoring' | 'builder' | 'sandbox' | 'pruning'>('monitoring');
+  const [activeTab, setActiveTab] = useState<
+    'monitoring' | 'builder' | 'sandbox' | 'pruning'
+  >('monitoring');
 
   // ── Build flow graph ───────────────────────────────────────────────────
 
@@ -194,12 +226,24 @@ export function SwarmView() {
 
   const handleDelegate = useCallback(async () => {
     if (!delegatePrompt.trim()) return;
-    await delegate(delegatePrompt, delegatePattern, delegateTargets, 120, delegateAttachments);
+    await delegate(
+      delegatePrompt,
+      delegatePattern,
+      delegateTargets,
+      120,
+      delegateAttachments,
+    );
     setDelegatePrompt('');
     setDelegateAttachments([]);
     setAttachmentUrl('');
     setShowDelegatePanel(false);
-  }, [delegate, delegatePrompt, delegatePattern, delegateTargets, delegateAttachments]);
+  }, [
+    delegate,
+    delegatePrompt,
+    delegatePattern,
+    delegateTargets,
+    delegateAttachments,
+  ]);
 
   const addAttachment = useCallback(() => {
     if (!attachmentUrl.trim()) return;
@@ -225,13 +269,31 @@ export function SwarmView() {
   // ── Toggle target selection ────────────────────────────────────────────
 
   const toggleTarget = useCallback((peerId: string) => {
-    setDelegateTargets((prev) => (prev.includes(peerId) ? prev.filter((id) => id !== peerId) : [...prev, peerId]));
+    setDelegateTargets((prev) =>
+      prev.includes(peerId)
+        ? prev.filter((id) => id !== peerId)
+        : [...prev, peerId],
+    );
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0a0a0f' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: '#0a0a0f',
+      }}
+    >
       {/* ── Tab Switcher ────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: '8px', padding: '12px', borderBottom: '1px solid #1e293b' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          padding: '12px',
+          borderBottom: '1px solid #1e293b',
+        }}
+      >
         <button
           type="button"
           onClick={() => setActiveTab('monitoring')}
@@ -243,7 +305,10 @@ export function SwarmView() {
             borderRadius: '6px',
             background: activeTab === 'monitoring' ? '#1e293b' : 'transparent',
             color: activeTab === 'monitoring' ? '#e2e8f0' : '#94a3b8',
-            border: activeTab === 'monitoring' ? '1px solid #334155' : '1px solid transparent',
+            border:
+              activeTab === 'monitoring'
+                ? '1px solid #334155'
+                : '1px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
           }}
@@ -261,7 +326,10 @@ export function SwarmView() {
             borderRadius: '6px',
             background: activeTab === 'builder' ? '#1e293b' : 'transparent',
             color: activeTab === 'builder' ? '#e2e8f0' : '#94a3b8',
-            border: activeTab === 'builder' ? '1px solid #334155' : '1px solid transparent',
+            border:
+              activeTab === 'builder'
+                ? '1px solid #334155'
+                : '1px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
           }}
@@ -279,7 +347,10 @@ export function SwarmView() {
             borderRadius: '6px',
             background: activeTab === 'sandbox' ? '#1e293b' : 'transparent',
             color: activeTab === 'sandbox' ? '#10b981' : '#94a3b8',
-            border: activeTab === 'sandbox' ? '1px solid #10b981' : '1px solid transparent',
+            border:
+              activeTab === 'sandbox'
+                ? '1px solid #10b981'
+                : '1px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
           }}
@@ -297,7 +368,10 @@ export function SwarmView() {
             borderRadius: '6px',
             background: activeTab === 'pruning' ? '#1e293b' : 'transparent',
             color: activeTab === 'pruning' ? '#c084fc' : '#94a3b8',
-            border: activeTab === 'pruning' ? '1px solid #a855f7' : '1px solid transparent',
+            border:
+              activeTab === 'pruning'
+                ? '1px solid #a855f7'
+                : '1px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
           }}
@@ -331,7 +405,9 @@ export function SwarmView() {
               style={{ background: '#0a0a0f' }}
             >
               <Background color="#1e293b" gap={24} />
-              <Controls style={{ background: '#1e293b', borderColor: '#334155' }} />
+              <Controls
+                style={{ background: '#1e293b', borderColor: '#334155' }}
+              />
               <MiniMap
                 nodeColor={(node) => {
                   const peer = node.data?.['peer'] as SwarmPeer | undefined;
@@ -354,11 +430,31 @@ export function SwarmView() {
                     border: '1px solid #1e293b',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
                     <Network size={16} color="#3b82f6" />
-                    <span style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: 600 }}>{t('swarm.title')}</span>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        color: '#e2e8f0',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {t('swarm.title')}
+                    </span>
                   </div>
-                  <div style={{ width: '1px', height: '20px', background: '#334155' }} />
+                  <div
+                    style={{
+                      width: '1px',
+                      height: '20px',
+                      background: '#334155',
+                    }}
+                  />
 
                   <Stat
                     icon={<Globe size={14} />}
@@ -385,7 +481,13 @@ export function SwarmView() {
                     color="#ef4444"
                   />
 
-                  <div style={{ width: '1px', height: '20px', background: '#334155' }} />
+                  <div
+                    style={{
+                      width: '1px',
+                      height: '20px',
+                      background: '#334155',
+                    }}
+                  />
 
                   <button
                     type="button"
@@ -404,7 +506,11 @@ export function SwarmView() {
                       cursor: 'pointer',
                     }}
                   >
-                    {isDiscovering ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    {isDiscovering ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={14} />
+                    )}
                     {t('swarm.discover')}
                   </button>
 
@@ -450,8 +556,18 @@ export function SwarmView() {
                     zIndex: 10,
                   }}
                 >
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px' }}>
-                    <Zap size={16} style={{ display: 'inline', marginRight: '6px' }} />
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: '#e2e8f0',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <Zap
+                      size={16}
+                      style={{ display: 'inline', marginRight: '6px' }}
+                    />
                     {t('swarm.delegateTitle')}
                   </div>
 
@@ -474,8 +590,22 @@ export function SwarmView() {
                   />
 
                   {/* Pattern selector */}
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
-                    {(['parallel', 'sequential', 'review', 'fan_out'] as OrchestrationPattern[]).map((p) => (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '6px',
+                      marginTop: '10px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    {(
+                      [
+                        'parallel',
+                        'sequential',
+                        'review',
+                        'fan_out',
+                      ] as OrchestrationPattern[]
+                    ).map((p) => (
                       <button
                         type="button"
                         key={p}
@@ -484,8 +614,12 @@ export function SwarmView() {
                           padding: '4px 10px',
                           borderRadius: '6px',
                           fontSize: '11px',
-                          border: delegatePattern === p ? '1px solid #3b82f6' : '1px solid #334155',
-                          background: delegatePattern === p ? '#1e3a5f' : '#1e293b',
+                          border:
+                            delegatePattern === p
+                              ? '1px solid #3b82f6'
+                              : '1px solid #334155',
+                          background:
+                            delegatePattern === p ? '#1e3a5f' : '#1e293b',
                           color: delegatePattern === p ? '#60a5fa' : '#94a3b8',
                           cursor: 'pointer',
                         }}
@@ -497,15 +631,27 @@ export function SwarmView() {
 
                   {/* Target selection */}
                   <div style={{ marginTop: '10px' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: '#94a3b8',
+                        marginBottom: '6px',
+                      }}
+                    >
                       {t('swarm.delegateTargets')}
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <div
+                      style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}
+                    >
                       {peers
-                        .filter((p) => p.id !== 'claudehydra' && p.status === 'online')
+                        .filter(
+                          (p) =>
+                            p.id !== 'claudehydra' && p.status === 'online',
+                        )
                         .map((peer) => {
                           const selected = delegateTargets.includes(peer.id);
-                          const colors = PROVIDER_COLORS[peer.provider] ?? DEFAULT_COLORS;
+                          const colors =
+                            PROVIDER_COLORS[peer.provider] ?? DEFAULT_COLORS;
                           return (
                             <button
                               type="button"
@@ -516,7 +662,9 @@ export function SwarmView() {
                                 borderRadius: '6px',
                                 fontSize: '11px',
                                 border: `1px solid ${selected ? colors.border : '#334155'}`,
-                                background: selected ? `${colors.bg}` : '#1e293b',
+                                background: selected
+                                  ? `${colors.bg}`
+                                  : '#1e293b',
                                 color: selected ? colors.text : '#94a3b8',
                                 cursor: 'pointer',
                               }}
@@ -571,14 +719,23 @@ export function SwarmView() {
                           borderRadius: '6px',
                           color: '#e2e8f0',
                           fontSize: '11px',
-                          cursor: attachmentUrl.trim() ? 'pointer' : 'not-allowed',
+                          cursor: attachmentUrl.trim()
+                            ? 'pointer'
+                            : 'not-allowed',
                         }}
                       >
                         {t('swarm.addAttachment')}
                       </button>
                     </div>
                     {delegateAttachments.length > 0 && (
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '6px',
+                          marginTop: '6px',
+                          flexWrap: 'wrap',
+                        }}
+                      >
                         {delegateAttachments.map((att, attIdx) => (
                           <div
                             key={att.url}
@@ -681,17 +838,37 @@ export function SwarmView() {
           >
             {/* Tasks section */}
             <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#e2e8f0',
+                  marginBottom: '8px',
+                }}
+              >
                 {t('swarm.recentTasks')}
               </div>
               {tasks.length === 0 ? (
-                <div style={{ fontSize: '12px', color: '#64748b', padding: '20px 0', textAlign: 'center' }}>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    padding: '20px 0',
+                    textAlign: 'center',
+                  }}
+                >
                   {t('swarm.noTasks')}
                 </div>
               ) : (
                 tasks
                   .slice(0, 20)
-                  .map((task) => <TaskRow key={task.id} task={task} onClick={() => loadTask(task.id)} />)
+                  .map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onClick={() => loadTask(task.id)}
+                    />
+                  ))
               )}
             </div>
 
@@ -704,11 +881,25 @@ export function SwarmView() {
                 padding: '12px',
               }}
             >
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#e2e8f0',
+                  marginBottom: '8px',
+                }}
+              >
                 {t('swarm.liveEvents')}
               </div>
               {events.length === 0 ? (
-                <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '12px' }}>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    textAlign: 'center',
+                    padding: '12px',
+                  }}
+                >
                   {t('swarm.waitingEvents')}
                 </div>
               ) : (
@@ -722,8 +913,15 @@ export function SwarmView() {
                       borderBottom: '1px solid #1e293b22',
                     }}
                   >
-                    <span style={{ color: eventColor(event.eventType) }}>{event.eventType}</span>
-                    {event.peerId && <span style={{ color: '#64748b' }}> [{event.peerId}]</span>}
+                    <span style={{ color: eventColor(event.eventType) }}>
+                      {event.eventType}
+                    </span>
+                    {event.peerId && (
+                      <span style={{ color: '#64748b' }}>
+                        {' '}
+                        [{event.peerId}]
+                      </span>
+                    )}
                     <span> — {event.message}</span>
                   </div>
                 ))
@@ -750,8 +948,22 @@ export function SwarmView() {
                     padding: '16px',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>{t('swarm.taskDetails')}</div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#e2e8f0',
+                      }}
+                    >
+                      {t('swarm.taskDetails')}
+                    </div>
                     <button
                       type="button"
                       onClick={() => loadTask('')}
@@ -769,62 +981,104 @@ export function SwarmView() {
 
                   <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                     <div>
-                      Pattern: <span style={{ color: '#e2e8f0' }}>{selectedTask.pattern}</span>
+                      Pattern:{' '}
+                      <span style={{ color: '#e2e8f0' }}>
+                        {selectedTask.pattern}
+                      </span>
                     </div>
                     <div>
-                      Status: <span style={{ color: statusColor(selectedTask.status) }}>{selectedTask.status}</span>
+                      Status:{' '}
+                      <span style={{ color: statusColor(selectedTask.status) }}>
+                        {selectedTask.status}
+                      </span>
                     </div>
                     {selectedTask.duration_ms && (
                       <div>
-                        Duration: <span style={{ color: '#e2e8f0' }}>{selectedTask.duration_ms}ms</span>
+                        Duration:{' '}
+                        <span style={{ color: '#e2e8f0' }}>
+                          {selectedTask.duration_ms}ms
+                        </span>
                       </div>
                     )}
                   </div>
 
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>
-                    <div style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: '6px' }}>Prompt:</div>
-                    <div style={{ background: '#1e293b', padding: '8px', borderRadius: '6px', whiteSpace: 'pre-wrap' }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: '#94a3b8',
+                      marginTop: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: '#e2e8f0',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      Prompt:
+                    </div>
+                    <div
+                      style={{
+                        background: '#1e293b',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
                       {selectedTask.prompt}
                     </div>
-                    {selectedTask.attachments && selectedTask.attachments.length > 0 && (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-                        {selectedTask.attachments.map((att) => (
-                          <div
-                            key={att.url}
-                            style={{
-                              position: 'relative',
-                              width: '60px',
-                              height: '60px',
-                              borderRadius: '4px',
-                              overflow: 'hidden',
-                              border: '1px solid #334155',
-                            }}
-                          >
-                            {att.contentType.startsWith('image/') ? (
-                              <img
-                                src={att.url}
-                                alt={att.name || 'attachment'}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              />
-                            ) : (
-                              <div
-                                style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  background: '#0f172a',
-                                  fontSize: '10px',
-                                }}
-                              >
-                                DOC
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {selectedTask.attachments &&
+                      selectedTask.attachments.length > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            marginTop: '8px',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          {selectedTask.attachments.map((att) => (
+                            <div
+                              key={att.url}
+                              style={{
+                                position: 'relative',
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                                border: '1px solid #334155',
+                              }}
+                            >
+                              {att.contentType.startsWith('image/') ? (
+                                <img
+                                  src={att.url}
+                                  alt={att.name || 'attachment'}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: '#0f172a',
+                                    fontSize: '10px',
+                                  }}
+                                >
+                                  DOC
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                   </div>
 
                   {selectedTask.results.map((result) => (
@@ -838,15 +1092,31 @@ export function SwarmView() {
                         borderLeft: `3px solid ${result.status === 'success' ? '#22c55e' : '#ef4444'}`,
                       }}
                     >
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0' }}>
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#e2e8f0',
+                        }}
+                      >
                         {result.peer_name}
                         {result.model_used && (
-                          <span style={{ fontWeight: 400, color: '#64748b' }}> · {result.model_used}</span>
+                          <span style={{ fontWeight: 400, color: '#64748b' }}>
+                            {' '}
+                            · {result.model_used}
+                          </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: '#94a3b8',
+                          marginTop: '2px',
+                        }}
+                      >
                         {result.duration_ms}ms
-                        {result.tokens_used && ` · ${result.tokens_used} tokens`}
+                        {result.tokens_used &&
+                          ` · ${result.tokens_used} tokens`}
                       </div>
                       {result.content && (
                         <div
@@ -863,7 +1133,14 @@ export function SwarmView() {
                         </div>
                       )}
                       {result.attachments && result.attachments.length > 0 && (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            marginTop: '8px',
+                            flexWrap: 'wrap',
+                          }}
+                        >
                           {result.attachments.map((att) => (
                             <div
                               key={att.url}
@@ -880,7 +1157,11 @@ export function SwarmView() {
                                 <img
                                   src={att.url}
                                   alt={att.name || 'result attachment'}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                  }}
                                 />
                               ) : (
                                 <div
@@ -902,7 +1183,15 @@ export function SwarmView() {
                         </div>
                       )}
                       {result.error && (
-                        <div style={{ fontSize: '11px', color: '#f87171', marginTop: '4px' }}>{result.error}</div>
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            color: '#f87171',
+                            marginTop: '4px',
+                          }}
+                        >
+                          {result.error}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -938,7 +1227,13 @@ function Stat({
   );
 }
 
-function TaskRow({ task, onClick }: { task: SwarmTaskSummary; onClick: () => void }) {
+function TaskRow({
+  task,
+  onClick,
+}: {
+  task: SwarmTaskSummary;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -956,8 +1251,16 @@ function TaskRow({ task, onClick }: { task: SwarmTaskSummary; onClick: () => voi
         color: '#e2e8f0',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '11px', fontWeight: 600 }}>{task.pattern}</span>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontSize: '11px', fontWeight: 600 }}>
+          {task.pattern}
+        </span>
         <span
           style={{
             fontSize: '10px',
@@ -1013,10 +1316,18 @@ function statusBg(status: string): string {
 }
 
 function eventColor(eventType: string): string {
-  if (eventType.includes('completed') || eventType.includes('discovered')) return '#22c55e';
-  if (eventType.includes('error') || eventType.includes('failed') || eventType.includes('lost')) return '#ef4444';
-  if (eventType.includes('sent') || eventType.includes('working')) return '#3b82f6';
+  if (eventType.includes('completed') || eventType.includes('discovered'))
+    return '#22c55e';
+  if (
+    eventType.includes('error') ||
+    eventType.includes('failed') ||
+    eventType.includes('lost')
+  )
+    return '#ef4444';
+  if (eventType.includes('sent') || eventType.includes('working'))
+    return '#3b82f6';
   if (eventType.includes('timeout')) return '#f59e0b';
-  if (eventType.includes('attachment') || eventType.includes('media')) return '#a855f7';
+  if (eventType.includes('attachment') || eventType.includes('media'))
+    return '#a855f7';
   return '#94a3b8';
 }

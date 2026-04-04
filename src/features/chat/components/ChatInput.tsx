@@ -51,7 +51,8 @@ export interface ChatInputHandle {
   setValue: (text: string) => void;
 }
 
-const FILE_ACCEPT = 'image/*,.txt,.md,.json,.js,.ts,.py,.rs,.go,.java,.cpp,.c,.h,.css,.html,.xml,.yaml,.yml,.toml,.sh';
+const FILE_ACCEPT =
+  'image/*,.txt,.md,.json,.js,.ts,.py,.rs,.go,.java,.cpp,.c,.h,.css,.html,.xml,.yaml,.yml,.toml,.sh';
 
 export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   (
@@ -183,7 +184,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       setAttachments((prev) => prev.filter((a) => a.id !== id));
     }, []);
 
-    const canSend = (input.trim().length > 0 || attachments.length > 0) && !isLoading && !disabled;
+    const canSend =
+      (input.trim().length > 0 || attachments.length > 0) &&
+      !isLoading &&
+      !disabled;
 
     return (
       <section
@@ -197,7 +201,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         {isDragging && (
           <div className="flex items-center justify-center py-3 px-4 glass-panel border-dashed border-2 border-[var(--matrix-accent)] bg-[var(--matrix-accent)]/5 rounded-lg">
             <Paperclip size={18} className="text-[var(--matrix-accent)] mr-2" />
-            <span className="text-sm text-[var(--matrix-accent)]">{t('chat.dropFilesHere', 'Drop files here')}</span>
+            <span className="text-sm text-[var(--matrix-accent)]">
+              {t('chat.dropFilesHere', 'Drop files here')}
+            </span>
           </div>
         )}
 
@@ -212,7 +218,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           onPaste={handlePaste}
           topActions={
             <>
-              <AttachmentPreview attachments={attachments} onRemove={removeAttachment} />
+              <AttachmentPreview
+                attachments={attachments}
+                onRemove={removeAttachment}
+              />
               {sessionId && onWorkingDirectoryChange && (
                 <WorkingFolderPicker
                   sessionId={sessionId}
@@ -254,7 +263,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               type="button"
               onClick={() => handleSend(input)}
               disabled={!canSend}
-              {...(canSend && { whileHover: { scale: 1.05 }, whileTap: { scale: 0.95 } })}
+              {...(canSend && {
+                whileHover: { scale: 1.05 },
+                whileTap: { scale: 0.95 },
+              })}
               className={cn(
                 'glass-button glass-button-primary p-2.5 rounded-lg shrink-0 transition-all',
                 canSend
@@ -264,7 +276,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               title={t('chat.sendMessage', 'Send message')}
               aria-label={t('chat.sendMessage', 'Send message')}
             >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              {isLoading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Send size={18} />
+              )}
             </motion.button>
           }
         />

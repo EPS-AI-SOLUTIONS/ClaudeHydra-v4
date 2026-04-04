@@ -173,7 +173,11 @@ pre,
 
 /* Light mode body background */
 [data-theme="light"] body {
-  background: linear-gradient(135deg, var(--matrix-bg-primary) 0%, var(--matrix-bg-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--matrix-bg-primary) 0%,
+    var(--matrix-bg-secondary) 100%
+  );
   color: #1a1a1a;
 }
 
@@ -191,13 +195,21 @@ pre,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.15));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.15)
+  );
   border-radius: 10px;
   transition: all 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.3));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.3)
+  );
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
@@ -212,11 +224,19 @@ pre,
 }
 
 [data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(45, 106, 79, 0.5), rgba(45, 106, 79, 0.25));
+  background: linear-gradient(
+    180deg,
+    rgba(45, 106, 79, 0.5),
+    rgba(45, 106, 79, 0.25)
+  );
 }
 
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(45, 106, 79, 0.7), rgba(45, 106, 79, 0.45));
+  background: linear-gradient(
+    180deg,
+    rgba(45, 106, 79, 0.7),
+    rgba(45, 106, 79, 0.45)
+  );
   box-shadow: 0 0 6px rgba(45, 106, 79, 0.3);
 }
 
@@ -699,7 +719,11 @@ pre,
   background: color-mix(in srgb, var(--matrix-accent) 10%, transparent);
 }
 .chat-markdown tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--matrix-bg-primary) 60%, var(--matrix-bg-secondary));
+  background: color-mix(
+    in srgb,
+    var(--matrix-bg-primary) 60%,
+    var(--matrix-bg-secondary)
+  );
 }
 
 /* --- Horizontal rule --- */
@@ -735,7 +759,11 @@ pre,
   background: color-mix(in srgb, var(--matrix-accent) 12%, transparent);
 }
 .ocr-rendered tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--matrix-bg-primary) 50%, var(--matrix-bg-secondary));
+  background: color-mix(
+    in srgb,
+    var(--matrix-bg-primary) 50%,
+    var(--matrix-bg-secondary)
+  );
 }
 .ocr-rendered h1,
 .ocr-rendered h2,
@@ -791,11 +819,19 @@ pre,
   font-size: 0.75rem;
 }
 .ocr-html-content th {
-  background: color-mix(in srgb, var(--matrix-accent, #4ade80) 10%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--matrix-accent, #4ade80) 10%,
+    transparent
+  );
   font-weight: 600;
 }
 .ocr-html-content tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--matrix-bg-primary) 50%, var(--matrix-bg-secondary));
+  background: color-mix(
+    in srgb,
+    var(--matrix-bg-primary) 50%,
+    var(--matrix-bg-secondary)
+  );
 }
 .ocr-html-content h1,
 .ocr-html-content h2,

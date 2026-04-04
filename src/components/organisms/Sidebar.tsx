@@ -48,10 +48,15 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePartnerSessions } from '@/features/chat/hooks/usePartnerSessions';
 
-const PartnerChatModal = lazy(() => import('@/features/chat/components/PartnerChatModal'));
+const PartnerChatModal = lazy(
+  () => import('@/features/chat/components/PartnerChatModal'),
+);
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { FooterControls, LogoButton } from '@jaskier/hydra-app/components/organisms';
+import {
+  FooterControls,
+  LogoButton,
+} from '@jaskier/hydra-app/components/organisms';
 import { cn } from '@jaskier/ui';
 import { SessionSearch } from '@/components/molecules/SessionSearch';
 import { TagChip } from '@/components/molecules/TagChip';
@@ -81,7 +86,11 @@ interface SidebarContentProps {
   isMobile?: boolean;
 }
 
-function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContentProps) {
+function SidebarContent({
+  collapsed,
+  onClose,
+  isMobile = false,
+}: SidebarContentProps) {
   const { t } = useTranslation();
 
   // Business logic from extracted hook
@@ -144,12 +153,21 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
   }, [newChatBase, isMobile, onClose]);
 
   // Partner sessions (GeminiHydra)
-  const { data: partnerSessions, isLoading: partnerLoading, isError: partnerError } = usePartnerSessions();
+  const {
+    data: partnerSessions,
+    isLoading: partnerLoading,
+    isError: partnerError,
+  } = usePartnerSessions();
   const [showPartnerSessions, setShowPartnerSessions] = useState(true);
-  const [partnerModalSessionId, setPartnerModalSessionId] = useState<string | null>(null);
+  const [partnerModalSessionId, setPartnerModalSessionId] = useState<
+    string | null
+  >(null);
   const sortedPartnerSessions = useMemo(
     () =>
-      [...(partnerSessions ?? [])].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+      [...(partnerSessions ?? [])].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
     [partnerSessions],
   );
 
@@ -162,31 +180,64 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
       items: [
         { id: 'home', label: t('nav.home', 'Home'), icon: Zap },
         { id: 'chat', label: t('nav.chat', 'Chat'), icon: MessageSquare },
-        { id: 'logs' as ViewId, label: t('nav.logs', 'Logs'), icon: ScrollText },
-        { id: 'delegations' as ViewId, label: t('nav.delegations', 'Delegations'), icon: Network },
-        { id: 'analytics' as ViewId, label: t('nav.analytics', 'Analytics'), icon: BarChart3 },
-        { id: 'swarm' as ViewId, label: t('nav.swarm', 'Swarm Dashboard'), icon: Activity },
-        { id: 'semantic-cache' as ViewId, label: t('nav.semanticCache', 'Semantic Cache'), icon: Brain },
-        { id: 'collab' as ViewId, label: t('nav.collab', 'Collaboration'), icon: Users },
-        { id: 'settings', label: t('nav.settings', 'Settings'), icon: Settings },
+        {
+          id: 'logs' as ViewId,
+          label: t('nav.logs', 'Logs'),
+          icon: ScrollText,
+        },
+        {
+          id: 'delegations' as ViewId,
+          label: t('nav.delegations', 'Delegations'),
+          icon: Network,
+        },
+        {
+          id: 'analytics' as ViewId,
+          label: t('nav.analytics', 'Analytics'),
+          icon: BarChart3,
+        },
+        {
+          id: 'swarm' as ViewId,
+          label: t('nav.swarm', 'Swarm Dashboard'),
+          icon: Activity,
+        },
+        {
+          id: 'semantic-cache' as ViewId,
+          label: t('nav.semanticCache', 'Semantic Cache'),
+          icon: Brain,
+        },
+        {
+          id: 'collab' as ViewId,
+          label: t('nav.collab', 'Collaboration'),
+          icon: Users,
+        },
+        {
+          id: 'settings',
+          label: t('nav.settings', 'Settings'),
+          icon: Settings,
+        },
       ],
     },
   ];
 
   // Grouped navigation - expandable sections (Tissaia style)
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem('claudehydra_expanded_groups');
-      const defaults = { main: true };
-      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
-    } catch {
-      return { main: true };
-    }
-  });
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    () => {
+      try {
+        const saved = localStorage.getItem('claudehydra_expanded_groups');
+        const defaults = { main: true };
+        return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+      } catch {
+        return { main: true };
+      }
+    },
+  );
 
   useEffect(() => {
     try {
-      localStorage.setItem('claudehydra_expanded_groups', JSON.stringify(expandedGroups));
+      localStorage.setItem(
+        'claudehydra_expanded_groups',
+        JSON.stringify(expandedGroups),
+      );
     } catch {
       /* ignore */
     }
@@ -205,11 +256,19 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
       <nav className="flex flex-col gap-2 shrink-0 px-2">
         {navGroups.map((group) => {
           const isExpanded = expandedGroups[group.id];
-          const hasActiveItem = group.items.some((item) => item.id === currentView);
+          const hasActiveItem = group.items.some(
+            (item) => item.id === currentView,
+          );
           const GroupIcon = group.icon;
 
           return (
-            <div key={group.id} className={cn(isLight ? 'glass-panel-light' : 'glass-panel-dark', 'overflow-hidden')}>
+            <div
+              key={group.id}
+              className={cn(
+                isLight ? 'glass-panel-light' : 'glass-panel-dark',
+                'overflow-hidden',
+              )}
+            >
               {/* Group Header */}
               {!collapsed && (
                 <button
@@ -225,17 +284,24 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                         : 'text-white bg-white/5'
                       : cn(
                           theme.textMuted,
-                          isLight ? 'hover:text-black hover:bg-black/5' : 'hover:text-white hover:bg-white/5',
+                          isLight
+                            ? 'hover:text-black hover:bg-black/5'
+                            : 'hover:text-white hover:bg-white/5',
                         ),
                   )}
                 >
                   <div className="flex items-center gap-2">
                     <GroupIcon size={14} />
-                    <span className="text-sm font-bold tracking-[0.12em] uppercase">{group.label}</span>
+                    <span className="text-sm font-bold tracking-[0.12em] uppercase">
+                      {group.label}
+                    </span>
                   </div>
                   <ChevronDown
                     size={14}
-                    className={cn('transition-transform duration-200', isExpanded ? '' : '-rotate-90')}
+                    className={cn(
+                      'transition-transform duration-200',
+                      isExpanded ? '' : '-rotate-90',
+                    )}
                   />
                 </button>
               )}
@@ -244,7 +310,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
               <div
                 className={cn(
                   'px-1.5 pb-1.5 space-y-0.5 overflow-hidden transition-all duration-200',
-                  !collapsed && !isExpanded ? 'max-h-0 opacity-0 pb-0' : 'max-h-96 opacity-100',
+                  !collapsed && !isExpanded
+                    ? 'max-h-0 opacity-0 pb-0'
+                    : 'max-h-96 opacity-100',
                   collapsed ? 'py-1.5' : '',
                 )}
               >
@@ -268,7 +336,9 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                             : 'bg-white/10 text-white'
                           : cn(
                               theme.textMuted,
-                              isLight ? 'hover:bg-black/5 hover:text-black' : 'hover:bg-white/5 hover:text-white',
+                              isLight
+                                ? 'hover:bg-black/5 hover:text-black'
+                                : 'hover:bg-white/5 hover:text-white',
                             ),
                       )}
                       title={collapsed ? item.label : undefined}
@@ -282,10 +352,19 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                             ? isLight
                               ? 'text-emerald-600'
                               : 'text-white'
-                            : cn(theme.iconMuted, isLight ? 'group-hover:text-black' : 'group-hover:text-white'),
+                            : cn(
+                                theme.iconMuted,
+                                isLight
+                                  ? 'group-hover:text-black'
+                                  : 'group-hover:text-white',
+                              ),
                         )}
                       />
-                      {!collapsed && <span className="font-medium text-base tracking-wide truncate">{item.label}</span>}
+                      {!collapsed && (
+                        <span className="font-medium text-base tracking-wide truncate">
+                          {item.label}
+                        </span>
+                      )}
                       {isActive && (
                         <div
                           className={cn(
@@ -321,17 +400,24 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             aria-label={`${showSessions ? 'Collapse' : 'Expand'} chat sessions`}
             className={cn(
               'flex items-center gap-2 transition-colors',
-              isLight ? `${theme.textMuted} hover:text-black` : `${theme.textMuted} hover:text-white`,
+              isLight
+                ? `${theme.textMuted} hover:text-black`
+                : `${theme.textMuted} hover:text-white`,
             )}
           >
             <MessagesSquare size={14} />
             {!collapsed && (
-              <span className="text-sm font-bold tracking-[0.12em] uppercase">{t('sidebar.chats', 'CHATS')}</span>
+              <span className="text-sm font-bold tracking-[0.12em] uppercase">
+                {t('sidebar.chats', 'CHATS')}
+              </span>
             )}
             {!collapsed && (
               <ChevronDown
                 size={14}
-                className={cn('transition-transform duration-200', showSessions ? '' : '-rotate-90')}
+                className={cn(
+                  'transition-transform duration-200',
+                  showSessions ? '' : '-rotate-90',
+                )}
               />
             )}
           </button>
@@ -353,7 +439,10 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
         {/* #19 - Session search input (only when expanded and sessions visible) */}
         {!collapsed && showSessions && sessions.length > 0 && (
           <>
-            <SessionSearch onSearch={handleSessionSearch} className="px-1 pb-1" />
+            <SessionSearch
+              onSearch={handleSessionSearch}
+              className="px-1 pb-1"
+            />
             {/* Tag filter chips */}
             {allTagsList.length > 0 && (
               <div className="flex items-center gap-1 flex-wrap px-1 pb-1.5">
@@ -365,7 +454,10 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                     size="xs"
                     onClick={() => handleTagFilterToggle(tag)}
                     className={cn(
-                      filterTags.includes(tag) && (isDark ? 'ring-1 ring-white/40' : 'ring-1 ring-black/30'),
+                      filterTags.includes(tag) &&
+                        (isDark
+                          ? 'ring-1 ring-white/40'
+                          : 'ring-1 ring-black/30'),
                     )}
                   />
                 ))}
@@ -416,8 +508,12 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                     isDark={isDark}
                     onSelect={() => handleSelectSession(session.id)}
                     onDelete={() => handleDeleteSession(session.id)}
-                    onRename={(newTitle) => handleRenameSession(session.id, newTitle)}
-                    tags={session.id === currentSessionId ? activeSessionTags : []}
+                    onRename={(newTitle) =>
+                      handleRenameSession(session.id, newTitle)
+                    }
+                    tags={
+                      session.id === currentSessionId ? activeSessionTags : []
+                    }
                     suggestedTags={allTagsList}
                     onAddTags={(tags) => handleAddTags(session.id, tags)}
                     onRemoveTag={(tag) => handleRemoveTag(session.id, tag)}
@@ -445,13 +541,17 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             aria-label={`${showPartnerSessions ? 'Collapse' : 'Expand'} GeminiHydra partner sessions`}
             className={cn(
               'flex items-center gap-2 transition-colors',
-              isLight ? `${theme.textMuted} hover:text-black` : `${theme.textMuted} hover:text-white`,
+              isLight
+                ? `${theme.textMuted} hover:text-black`
+                : `${theme.textMuted} hover:text-white`,
             )}
           >
             <div
               className={cn(
                 'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold shrink-0',
-                isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400',
+                isLight
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-blue-500/20 text-blue-400',
               )}
             >
               GH
@@ -464,15 +564,24 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
             {!collapsed && (
               <ChevronDown
                 size={14}
-                className={cn('transition-transform duration-200', showPartnerSessions ? '' : '-rotate-90')}
+                className={cn(
+                  'transition-transform duration-200',
+                  showPartnerSessions ? '' : '-rotate-90',
+                )}
               />
             )}
           </button>
           <div className="flex items-center gap-1">
-            {partnerLoading && <Loader2 size={12} className="animate-spin text-blue-400" />}
-            {partnerError && <WifiOff size={12} className={cn(theme.iconMuted)} />}
+            {partnerLoading && (
+              <Loader2 size={12} className="animate-spin text-blue-400" />
+            )}
+            {partnerError && (
+              <WifiOff size={12} className={cn(theme.iconMuted)} />
+            )}
             {!partnerLoading && !partnerError && (
-              <span className={cn('text-xs', theme.textMuted)}>{sortedPartnerSessions.length}</span>
+              <span className={cn('text-xs', theme.textMuted)}>
+                {sortedPartnerSessions.length}
+              </span>
             )}
           </div>
         </div>
@@ -487,13 +596,17 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
               className="flex-1 space-y-1 overflow-y-auto min-h-0"
             >
               {partnerError && (
-                <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">Offline</p>
-              )}
-              {!partnerError && sortedPartnerSessions.length === 0 && !partnerLoading && (
                 <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">
-                  {t('sidebar.noSessions', 'No sessions')}
+                  Offline
                 </p>
               )}
+              {!partnerError &&
+                sortedPartnerSessions.length === 0 &&
+                !partnerLoading && (
+                  <p className="text-[10px] text-[var(--matrix-text-secondary)] text-center py-2">
+                    {t('sidebar.noSessions', 'No sessions')}
+                  </p>
+                )}
               {sortedPartnerSessions.map((ps) => (
                 <button
                   type="button"
@@ -507,11 +620,18 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                   )}
                   title={ps.title}
                 >
-                  <MessageSquare size={14} className={cn('shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')} />
+                  <MessageSquare
+                    size={14}
+                    className={cn(
+                      'shrink-0',
+                      isLight ? 'text-blue-500' : 'text-blue-400/60',
+                    )}
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{ps.title}</p>
                     <p className="text-xs text-[var(--matrix-text-secondary)] truncate">
-                      {ps.message_count} {ps.message_count === 1 ? 'message' : 'messages'}
+                      {ps.message_count}{' '}
+                      {ps.message_count === 1 ? 'message' : 'messages'}
                     </p>
                   </div>
                   <ExternalLink
@@ -527,11 +647,18 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
       {/* Partner session modal (lazy-loaded) */}
       <Suspense fallback={null}>
-        <PartnerChatModal sessionId={partnerModalSessionId} onClose={() => setPartnerModalSessionId(null)} />
+        <PartnerChatModal
+          sessionId={partnerModalSessionId}
+          onClose={() => setPartnerModalSessionId(null)}
+        />
       </Suspense>
 
       {/* ---- Bottom: Theme & Language + Version ---- */}
-      <FooterControls collapsed={collapsed} version="ClaudeHydra v4.0.0" tagline={t('footer.tagline', 'AI Swarm')} />
+      <FooterControls
+        collapsed={collapsed}
+        version="ClaudeHydra v4.0.0"
+        tagline={t('footer.tagline', 'AI Swarm')}
+      />
 
       {/* ---- Mobile close button ---- */}
       {isMobile && (
@@ -557,7 +684,8 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { sidebarCollapsed, setSidebarCollapsed, toggleSidebar } = useViewStore();
+  const { sidebarCollapsed, setSidebarCollapsed, toggleSidebar } =
+    useViewStore();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -577,7 +705,9 @@ export function Sidebar() {
   }, [isMobile]);
 
   // #29 — Swipe gesture for mobile drawer
-  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(
+    null,
+  );
 
   const handlePointerDown = useCallback((e: ReactPointerEvent) => {
     swipeStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
@@ -611,7 +741,11 @@ export function Sidebar() {
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
       if (touch && touch.clientX < 30) {
-        swipeStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+        swipeStartRef.current = {
+          x: touch.clientX,
+          y: touch.clientY,
+          time: Date.now(),
+        };
       }
     };
     const handleTouchEnd = (e: TouchEvent) => {
@@ -684,7 +818,11 @@ export function Sidebar() {
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
         >
-          <SidebarContent collapsed={false} onClose={() => setMobileDrawerOpen(false)} isMobile />
+          <SidebarContent
+            collapsed={false}
+            onClose={() => setMobileDrawerOpen(false)}
+            isMobile
+          />
         </motion.aside>
       </>
     );
@@ -697,7 +835,10 @@ export function Sidebar() {
       initial={false}
       animate={{ width: sidebarCollapsed ? 64 : 240 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className={cn(isDark ? 'glass-panel-dark' : 'glass-panel-light', 'flex flex-col h-full overflow-hidden relative')}
+      className={cn(
+        isDark ? 'glass-panel-dark' : 'glass-panel-light',
+        'flex flex-col h-full overflow-hidden relative',
+      )}
     >
       <SidebarContent collapsed={sidebarCollapsed} />
 
@@ -728,7 +869,11 @@ export function Sidebar() {
             : t('sidebar.collapseSidebar', 'Collapse sidebar')
         }
       >
-        {sidebarCollapsed ? <ChevronRight size={18} strokeWidth={2.5} /> : <ChevronLeft size={18} strokeWidth={2.5} />}
+        {sidebarCollapsed ? (
+          <ChevronRight size={18} strokeWidth={2.5} />
+        ) : (
+          <ChevronLeft size={18} strokeWidth={2.5} />
+        )}
       </button>
     </motion.aside>
   );

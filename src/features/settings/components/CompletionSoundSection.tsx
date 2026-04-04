@@ -38,7 +38,12 @@ export const CompletionSoundSection = memo(() => {
         ) : (
           <BellOff size={18} className="text-[var(--matrix-accent)]" />
         )}
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.completionSound.title', 'Completion Sound')}
         </h3>
       </div>
@@ -61,7 +66,10 @@ export const CompletionSoundSection = memo(() => {
           )}
           role="switch"
           aria-checked={enabled}
-          aria-label={t('settings.completionSound.toggle', 'Toggle completion sound')}
+          aria-label={t(
+            'settings.completionSound.toggle',
+            'Toggle completion sound',
+          )}
         >
           <span
             className={cn(
@@ -86,7 +94,12 @@ export const CompletionSoundSection = memo(() => {
         )}
 
         {enabled && (
-          <span className={cn('text-xs font-mono min-w-[3ch] text-right', theme.textMuted)}>
+          <span
+            className={cn(
+              'text-xs font-mono min-w-[3ch] text-right',
+              theme.textMuted,
+            )}
+          >
             {Math.round(volume * 100)}%
           </span>
         )}

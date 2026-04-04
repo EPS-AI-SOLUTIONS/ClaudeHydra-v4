@@ -13,7 +13,10 @@ interface CollabStatusBadgeProps {
  * - Spinning loader when connecting
  * - Red dot when disconnected
  */
-export function CollabStatusBadge({ status, peerCount }: CollabStatusBadgeProps) {
+export function CollabStatusBadge({
+  status,
+  peerCount,
+}: CollabStatusBadgeProps) {
   return (
     <div className="flex items-center gap-1.5 text-xs">
       {status === 'connected' && (

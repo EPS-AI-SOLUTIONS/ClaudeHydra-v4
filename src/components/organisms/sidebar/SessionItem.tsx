@@ -141,7 +141,10 @@ export function SessionItem({
         <button
           type="button"
           onClick={handleSave}
-          className={cn('p-1 rounded text-[var(--matrix-accent)]', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
+          className={cn(
+            'p-1 rounded text-[var(--matrix-accent)]',
+            isDark ? 'hover:bg-white/15' : 'hover:bg-black/5',
+          )}
         >
           <Check size={14} />
         </button>
@@ -150,7 +153,9 @@ export function SessionItem({
           onClick={handleCancel}
           className={cn(
             'p-1 rounded',
-            isDark ? 'hover:bg-red-500/20 text-red-400' : 'hover:bg-red-500/15 text-red-600',
+            isDark
+              ? 'hover:bg-red-500/20 text-red-400'
+              : 'hover:bg-red-500/15 text-red-600',
           )}
         >
           <X size={14} />
@@ -192,12 +197,22 @@ export function SessionItem({
       <div className="flex items-center gap-2">
         {/* #16 - Show spinner for pending sessions */}
         {session._pending ? (
-          <Loader2 size={14} className="shrink-0 animate-spin text-[var(--matrix-accent)]/60" />
+          <Loader2
+            size={14}
+            className="shrink-0 animate-spin text-[var(--matrix-accent)]/60"
+          />
         ) : (
           <MessageSquare size={14} className="shrink-0" />
         )}
         <div className="flex-1 min-w-0">
-          <p className={cn('text-sm truncate', session._pending && 'opacity-60 italic')}>{session.title}</p>
+          <p
+            className={cn(
+              'text-sm truncate',
+              session._pending && 'opacity-60 italic',
+            )}
+          >
+            {session.title}
+          </p>
           <p className="text-xs text-[var(--matrix-text-secondary)] truncate">
             {session._pending
               ? t('sidebar.creating', 'Creating...')
@@ -211,7 +226,10 @@ export function SessionItem({
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className={cn('p-1 rounded', isDark ? 'hover:bg-white/15' : 'hover:bg-black/5')}
+            className={cn(
+              'p-1 rounded',
+              isDark ? 'hover:bg-white/15' : 'hover:bg-black/5',
+            )}
             title={t('sidebar.rename', 'Rename')}
           >
             <Edit2 size={12} />
@@ -229,7 +247,11 @@ export function SessionItem({
                   ? 'hover:bg-red-500/20 text-red-400'
                   : 'hover:bg-red-500/15 text-red-600',
             )}
-            title={confirmDelete ? t('sidebar.confirmDelete', 'Click again to delete') : t('common.delete', 'Delete')}
+            title={
+              confirmDelete
+                ? t('sidebar.confirmDelete', 'Click again to delete')
+                : t('common.delete', 'Delete')
+            }
           >
             <Trash2 size={12} />
           </button>
@@ -250,7 +272,10 @@ export function SessionItem({
             />
           ))}
           {isActive && onAddTags && !showTagInput && (
-            <AddTagButton isDark={isDark} onClick={() => setShowTagInput(true)} />
+            <AddTagButton
+              isDark={isDark}
+              onClick={() => setShowTagInput(true)}
+            />
           )}
         </div>
       )}
@@ -283,14 +308,18 @@ export function SessionItem({
             'animate-fade-in',
           )}
         >
-          <p className="text-[11px] text-[var(--matrix-text-primary)] font-medium truncate mb-1">{session.title}</p>
+          <p className="text-[11px] text-[var(--matrix-text-primary)] font-medium truncate mb-1">
+            {session.title}
+          </p>
           <p className="text-[10px] text-[var(--matrix-text-secondary)] line-clamp-3 leading-relaxed">
             {session.preview}
           </p>
           <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-[var(--matrix-border)]">
             <span className="text-[9px] text-[var(--matrix-text-secondary)]">
               {session.messageCount}{' '}
-              {session.messageCount === 1 ? t('sidebar.message', 'message') : t('sidebar.messages', 'messages')}
+              {session.messageCount === 1
+                ? t('sidebar.message', 'message')
+                : t('sidebar.messages', 'messages')}
             </span>
             <span className="text-[9px] text-[var(--matrix-accent)]">
               {timeAgo(session.updatedAt ?? session.createdAt)}

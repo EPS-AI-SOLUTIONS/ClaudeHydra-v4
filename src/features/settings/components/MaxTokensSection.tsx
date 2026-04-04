@@ -31,7 +31,10 @@ export const MaxTokensSection = memo(() => {
       const clamped = Math.max(MIN, Math.min(MAX, value));
       setSaving(true);
       try {
-        await apiPost<Settings>('/api/settings', { ...settings, max_tokens: clamped });
+        await apiPost<Settings>('/api/settings', {
+          ...settings,
+          max_tokens: clamped,
+        });
         await refetch();
         toast.success(t('settings.maxTokens.saved', 'Max tokens updated'));
       } catch (err) {
@@ -47,7 +50,12 @@ export const MaxTokensSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <TextCursorInput size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.maxTokens.title', 'Max Output Tokens')}
         </h3>
       </div>
@@ -91,12 +99,22 @@ export const MaxTokensSection = memo(() => {
           <Plus size={14} />
         </Button>
 
-        <span className={cn('text-lg font-mono font-bold min-w-[4ch] text-center', theme.text)}>
+        <span
+          className={cn(
+            'text-lg font-mono font-bold min-w-[4ch] text-center',
+            theme.text,
+          )}
+        >
           {formatTokens(current)}
         </span>
       </div>
 
-      <div className={cn('flex justify-between text-[10px] font-mono px-1', theme.textMuted)}>
+      <div
+        className={cn(
+          'flex justify-between text-[10px] font-mono px-1',
+          theme.textMuted,
+        )}
+      >
         <span>{formatTokens(MIN)} (short)</span>
         <span>{formatTokens(MAX)} (long)</span>
       </div>

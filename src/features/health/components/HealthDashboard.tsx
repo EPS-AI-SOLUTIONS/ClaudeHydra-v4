@@ -45,11 +45,29 @@ const StatCard = memo<StatCardProps>(({ icon, label, value, statusColor }) => {
   const theme = useViewTheme();
 
   return (
-    <Card variant="default" padding="sm" className="flex items-center gap-3 min-w-0">
+    <Card
+      variant="default"
+      padding="sm"
+      className="flex items-center gap-3 min-w-0"
+    >
       <div className={cn('shrink-0', theme.iconMuted)}>{icon}</div>
       <div className="flex-1 min-w-0">
-        <p className={cn('text-[10px] uppercase tracking-wider font-mono', theme.textMuted)}>{label}</p>
-        <p className={cn('text-sm font-mono font-semibold truncate', statusColor ?? theme.text)}>{value}</p>
+        <p
+          className={cn(
+            'text-[10px] uppercase tracking-wider font-mono',
+            theme.textMuted,
+          )}
+        >
+          {label}
+        </p>
+        <p
+          className={cn(
+            'text-sm font-mono font-semibold truncate',
+            statusColor ?? theme.text,
+          )}
+        >
+          {value}
+        </p>
       </div>
     </Card>
   );
@@ -76,7 +94,12 @@ export const HealthDashboard = memo(() => {
   if (data.loading) {
     return (
       <div className="w-full">
-        <h3 className={cn('text-sm font-mono font-semibold uppercase tracking-wider mb-3', theme.textMuted)}>
+        <h3
+          className={cn(
+            'text-sm font-mono font-semibold uppercase tracking-wider mb-3',
+            theme.textMuted,
+          )}
+        >
           {t('health.title', 'System Health')}
         </h3>
         <div className={cn('text-sm font-mono animate-pulse', theme.textMuted)}>
@@ -89,7 +112,12 @@ export const HealthDashboard = memo(() => {
   if (data.error) {
     return (
       <div className="w-full">
-        <h3 className={cn('text-sm font-mono font-semibold uppercase tracking-wider mb-3', theme.textMuted)}>
+        <h3
+          className={cn(
+            'text-sm font-mono font-semibold uppercase tracking-wider mb-3',
+            theme.textMuted,
+          )}
+        >
           {t('health.title', 'System Health')}
         </h3>
         <QueryError onRetry={data.refetch} />
@@ -98,12 +126,19 @@ export const HealthDashboard = memo(() => {
   }
 
   const memoryPercent =
-    data.memoryTotalMb && data.memoryTotalMb > 0 ? ((data.memoryUsedMb ?? 0) / data.memoryTotalMb) * 100 : 0;
+    data.memoryTotalMb && data.memoryTotalMb > 0
+      ? ((data.memoryUsedMb ?? 0) / data.memoryTotalMb) * 100
+      : 0;
 
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h3 className={cn('text-sm font-mono font-semibold uppercase tracking-wider', theme.textMuted)}>
+        <h3
+          className={cn(
+            'text-sm font-mono font-semibold uppercase tracking-wider',
+            theme.textMuted,
+          )}
+        >
           {t('health.title', 'System Health')}
         </h3>
         <button
@@ -124,7 +159,12 @@ export const HealthDashboard = memo(() => {
             ? {
                 label: 'CPU',
                 value: data.cpuUsage,
-                status: data.cpuUsage > 90 ? 'error' : data.cpuUsage > 70 ? 'warning' : 'success',
+                status:
+                  data.cpuUsage > 90
+                    ? 'error'
+                    : data.cpuUsage > 70
+                      ? 'warning'
+                      : 'success',
               }
             : undefined
         }
@@ -133,8 +173,16 @@ export const HealthDashboard = memo(() => {
             ? {
                 label: 'RAM',
                 value: memoryPercent,
-                displayValue: formatMemory(data.memoryUsedMb, data.memoryTotalMb),
-                status: memoryPercent > 90 ? 'error' : memoryPercent > 75 ? 'warning' : 'success',
+                displayValue: formatMemory(
+                  data.memoryUsedMb,
+                  data.memoryTotalMb,
+                ),
+                status:
+                  memoryPercent > 90
+                    ? 'error'
+                    : memoryPercent > 75
+                      ? 'warning'
+                      : 'success',
               }
             : undefined
         }
@@ -172,7 +220,11 @@ export const HealthDashboard = memo(() => {
         <StatCard
           icon={<Clock size={16} />}
           label={t('health.uptime', 'Uptime')}
-          value={data.uptimeSeconds !== null ? formatUptime(data.uptimeSeconds) : '--'}
+          value={
+            data.uptimeSeconds !== null
+              ? formatUptime(data.uptimeSeconds)
+              : '--'
+          }
         />
       </div>
     </div>

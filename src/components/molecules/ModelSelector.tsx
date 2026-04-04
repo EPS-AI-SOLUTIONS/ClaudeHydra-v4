@@ -13,7 +13,15 @@ import { useDebounce } from '@jaskier/core';
 import { cn } from '@jaskier/ui';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 // ---------------------------------------------------------------------------
@@ -75,7 +83,10 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const selectedModel = useMemo(() => models.find((m) => m.id === selectedId) ?? null, [models, selectedId]);
+  const selectedModel = useMemo(
+    () => models.find((m) => m.id === selectedId) ?? null,
+    [models, selectedId],
+  );
 
   const filtered = useMemo(() => {
     if (!debouncedSearch.trim()) return models;
@@ -194,17 +205,23 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
           'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all w-full',
           'bg-[var(--glass-bg)] border border-[var(--glass-border)]',
           'hover:border-[var(--matrix-accent-dim)] hover:bg-[var(--matrix-bg-tertiary)]',
-          isOpen && 'border-[var(--matrix-accent)] ring-1 ring-[var(--matrix-accent)]/30',
+          isOpen &&
+            'border-[var(--matrix-accent)] ring-1 ring-[var(--matrix-accent)]/30',
           disabled && 'opacity-50 cursor-not-allowed',
         )}
       >
-        {selectedModel?.icon && <span className="shrink-0">{selectedModel.icon}</span>}
+        {selectedModel?.icon && (
+          <span className="shrink-0">{selectedModel.icon}</span>
+        )}
         <span className="text-[var(--matrix-text-primary)] font-medium truncate flex-1 text-left">
           {selectedModel?.name ?? placeholder}
         </span>
         <ChevronDown
           size={16}
-          className={cn('text-[var(--matrix-text-secondary)] transition-transform shrink-0', isOpen && 'rotate-180')}
+          className={cn(
+            'text-[var(--matrix-text-secondary)] transition-transform shrink-0',
+            isOpen && 'rotate-180',
+          )}
         />
       </button>
 
@@ -216,13 +233,19 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.15 }}
-            className={cn('absolute z-50 mt-2 w-full min-w-[280px]', 'glass-panel overflow-hidden')}
+            className={cn(
+              'absolute z-50 mt-2 w-full min-w-[280px]',
+              'glass-panel overflow-hidden',
+            )}
             role="listbox"
           >
             {/* Search */}
             {models.length > 5 && (
               <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--glass-border)]">
-                <Search size={14} className="text-[var(--matrix-text-secondary)] shrink-0" />
+                <Search
+                  size={14}
+                  className="text-[var(--matrix-text-secondary)] shrink-0"
+                />
                 <input
                   ref={searchRef}
                   type="text"
@@ -263,20 +286,33 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2 rounded-lg',
                       'transition-colors text-left text-sm',
-                      isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
-                      !isDisabled && (isFocused || isSelected) && 'bg-[var(--matrix-accent)]/10',
+                      isDisabled
+                        ? 'opacity-40 cursor-not-allowed'
+                        : 'cursor-pointer',
+                      !isDisabled &&
+                        (isFocused || isSelected) &&
+                        'bg-[var(--matrix-accent)]/10',
                       isSelected && 'border border-[var(--matrix-accent)]/30',
                       !isSelected && 'border border-transparent',
                     )}
                   >
                     {/* Check / icon */}
                     <span className="w-4 h-4 flex items-center justify-center shrink-0">
-                      {isSelected ? <Check size={14} className="text-[var(--matrix-accent)]" /> : (model.icon ?? null)}
+                      {isSelected ? (
+                        <Check
+                          size={14}
+                          className="text-[var(--matrix-accent)]"
+                        />
+                      ) : (
+                        (model.icon ?? null)
+                      )}
                     </span>
 
                     {/* Name + description */}
                     <span className="flex-1 min-w-0">
-                      <span className="block font-medium text-[var(--matrix-text-primary)] truncate">{model.name}</span>
+                      <span className="block font-medium text-[var(--matrix-text-primary)] truncate">
+                        {model.name}
+                      </span>
                       {model.description && (
                         <span className="block text-xs text-[var(--matrix-text-secondary)] truncate mt-0.5">
                           {model.description}

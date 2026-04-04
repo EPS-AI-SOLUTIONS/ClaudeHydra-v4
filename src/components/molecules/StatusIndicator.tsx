@@ -20,7 +20,8 @@ import type { HTMLAttributes } from 'react';
 export type StatusState = 'online' | 'offline' | 'pending' | 'error';
 type StatusSize = 'sm' | 'md';
 
-interface StatusIndicatorProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
+interface StatusIndicatorProps
+  extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Current status state. */
   status?: StatusState;
   /** Size variant. */
@@ -87,12 +88,23 @@ export function StatusIndicator({
       {/* Dot wrapper */}
       <span className="relative flex items-center justify-center">
         {/* Solid dot with glow */}
-        <span className={cn('rounded-full shrink-0', dotSize, dotColorMap[status], glowMap[status])} />
+        <span
+          className={cn(
+            'rounded-full shrink-0',
+            dotSize,
+            dotColorMap[status],
+            glowMap[status],
+          )}
+        />
 
         {/* Pulse ring */}
         {shouldPulse && (
           <motion.span
-            className={cn('absolute rounded-full opacity-75', dotSize, dotColorMap[status])}
+            className={cn(
+              'absolute rounded-full opacity-75',
+              dotSize,
+              dotColorMap[status],
+            )}
             animate={{
               scale: [1, 2.5],
               opacity: [0.75, 0],
@@ -107,7 +119,17 @@ export function StatusIndicator({
       </span>
 
       {/* Label */}
-      {label != null && <span className={cn('font-mono leading-none', textSize, textColorMap[status])}>{label}</span>}
+      {label != null && (
+        <span
+          className={cn(
+            'font-mono leading-none',
+            textSize,
+            textColorMap[status],
+          )}
+        >
+          {label}
+        </span>
+      )}
     </div>
   );
 }

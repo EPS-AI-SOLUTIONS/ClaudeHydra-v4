@@ -31,7 +31,10 @@ const AttachmentChip = memo(function AttachmentChip({
   attachment: Attachment;
   onRemove: (id: string) => void;
 }) {
-  const handleRemove = useCallback(() => onRemove(attachment.id), [onRemove, attachment.id]);
+  const handleRemove = useCallback(
+    () => onRemove(attachment.id),
+    [onRemove, attachment.id],
+  );
 
   return (
     <motion.div
@@ -42,12 +45,18 @@ const AttachmentChip = memo(function AttachmentChip({
     >
       {attachment.type === 'image' ? (
         <div className="w-8 h-8 rounded overflow-hidden shrink-0">
-          <img src={attachment.content} alt={attachment.name} className="w-full h-full object-cover" />
+          <img
+            src={attachment.content}
+            alt={attachment.name}
+            className="w-full h-full object-cover"
+          />
         </div>
       ) : (
         <FileText size={16} className="text-blue-400 shrink-0" />
       )}
-      <span className="text-sm truncate max-w-[150px] text-[var(--matrix-text-primary)]">{attachment.name}</span>
+      <span className="text-sm truncate max-w-[150px] text-[var(--matrix-text-primary)]">
+        {attachment.name}
+      </span>
       <button
         type="button"
         onClick={handleRemove}
@@ -66,7 +75,10 @@ AttachmentChip.displayName = 'AttachmentChip';
 // Component
 // ---------------------------------------------------------------------------
 
-export const AttachmentPreview = memo(function AttachmentPreview({ attachments, onRemove }: AttachmentPreviewProps) {
+export const AttachmentPreview = memo(function AttachmentPreview({
+  attachments,
+  onRemove,
+}: AttachmentPreviewProps) {
   if (attachments.length === 0) return null;
 
   return (

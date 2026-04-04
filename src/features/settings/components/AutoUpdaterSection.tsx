@@ -21,9 +21,14 @@ export const AutoUpdaterSection = memo(() => {
   const toggle = useCallback(async () => {
     setSaving(true);
     try {
-      await apiPost<Settings>('/api/settings', { ...settings, auto_updater: !enabled });
+      await apiPost<Settings>('/api/settings', {
+        ...settings,
+        auto_updater: !enabled,
+      });
       await refetch();
-      toast.success(t('settings.autoUpdater.saved', 'Auto-updater setting saved'));
+      toast.success(
+        t('settings.autoUpdater.saved', 'Auto-updater setting saved'),
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -35,13 +40,21 @@ export const AutoUpdaterSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <RefreshCw size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.autoUpdater.title', 'Auto Updater')}
         </h3>
       </div>
 
       <p className={cn('text-xs', theme.textMuted)}>
-        {t('settings.autoUpdater.description', 'Automatically check for and apply updates when available.')}
+        {t(
+          'settings.autoUpdater.description',
+          'Automatically check for and apply updates when available.',
+        )}
       </p>
 
       <div className="flex items-center gap-3">
@@ -65,7 +78,9 @@ export const AutoUpdaterSection = memo(() => {
           />
         </button>
         <span className={cn('text-sm font-mono', theme.textMuted)}>
-          {enabled ? t('settings.autoUpdater.enabled', 'Enabled') : t('settings.autoUpdater.disabled', 'Disabled')}
+          {enabled
+            ? t('settings.autoUpdater.enabled', 'Enabled')
+            : t('settings.autoUpdater.disabled', 'Disabled')}
         </span>
       </div>
     </div>

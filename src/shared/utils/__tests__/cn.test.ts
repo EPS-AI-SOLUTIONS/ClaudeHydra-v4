@@ -40,7 +40,10 @@ describe('cn utility', () => {
   });
 
   it('handles a mix of strings, objects, and arrays', () => {
-    const result = cn('base', ['arr-class'], { 'obj-class': true, hidden: false });
+    const result = cn('base', ['arr-class'], {
+      'obj-class': true,
+      hidden: false,
+    });
     expect(result).toContain('base');
     expect(result).toContain('arr-class');
     expect(result).toContain('obj-class');

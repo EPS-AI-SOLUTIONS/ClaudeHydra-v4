@@ -18,8 +18,8 @@ use claudehydra_backend::state::AppState;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-fn app() -> axum::Router {
-    let state = AppState::new_test();
+async fn app() -> axum::Router {
+    let state = AppState::new_test().await;
     claudehydra_backend::create_test_router(state)
 }
 
@@ -34,6 +34,7 @@ async fn chat_without_api_key_returns_401() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/claude/chat", body))
         .await
         .unwrap();
@@ -48,6 +49,7 @@ async fn chat_stream_without_api_key_returns_401() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/claude/chat/stream", body))
         .await
         .unwrap();
@@ -62,6 +64,7 @@ async fn chat_request_accepted_with_model_field() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/claude/chat", body))
         .await
         .unwrap();
@@ -78,6 +81,7 @@ async fn chat_request_accepted_with_temperature() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/claude/chat", body))
         .await
         .unwrap();
@@ -92,6 +96,7 @@ async fn chat_request_accepted_with_tools_enabled() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/claude/chat/stream", body))
         .await
         .unwrap();
@@ -113,6 +118,7 @@ async fn chat_request_accepted_with_session_id() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/claude/chat", body))
         .await
         .unwrap();
@@ -126,6 +132,7 @@ async fn chat_request_accepted_with_session_id() {
 #[tokio::test]
 async fn claude_models_returns_3_tiers() {
     let response = app()
+        .await
         .oneshot(jaskier_core::testing::get("/api/claude/models"))
         .await
         .unwrap();
@@ -144,6 +151,7 @@ async fn claude_models_returns_3_tiers() {
 #[tokio::test]
 async fn claude_models_all_have_anthropic_provider() {
     let response = app()
+        .await
         .oneshot(jaskier_core::testing::get("/api/claude/models"))
         .await
         .unwrap();
@@ -157,6 +165,7 @@ async fn claude_models_all_have_anthropic_provider() {
 #[tokio::test]
 async fn claude_models_have_expected_ids() {
     let response = app()
+        .await
         .oneshot(jaskier_core::testing::get("/api/claude/models"))
         .await
         .unwrap();
@@ -191,6 +200,7 @@ async fn claude_models_have_expected_ids() {
 #[tokio::test]
 async fn claude_models_have_required_fields() {
     let response = app()
+        .await
         .oneshot(jaskier_core::testing::get("/api/claude/models"))
         .await
         .unwrap();
@@ -210,7 +220,7 @@ async fn claude_models_have_required_fields() {
 
 #[tokio::test]
 async fn circuit_breaker_starts_closed() {
-    let state = AppState::new_test();
+    let state = AppState::new_test().await;
     // Circuit breaker should be in CLOSED state initially (allowing requests)
     assert!(
         state.circuit_breaker.check().await.is_ok(),
@@ -220,7 +230,7 @@ async fn circuit_breaker_starts_closed() {
 
 #[tokio::test]
 async fn circuit_breaker_opens_after_failures() {
-    let state = AppState::new_test();
+    let state = AppState::new_test().await;
 
     // Record 3 consecutive failures to trip the breaker
     state.circuit_breaker.record_failure().await;
@@ -236,7 +246,7 @@ async fn circuit_breaker_opens_after_failures() {
 
 #[tokio::test]
 async fn circuit_breaker_resets_on_success() {
-    let state = AppState::new_test();
+    let state = AppState::new_test().await;
 
     // Record 2 failures (not enough to trip)
     state.circuit_breaker.record_failure().await;

@@ -9,7 +9,12 @@ const BASE = 'http://localhost:8082';
 /** Helper — create a minimal Response-like object for the fetch mock. */
 function mockResponse(
   body: unknown,
-  init: { status?: number; statusText?: string; ok?: boolean; headers?: Record<string, string> } = {},
+  init: {
+    status?: number;
+    statusText?: string;
+    ok?: boolean;
+    headers?: Record<string, string>;
+  } = {},
 ) {
   const { status = 200, ok = status >= 200 && status < 300 } = init;
   const statusText =
@@ -38,7 +43,8 @@ function mockResponse(
 // ---------------------------------------------------------------------------
 // Global fetch mock
 // ---------------------------------------------------------------------------
-const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+const fetchMock =
+  vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
@@ -95,7 +101,9 @@ describe('apiGet', () => {
     fetchMock.mockResolvedValueOnce(mockResponse(errorBody, { status: 404 }));
 
     await expect(apiGet('/items/999')).rejects.toThrow(ApiError);
-    await fetchMock.mockResolvedValueOnce(mockResponse(errorBody, { status: 404 }));
+    await fetchMock.mockResolvedValueOnce(
+      mockResponse(errorBody, { status: 404 }),
+    );
 
     try {
       await apiGet('/items/999');
@@ -109,7 +117,9 @@ describe('apiGet', () => {
   });
 
   it('throws ApiError with text body on 500 with non-JSON response', async () => {
-    fetchMock.mockResolvedValue(mockResponse('Internal Server Error', { status: 500 }));
+    fetchMock.mockResolvedValue(
+      mockResponse('Internal Server Error', { status: 500 }),
+    );
 
     try {
       await apiGet('/crash');
@@ -158,11 +168,15 @@ describe('apiPost', () => {
 
   it('throws ApiError on 422 validation error', async () => {
     const validationErr = { errors: [{ field: 'title', message: 'required' }] };
-    fetchMock.mockResolvedValueOnce(mockResponse(validationErr, { status: 422 }));
+    fetchMock.mockResolvedValueOnce(
+      mockResponse(validationErr, { status: 422 }),
+    );
 
     await expect(apiPost('/items', {})).rejects.toThrow(ApiError);
 
-    fetchMock.mockResolvedValueOnce(mockResponse(validationErr, { status: 422 }));
+    fetchMock.mockResolvedValueOnce(
+      mockResponse(validationErr, { status: 422 }),
+    );
     try {
       await apiPost('/items', {});
     } catch (e) {
@@ -196,11 +210,15 @@ describe('apiPatch', () => {
   });
 
   it('throws ApiError on 401 Unauthorized', async () => {
-    fetchMock.mockResolvedValueOnce(mockResponse('Unauthorized', { status: 401 }));
+    fetchMock.mockResolvedValueOnce(
+      mockResponse('Unauthorized', { status: 401 }),
+    );
 
     await expect(apiPatch('/items/1', { name: 'x' })).rejects.toThrow(ApiError);
 
-    fetchMock.mockResolvedValueOnce(mockResponse('Unauthorized', { status: 401 }));
+    fetchMock.mockResolvedValueOnce(
+      mockResponse('Unauthorized', { status: 401 }),
+    );
     try {
       await apiPatch('/items/1', { name: 'x' });
     } catch (e) {

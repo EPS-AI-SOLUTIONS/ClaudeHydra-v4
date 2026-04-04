@@ -1,4 +1,12 @@
-import { Activity, FileText, Plug, PlugZap, Redo2, Undo2, Users } from 'lucide-react';
+import {
+  Activity,
+  FileText,
+  Plug,
+  PlugZap,
+  Redo2,
+  Undo2,
+  Users,
+} from 'lucide-react';
 import { motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +30,18 @@ export default function CollabViewContent() {
   const [docKey, setDocKey] = useState('default-session');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { content, peers, status, applyChange, connect, disconnect, undo, redo, canUndo, canRedo } = useCollabDocument({
+  const {
+    content,
+    peers,
+    status,
+    applyChange,
+    connect,
+    disconnect,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useCollabDocument({
     appId: 'claudehydra',
     docKey,
     userName: 'Claude User',
@@ -39,13 +58,21 @@ export default function CollabViewContent() {
 
       // Find the diff position
       let start = 0;
-      while (start < oldValue.length && start < newValue.length && oldValue[start] === newValue[start]) {
+      while (
+        start < oldValue.length &&
+        start < newValue.length &&
+        oldValue[start] === newValue[start]
+      ) {
         start++;
       }
 
       let oldEnd = oldValue.length;
       let newEnd = newValue.length;
-      while (oldEnd > start && newEnd > start && oldValue[oldEnd - 1] === newValue[newEnd - 1]) {
+      while (
+        oldEnd > start &&
+        newEnd > start &&
+        oldValue[oldEnd - 1] === newValue[newEnd - 1]
+      ) {
         oldEnd--;
         newEnd--;
       }
@@ -86,8 +113,12 @@ export default function CollabViewContent() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-5 w-5 text-indigo-400" />
-          <h1 className="text-lg font-semibold text-zinc-100">{t('collab.title')}</h1>
-          <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-400">{t('collab.crdt')}</span>
+          <h1 className="text-lg font-semibold text-zinc-100">
+            {t('collab.title')}
+          </h1>
+          <span className="rounded bg-indigo-500/20 px-2 py-0.5 text-xs text-indigo-400">
+            {t('collab.crdt')}
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -181,7 +212,9 @@ export default function CollabViewContent() {
         <div className="w-64 shrink-0 rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="h-4 w-4 text-zinc-400" />
-            <h2 className="text-sm font-medium text-zinc-300">{t('collab.roomStats')}</h2>
+            <h2 className="text-sm font-medium text-zinc-300">
+              {t('collab.roomStats')}
+            </h2>
           </div>
 
           {stats ? (
@@ -201,14 +234,23 @@ export default function CollabViewContent() {
 
               {stats.rooms.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <h3 className="text-zinc-500 font-medium">{t('collab.rooms')}</h3>
+                  <h3 className="text-zinc-500 font-medium">
+                    {t('collab.rooms')}
+                  </h3>
                   {stats.rooms.map((room) => (
-                    <div key={room.room_key} className="rounded-md border border-zinc-700/50 bg-zinc-800/30 p-2">
-                      <div className="truncate text-zinc-300 font-mono">{room.room_key}</div>
+                    <div
+                      key={room.room_key}
+                      className="rounded-md border border-zinc-700/50 bg-zinc-800/30 p-2"
+                    >
+                      <div className="truncate text-zinc-300 font-mono">
+                        {room.room_key}
+                      </div>
                       <div className="mt-1 flex gap-3 text-zinc-500">
                         <span>{room.peer_count} peers</span>
                         <span>v{room.version}</span>
-                        <span>{(room.document_size_bytes / 1024).toFixed(1)}KB</span>
+                        <span>
+                          {(room.document_size_bytes / 1024).toFixed(1)}KB
+                        </span>
                       </div>
                     </div>
                   ))}

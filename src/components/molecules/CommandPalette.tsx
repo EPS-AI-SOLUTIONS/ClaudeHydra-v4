@@ -89,7 +89,9 @@ export function CommandPalette() {
       },
       {
         id: 'theme',
-        label: isLight ? t('command.darkMode', 'Switch to Dark Mode') : t('command.lightMode', 'Switch to Light Mode'),
+        label: isLight
+          ? t('command.darkMode', 'Switch to Dark Mode')
+          : t('command.lightMode', 'Switch to Light Mode'),
         icon: isLight ? <Moon size={16} /> : <Sun size={16} />,
         keywords: 'theme dark light mode toggle',
         handler: () => {
@@ -98,13 +100,22 @@ export function CommandPalette() {
         },
       },
     ],
-    [t, setCurrentView, toggleSidebar, isLight, toggleTheme, createSessionWithSync],
+    [
+      t,
+      setCurrentView,
+      toggleSidebar,
+      isLight,
+      toggleTheme,
+      createSessionWithSync,
+    ],
   );
 
   const filtered = useMemo(() => {
     if (!query.trim()) return actions;
     const q = query.toLowerCase();
-    return actions.filter((a) => a.label.toLowerCase().includes(q) || a.keywords.includes(q));
+    return actions.filter(
+      (a) => a.label.toLowerCase().includes(q) || a.keywords.includes(q),
+    );
   }, [query, actions]);
 
   useEffect(() => {
@@ -150,6 +161,7 @@ export function CommandPalette() {
 
   return createPortal(
     <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop overlay */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]"
         onClick={() => setOpen(false)}
@@ -166,13 +178,21 @@ export function CommandPalette() {
         onKeyDown={handleKeyDown}
         className={cn(
           'fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-md z-[9999] rounded-xl border overflow-hidden shadow-2xl',
-          isLight ? 'bg-white/95 border-slate-200' : 'bg-[#0a0e13]/95 border-white/10',
+          isLight
+            ? 'bg-white/95 border-slate-200'
+            : 'bg-[#0a0e13]/95 border-white/10',
         )}
       >
         <div
-          className={cn('flex items-center gap-3 px-4 py-3 border-b', isLight ? 'border-slate-200' : 'border-white/10')}
+          className={cn(
+            'flex items-center gap-3 px-4 py-3 border-b',
+            isLight ? 'border-slate-200' : 'border-white/10',
+          )}
         >
-          <Search size={16} className={isLight ? 'text-slate-400' : 'text-white/40'} />
+          <Search
+            size={16}
+            className={isLight ? 'text-slate-400' : 'text-white/40'}
+          />
           <input
             ref={inputRef}
             type="text"
@@ -181,13 +201,17 @@ export function CommandPalette() {
             placeholder={t('command.placeholder', 'Type a command...')}
             className={cn(
               'flex-1 bg-transparent outline-none text-sm font-mono',
-              isLight ? 'text-slate-900 placeholder:text-slate-400' : 'text-white placeholder:text-white/40',
+              isLight
+                ? 'text-slate-900 placeholder:text-slate-400'
+                : 'text-white placeholder:text-white/40',
             )}
           />
           <kbd
             className={cn(
               'text-[10px] px-1.5 py-0.5 rounded border font-mono',
-              isLight ? 'border-slate-300 text-slate-400' : 'border-white/20 text-white/30',
+              isLight
+                ? 'border-slate-300 text-slate-400'
+                : 'border-white/20 text-white/30',
             )}
           >
             ESC
@@ -196,7 +220,12 @@ export function CommandPalette() {
 
         <div className="max-h-64 overflow-y-auto py-1" role="listbox">
           {filtered.length === 0 && (
-            <p className={cn('text-center text-sm py-4', isLight ? 'text-slate-400' : 'text-white/40')}>
+            <p
+              className={cn(
+                'text-center text-sm py-4',
+                isLight ? 'text-slate-400' : 'text-white/40',
+              )}
+            >
               {t('command.noResults', 'No results')}
             </p>
           )}
@@ -228,7 +257,9 @@ export function CommandPalette() {
         <div
           className={cn(
             'flex items-center justify-between px-4 py-2 border-t text-[10px]',
-            isLight ? 'border-slate-200 text-slate-400' : 'border-white/10 text-white/30',
+            isLight
+              ? 'border-slate-200 text-slate-400'
+              : 'border-white/10 text-white/30',
           )}
         >
           <span>Navigate with arrow keys</span>

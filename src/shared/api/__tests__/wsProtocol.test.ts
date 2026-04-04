@@ -20,7 +20,12 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
     });
 
     it('should accept files_loaded array', () => {
-      const msg = { type: 'start', id: 'msg-1', model: 'claude-sonnet-4-6', files_loaded: ['a.ts'] };
+      const msg = {
+        type: 'start',
+        id: 'msg-1',
+        model: 'claude-sonnet-4-6',
+        files_loaded: ['a.ts'],
+      };
       const result = wsServerMessageSchema.parse(msg);
       if (result.type === 'start') {
         expect(result.files_loaded).toEqual(['a.ts']);
@@ -30,19 +35,30 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
 
   describe('token messages', () => {
     it('should parse a token message', () => {
-      const result = wsServerMessageSchema.parse({ type: 'token', content: 'Hello' });
+      const result = wsServerMessageSchema.parse({
+        type: 'token',
+        content: 'Hello',
+      });
       expect(result.type).toBe('token');
     });
 
     it('should parse empty content token', () => {
-      const result = wsServerMessageSchema.safeParse({ type: 'token', content: '' });
+      const result = wsServerMessageSchema.safeParse({
+        type: 'token',
+        content: '',
+      });
       expect(result.success).toBe(true);
     });
   });
 
   describe('tool lifecycle messages', () => {
     it('should parse tool_call', () => {
-      const msg = { type: 'tool_call', name: 'read_file', args: { path: '/src/app.ts' }, iteration: 1 };
+      const msg = {
+        type: 'tool_call',
+        name: 'read_file',
+        args: { path: '/src/app.ts' },
+        iteration: 1,
+      };
       const result = wsServerMessageSchema.parse(msg);
       if (result.type === 'tool_call') {
         expect(result.name).toBe('read_file');
@@ -52,7 +68,13 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
     });
 
     it('should parse tool_result success', () => {
-      const msg = { type: 'tool_result', name: 'read_file', success: true, summary: 'Read 50 lines', iteration: 1 };
+      const msg = {
+        type: 'tool_result',
+        name: 'read_file',
+        success: true,
+        summary: 'Read 50 lines',
+        iteration: 1,
+      };
       const result = wsServerMessageSchema.parse(msg);
       if (result.type === 'tool_result') {
         expect(result.success).toBe(true);
@@ -75,7 +97,12 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
     });
 
     it('should parse tool_progress', () => {
-      const msg = { type: 'tool_progress', iteration: 3, tools_completed: 2, tools_total: 5 };
+      const msg = {
+        type: 'tool_progress',
+        iteration: 3,
+        tools_completed: 2,
+        tools_total: 5,
+      };
       const result = wsServerMessageSchema.parse(msg);
       if (result.type === 'tool_progress') {
         expect(result.tools_completed).toBe(2);
@@ -86,14 +113,20 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
 
   describe('control messages', () => {
     it('should parse complete message', () => {
-      const result = wsServerMessageSchema.parse({ type: 'complete', duration_ms: 2500 });
+      const result = wsServerMessageSchema.parse({
+        type: 'complete',
+        duration_ms: 2500,
+      });
       if (result.type === 'complete') {
         expect(result.duration_ms).toBe(2500);
       }
     });
 
     it('should parse error message', () => {
-      const result = wsServerMessageSchema.parse({ type: 'error', message: 'Rate limit exceeded' });
+      const result = wsServerMessageSchema.parse({
+        type: 'error',
+        message: 'Rate limit exceeded',
+      });
       if (result.type === 'error') {
         expect(result.message).toBe('Rate limit exceeded');
         expect(result.code).toBeUndefined();
@@ -101,7 +134,11 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
     });
 
     it('should parse error message with code', () => {
-      const result = wsServerMessageSchema.parse({ type: 'error', message: 'Rate limit', code: 'rate_limited' });
+      const result = wsServerMessageSchema.parse({
+        type: 'error',
+        message: 'Rate limit',
+        code: 'rate_limited',
+      });
       if (result.type === 'error') {
         expect(result.code).toBe('rate_limited');
       }
@@ -120,7 +157,11 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
 
   describe('iteration messages', () => {
     it('should parse iteration with number and max', () => {
-      const result = wsServerMessageSchema.parse({ type: 'iteration', number: 3, max: 10 });
+      const result = wsServerMessageSchema.parse({
+        type: 'iteration',
+        number: 3,
+        max: 10,
+      });
       if (result.type === 'iteration') {
         expect(result.number).toBe(3);
         expect(result.max).toBe(10);
@@ -146,14 +187,20 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
 
   describe('view_hint messages', () => {
     it('should parse view_hint with views array', () => {
-      const result = wsServerMessageSchema.parse({ type: 'view_hint', views: ['settings', 'agents'] });
+      const result = wsServerMessageSchema.parse({
+        type: 'view_hint',
+        views: ['settings', 'agents'],
+      });
       if (result.type === 'view_hint') {
         expect(result.views).toEqual(['settings', 'agents']);
       }
     });
 
     it('should parse view_hint with empty views', () => {
-      const result = wsServerMessageSchema.parse({ type: 'view_hint', views: [] });
+      const result = wsServerMessageSchema.parse({
+        type: 'view_hint',
+        views: [],
+      });
       if (result.type === 'view_hint') {
         expect(result.views).toEqual([]);
       }
@@ -162,19 +209,31 @@ describe('wsServerMessageSchema — WebSocket protocol validation', () => {
 
   describe('rejection of invalid messages', () => {
     it('should reject unknown type', () => {
-      expect(wsServerMessageSchema.safeParse({ type: 'unknown' }).success).toBe(false);
+      expect(wsServerMessageSchema.safeParse({ type: 'unknown' }).success).toBe(
+        false,
+      );
     });
 
     it('should reject missing type', () => {
-      expect(wsServerMessageSchema.safeParse({ content: 'hello' }).success).toBe(false);
+      expect(
+        wsServerMessageSchema.safeParse({ content: 'hello' }).success,
+      ).toBe(false);
     });
 
     it('should reject start without id', () => {
-      expect(wsServerMessageSchema.safeParse({ type: 'start', model: 'm' }).success).toBe(false);
+      expect(
+        wsServerMessageSchema.safeParse({ type: 'start', model: 'm' }).success,
+      ).toBe(false);
     });
 
     it('should reject tool_call without iteration', () => {
-      expect(wsServerMessageSchema.safeParse({ type: 'tool_call', name: 'x', args: {} }).success).toBe(false);
+      expect(
+        wsServerMessageSchema.safeParse({
+          type: 'tool_call',
+          name: 'x',
+          args: {},
+        }).success,
+      ).toBe(false);
     });
   });
 });

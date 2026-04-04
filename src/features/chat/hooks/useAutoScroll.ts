@@ -31,7 +31,8 @@ export function useAutoScroll(messageCount: number): UseAutoScrollResult {
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < SCROLL_THRESHOLD;
+    const atBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < SCROLL_THRESHOLD;
     setIsAtBottom(atBottom);
     if (atBottom) {
       setShowNewMessages(false);

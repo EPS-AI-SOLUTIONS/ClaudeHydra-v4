@@ -7,8 +7,8 @@ use claudehydra_backend::state::AppState;
 /// Helper: build a fresh app router with a clean in-memory AppState.
 /// Uses `create_test_router` — no GovernorLayer (rate limiter needs peer IP
 /// which `oneshot()` doesn't provide) and `connect_lazy` (no real DB).
-fn app() -> axum::Router {
-    let state = AppState::new_test();
+async fn app() -> axum::Router {
+    let state = AppState::new_test().await;
     claudehydra_backend::create_test_router(state)
 }
 
@@ -18,13 +18,13 @@ fn app() -> axum::Router {
 
 #[tokio::test]
 async fn health_returns_200() {
-    let response = app().oneshot(get("/api/health")).await.unwrap();
+    let response = app().await.oneshot(get("/api/health")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn health_has_correct_fields() {
-    let response = app().oneshot(get("/api/health")).await.unwrap();
+    let response = app().await.oneshot(get("/api/health")).await.unwrap();
     let json = body_json(response).await;
 
     // Shared health handler (HasHealthState) uses "ok"/"starting" status.
@@ -48,7 +48,7 @@ async fn health_has_correct_fields() {
 
 #[tokio::test]
 async fn auth_mode_returns_200() {
-    let response = app().oneshot(get("/api/auth/mode")).await.unwrap();
+    let response = app().await.oneshot(get("/api/auth/mode")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -64,7 +64,7 @@ async fn auth_mode_returns_200() {
 
 #[tokio::test]
 async fn readiness_returns_503_before_ready() {
-    let response = app().oneshot(get("/api/health/ready")).await.unwrap();
+    let response = app().await.oneshot(get("/api/health/ready")).await.unwrap();
     assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
 }
 
@@ -74,13 +74,13 @@ async fn readiness_returns_503_before_ready() {
 
 #[tokio::test]
 async fn agents_returns_200() {
-    let response = app().oneshot(get("/api/agents")).await.unwrap();
+    let response = app().await.oneshot(get("/api/agents")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn agents_returns_12_agents() {
-    let response = app().oneshot(get("/api/agents")).await.unwrap();
+    let response = app().await.oneshot(get("/api/agents")).await.unwrap();
     let json = body_json(response).await;
     let agents = json.as_array().unwrap();
     assert_eq!(agents.len(), 12);
@@ -88,7 +88,7 @@ async fn agents_returns_12_agents() {
 
 #[tokio::test]
 async fn agents_have_required_fields() {
-    let response = app().oneshot(get("/api/agents")).await.unwrap();
+    let response = app().await.oneshot(get("/api/agents")).await.unwrap();
     let json = body_json(response).await;
     let agents = json.as_array().unwrap();
 
@@ -104,7 +104,7 @@ async fn agents_have_required_fields() {
 
 #[tokio::test]
 async fn agents_have_correct_model_per_tier() {
-    let response = app().oneshot(get("/api/agents")).await.unwrap();
+    let response = app().await.oneshot(get("/api/agents")).await.unwrap();
     let json = body_json(response).await;
     let agents = json.as_array().unwrap();
 
@@ -132,6 +132,7 @@ async fn set_api_key_returns_200() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/settings/api-key", body))
         .await
         .unwrap();
@@ -148,6 +149,6 @@ async fn set_api_key_returns_200() {
 
 #[tokio::test]
 async fn unknown_route_returns_404() {
-    let response = app().oneshot(get("/api/nonexistent")).await.unwrap();
+    let response = app().await.oneshot(get("/api/nonexistent")).await.unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }

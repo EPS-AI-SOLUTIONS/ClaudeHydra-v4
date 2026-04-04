@@ -25,8 +25,20 @@ export interface ClaudeModel {
 // ---------------------------------------------------------------------------
 
 export const FALLBACK_CLAUDE_MODELS: ClaudeModel[] = [
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', tier: 'Coordinator', provider: 'anthropic', available: true },
+  {
+    id: 'claude-opus-4-6',
+    name: 'Claude Opus 4.6',
+    tier: 'Commander',
+    provider: 'anthropic',
+    available: true,
+  },
+  {
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    tier: 'Coordinator',
+    provider: 'anthropic',
+    available: true,
+  },
   {
     id: 'claude-haiku-4-5-20251001',
     name: 'Claude Haiku 4.5',

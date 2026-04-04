@@ -27,9 +27,14 @@ export const MaxIterationsSection = memo(() => {
       const clamped = Math.max(MIN, Math.min(MAX, value));
       setSaving(true);
       try {
-        await apiPost<Settings>('/api/settings', { ...settings, max_iterations: clamped });
+        await apiPost<Settings>('/api/settings', {
+          ...settings,
+          max_iterations: clamped,
+        });
         await refetch();
-        toast.success(t('settings.maxIterations.saved', 'Max iterations updated'));
+        toast.success(
+          t('settings.maxIterations.saved', 'Max iterations updated'),
+        );
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to save');
       } finally {
@@ -43,7 +48,12 @@ export const MaxIterationsSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Repeat size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.maxIterations.title', 'Agent Iterations')}
         </h3>
       </div>
@@ -87,10 +97,22 @@ export const MaxIterationsSection = memo(() => {
           <Plus size={14} />
         </Button>
 
-        <span className={cn('text-lg font-mono font-bold min-w-[3ch] text-center', theme.text)}>{current}</span>
+        <span
+          className={cn(
+            'text-lg font-mono font-bold min-w-[3ch] text-center',
+            theme.text,
+          )}
+        >
+          {current}
+        </span>
       </div>
 
-      <div className={cn('flex justify-between text-[10px] font-mono px-1', theme.textMuted)}>
+      <div
+        className={cn(
+          'flex justify-between text-[10px] font-mono px-1',
+          theme.textMuted,
+        )}
+      >
         <span>{MIN} (fast)</span>
         <span>{MAX} (autonomous)</span>
       </div>

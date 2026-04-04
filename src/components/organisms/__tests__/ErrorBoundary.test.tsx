@@ -43,10 +43,14 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
     expect(
-      screen.getByText('An unexpected error occurred. You can try again or refresh the page.'),
+      screen.getByText(
+        'An unexpected error occurred. You can try again or refresh the page.',
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText('Test explosion')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /try again/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders custom fallback when the fallback prop is provided', () => {

@@ -82,14 +82,29 @@ function BrowserProxyBadge({ status }: { status: BrowserProxyStatus }) {
     : [`Status: ${state}`, ...(status.error ? [`Error: ${status.error}`] : [])];
 
   return (
-    <div className="inline-flex items-center gap-1.5 cursor-default" title={tooltipLines.join('\n')}>
+    <div
+      className="inline-flex items-center gap-1.5 cursor-default"
+      title={tooltipLines.join('\n')}
+    >
       <span className="relative flex items-center justify-center">
-        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', proxyDotColor[state])} />
+        <span
+          className={cn(
+            'h-1.5 w-1.5 rounded-full shrink-0',
+            proxyDotColor[state],
+          )}
+        />
         {shouldPulse && (
-          <span className={cn('absolute h-1.5 w-1.5 rounded-full animate-ping opacity-75', proxyDotColor[state])} />
+          <span
+            className={cn(
+              'absolute h-1.5 w-1.5 rounded-full animate-ping opacity-75',
+              proxyDotColor[state],
+            )}
+          />
         )}
       </span>
-      <span className="text-[10px] font-mono leading-none text-inherit opacity-70">{t(proxyLabelKey[state])}</span>
+      <span className="text-[10px] font-mono leading-none text-inherit opacity-70">
+        {t(proxyLabelKey[state])}
+      </span>
     </div>
   );
 }
@@ -107,7 +122,8 @@ function StatusFooterComponent({
   statsLoaded = true,
 }: StatusFooterProps) {
   const { t } = useTranslation();
-  const resolvedTagline = tagline ?? t('footer.statusTagline', 'AI Swarm Control Center');
+  const resolvedTagline =
+    tagline ?? t('footer.statusTagline', 'AI Swarm Control Center');
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === 'light';
   const { data: proxyStatus } = useBrowserProxyStatus(true);
@@ -135,7 +151,10 @@ function StatusFooterComponent({
   }, []);
 
   // Connection status mapping
-  const healthMap: Record<ConnectionHealth, { status: 'online' | 'pending' | 'offline'; label: string }> = {
+  const healthMap: Record<
+    ConnectionHealth,
+    { status: 'online' | 'pending' | 'offline'; label: string }
+  > = {
     connected: { status: 'online', label: 'Online' },
     degraded: { status: 'pending', label: 'Degraded' },
     disconnected: { status: 'offline', label: 'Offline' },
@@ -147,20 +166,42 @@ function StatusFooterComponent({
   const modelLower = selectedModel.toLowerCase();
   const modelTier = (() => {
     if (modelLower.includes('opus') || modelLower.includes('pro')) {
-      return { label: 'PRO', icon: Cloud, cls: isLight ? 'text-blue-600' : 'text-blue-400' };
+      return {
+        label: 'PRO',
+        icon: Cloud,
+        cls: isLight ? 'text-blue-600' : 'text-blue-400',
+      };
     }
     if (modelLower.includes('sonnet') || modelLower.includes('flash')) {
-      return { label: 'FLASH', icon: Zap, cls: isLight ? 'text-amber-600' : 'text-amber-400' };
+      return {
+        label: 'FLASH',
+        icon: Zap,
+        cls: isLight ? 'text-amber-600' : 'text-amber-400',
+      };
     }
-    if (modelLower.includes('haiku') || modelLower.includes('qwen') || modelLower.includes('llama')) {
-      return { label: 'LOCAL', icon: Cpu, cls: isLight ? 'text-emerald-600' : 'text-emerald-400' };
+    if (
+      modelLower.includes('haiku') ||
+      modelLower.includes('qwen') ||
+      modelLower.includes('llama')
+    ) {
+      return {
+        label: 'LOCAL',
+        icon: Cpu,
+        cls: isLight ? 'text-emerald-600' : 'text-emerald-400',
+      };
     }
     return null;
   })();
 
   // CPU color based on usage
   const cpuColor =
-    cpuUsage > 80 ? 'text-red-400' : cpuUsage > 50 ? 'text-yellow-400' : isLight ? 'text-sky-600' : 'text-sky-400';
+    cpuUsage > 80
+      ? 'text-red-400'
+      : cpuUsage > 50
+        ? 'text-yellow-400'
+        : isLight
+          ? 'text-sky-600'
+          : 'text-sky-400';
 
   // RAM color based on usage
   const ramColor =
@@ -179,29 +220,43 @@ function StatusFooterComponent({
       data-testid="status-footer"
       className={cn(
         'px-6 py-2.5 border-t text-sm flex items-center justify-between shrink-0 transition-all duration-500',
-        isLight ? 'border-slate-200/30 bg-white/40 text-slate-600' : 'border-white/10 bg-black/20 text-slate-300',
+        isLight
+          ? 'border-slate-200/30 bg-white/40 text-slate-600'
+          : 'border-white/10 bg-black/20 text-slate-300',
       )}
     >
       {/* Left: Version + Connection + CPU + RAM + Proxy */}
       <div className="flex items-center gap-4">
         {/* Version */}
-        <span className={isLight ? 'text-emerald-600' : 'text-white'}>v4.0.0</span>
+        <span className={isLight ? 'text-emerald-600' : 'text-white'}>
+          v4.0.0
+        </span>
 
         <span className={dividerCls}>|</span>
 
         {/* Connection Status */}
-        <StatusIndicator status={health.status} size="sm" label={health.label} />
+        <StatusIndicator
+          status={health.status}
+          size="sm"
+          label={health.label}
+        />
 
         {/* CPU & RAM stats */}
         {statsLoaded && (
           <>
             <span className={dividerCls}>|</span>
 
-            <span className={cn('font-semibold', cpuColor)} title={`CPU: ${cpuUsage}%`}>
+            <span
+              className={cn('font-semibold', cpuColor)}
+              title={`CPU: ${cpuUsage}%`}
+            >
               CPU {cpuUsage}%
             </span>
 
-            <span className={cn('font-semibold', ramColor)} title={`RAM: ${ramUsage}%`}>
+            <span
+              className={cn('font-semibold', ramColor)}
+              title={`RAM: ${ramUsage}%`}
+            >
               RAM {ramUsage}%
             </span>
           </>
@@ -227,12 +282,16 @@ function StatusFooterComponent({
         )}
 
         {/* Model name */}
-        <span className={isLight ? 'text-slate-700' : 'text-white/50'}>{selectedModel}</span>
+        <span className={isLight ? 'text-slate-700' : 'text-white/50'}>
+          {selectedModel}
+        </span>
 
         <span className={dividerCls}>|</span>
 
         {/* Tagline */}
-        <span title={t('footer.statusTagline', 'AI Swarm Control Center')}>{resolvedTagline}</span>
+        <span title={t('footer.statusTagline', 'AI Swarm Control Center')}>
+          {resolvedTagline}
+        </span>
 
         <span className={dividerCls}>|</span>
 
@@ -249,7 +308,12 @@ function StatusFooterComponent({
         <span className={dividerCls}>|</span>
 
         {/* Live time */}
-        <span className={cn('font-mono font-semibold tabular-nums', isLight ? 'text-emerald-600' : 'text-white')}>
+        <span
+          className={cn(
+            'font-mono font-semibold tabular-nums',
+            isLight ? 'text-emerald-600' : 'text-white',
+          )}
+        >
           {currentTime}
         </span>
       </div>

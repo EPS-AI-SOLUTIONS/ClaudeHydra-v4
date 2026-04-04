@@ -4,7 +4,9 @@ import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 );
@@ -59,8 +61,18 @@ vi.mock('@/stores/viewStore', () => ({
       setCurrentView: mockSetView,
       selectSession: mockSelectSession,
       sessions: [
-        { id: 'session-1', title: 'Test Session 1', created_at: '2026-01-01T00:00:00Z', message_count: 3 },
-        { id: 'session-2', title: 'Test Session 2', created_at: '2026-01-02T00:00:00Z', message_count: 5 },
+        {
+          id: 'session-1',
+          title: 'Test Session 1',
+          created_at: '2026-01-01T00:00:00Z',
+          message_count: 3,
+        },
+        {
+          id: 'session-2',
+          title: 'Test Session 2',
+          created_at: '2026-01-02T00:00:00Z',
+          message_count: 5,
+        },
       ],
       currentSessionId: 'session-1',
       sidebarCollapsed: false,
@@ -90,23 +102,40 @@ vi.mock('@/features/chat/components/PartnerChatModal', () => ({
 }));
 
 // Mock hydra-app resolved paths
-vi.mock('../../../../../../packages/hydra-app/src/shared/hooks/useViewTheme', () => ({
-  useViewTheme: () => ({
-    accent: '#ffffff',
-    bg: 'rgba(10,10,30,0.95)',
-    text: '#ffffff',
-    border: 'rgba(255,255,255,0.3)',
-    isLight: false,
+vi.mock(
+  '../../../../../../packages/hydra-app/src/shared/hooks/useViewTheme',
+  () => ({
+    useViewTheme: () => ({
+      accent: '#ffffff',
+      bg: 'rgba(10,10,30,0.95)',
+      text: '#ffffff',
+      border: 'rgba(255,255,255,0.3)',
+      isLight: false,
+    }),
   }),
-}));
+);
 
-vi.mock('../../../../../../packages/hydra-app/src/contexts/HydraAppConfig', () => ({
-  useHydraAppConfig: () => ({ appName: 'ClaudeHydra', logoSrc: '', appVersion: '1.0.0' }),
-}));
+vi.mock(
+  '../../../../../../packages/hydra-app/src/contexts/HydraAppConfig',
+  () => ({
+    useHydraAppConfig: () => ({
+      appName: 'ClaudeHydra',
+      logoSrc: '',
+      appVersion: '1.0.0',
+    }),
+  }),
+);
 
-vi.mock('../../../../../../packages/hydra-app/src/contexts/ThemeContext', () => ({
-  useTheme: () => ({ theme: 'dark', setTheme: () => {}, resolvedTheme: 'dark' }),
-}));
+vi.mock(
+  '../../../../../../packages/hydra-app/src/contexts/ThemeContext',
+  () => ({
+    useTheme: () => ({
+      theme: 'dark',
+      setTheme: () => {},
+      resolvedTheme: 'dark',
+    }),
+  }),
+);
 
 describe('Sidebar', () => {
   beforeEach(() => {

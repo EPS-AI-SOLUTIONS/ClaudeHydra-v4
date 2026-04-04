@@ -102,7 +102,8 @@ const _CodeBlock = memo(function CodeBlock({
   const preRef = useRef<HTMLPreElement>(null);
 
   const lang = language?.toLowerCase() ?? '';
-  const displayName = LANGUAGE_NAMES[lang] ?? (lang ? lang.toUpperCase() : 'Code');
+  const displayName =
+    LANGUAGE_NAMES[lang] ?? (lang ? lang.toUpperCase() : 'Code');
 
   const setActiveArtifact = useViewStore((s) => s.setActiveArtifact);
 
@@ -132,12 +133,22 @@ const _CodeBlock = memo(function CodeBlock({
       const artifactId = code.substring(0, 100).replace(/\s/g, '');
       if (!autoOpenedArtifacts.has(artifactId)) {
         autoOpenedArtifacts.add(artifactId);
-        setActiveArtifact({ id: artifactId, code, language: lang, title: 'Generated Artifact' });
+        setActiveArtifact({
+          id: artifactId,
+          code,
+          language: lang,
+          title: 'Generated Artifact',
+        });
       } else {
         // Update it live if it's currently active (streaming)
         const currentActive = useViewStore.getState().activeArtifact;
         if (currentActive?.id === artifactId) {
-          setActiveArtifact({ id: artifactId, code, language: lang, title: 'Generated Artifact' });
+          setActiveArtifact({
+            id: artifactId,
+            code,
+            language: lang,
+            title: 'Generated Artifact',
+          });
         }
       }
     }
@@ -173,7 +184,12 @@ const _CodeBlock = memo(function CodeBlock({
             <button
               type="button"
               onClick={() =>
-                setActiveArtifact({ id: code.substring(0, 50), code, language: lang, title: 'Code Artifact' })
+                setActiveArtifact({
+                  id: code.substring(0, 50),
+                  code,
+                  language: lang,
+                  title: 'Code Artifact',
+                })
               }
               className={cn(
                 'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono transition-colors',
@@ -244,6 +260,7 @@ const _CodeBlock = memo(function CodeBlock({
               aria-hidden="true"
             >
               {lines.map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: line numbers are static
                 <div key={i} className="leading-relaxed">
                   {i + 1}
                 </div>
@@ -252,7 +269,9 @@ const _CodeBlock = memo(function CodeBlock({
           )}
 
           {/* Code body */}
-          <code className={cn(lang && `language-${lang}`, 'block flex-1')}>{code}</code>
+          <code className={cn(lang && `language-${lang}`, 'block flex-1')}>
+            {code}
+          </code>
         </pre>
       </div>
     </div>

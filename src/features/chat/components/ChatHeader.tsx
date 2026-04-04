@@ -13,7 +13,10 @@ import { motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { type ModelOption, ModelSelector } from '@/components/molecules/ModelSelector';
+import {
+  type ModelOption,
+  ModelSelector,
+} from '@/components/molecules/ModelSelector';
 import type { ConnectionStatus } from '@/shared/hooks/useWebSocketChat';
 import { copyToClipboard } from '@/shared/utils/clipboard';
 import { formatDateTime, formatTime } from '@/shared/utils/locale';
@@ -82,12 +85,22 @@ export const ChatHeader = memo(function ChatHeader({
     if (messages.length === 0) return;
 
     const title = activeSessionTitle ?? 'Untitled';
-    const date = activeSessionCreatedAt ? formatDateTime(activeSessionCreatedAt) : '';
+    const date = activeSessionCreatedAt
+      ? formatDateTime(activeSessionCreatedAt)
+      : '';
 
-    const lines = [`=== ${title} ===`, date ? `Date: ${date}` : '', `Messages: ${messages.length}`, ''];
+    const lines = [
+      `=== ${title} ===`,
+      date ? `Date: ${date}` : '',
+      `Messages: ${messages.length}`,
+      '',
+    ];
     for (const msg of messages) {
       const role = msg.role === 'user' ? 'User' : 'Assistant';
-      const time = typeof msg.timestamp === 'number' ? formatTime(new Date(msg.timestamp)) : '';
+      const time =
+        typeof msg.timestamp === 'number'
+          ? formatTime(new Date(msg.timestamp))
+          : '';
       const model = msg.model ? ` (${msg.model})` : '';
       lines.push(`[${role}] ${time}${model}:`);
       lines.push(msg.content);
@@ -120,8 +133,13 @@ export const ChatHeader = memo(function ChatHeader({
             {t('chat.title', 'Claude Chat')}
           </h2>
           <div className="flex items-center gap-2">
-            <p data-testid="chat-status-text" className="text-xs text-[var(--matrix-text-secondary)]">
-              {claudeConnected ? `${modelCount} models available` : 'Offline — configure API key in Settings'}
+            <p
+              data-testid="chat-status-text"
+              className="text-xs text-[var(--matrix-text-secondary)]"
+            >
+              {claudeConnected
+                ? `${modelCount} models available`
+                : 'Offline — configure API key in Settings'}
             </p>
             {wsConnectionStatus && onWsReconnect && (
               <ConnectionStatusBadge
@@ -165,7 +183,13 @@ export const ChatHeader = memo(function ChatHeader({
           disabled={messages.length === 0}
           title={t('chat.copySession', 'Copy entire session')}
           aria-label={t('chat.copySession', 'Copy entire session')}
-          leftIcon={sessionCopied ? <Check size={14} className="text-emerald-400" /> : <ClipboardList size={14} />}
+          leftIcon={
+            sessionCopied ? (
+              <Check size={14} className="text-emerald-400" />
+            ) : (
+              <ClipboardList size={14} />
+            )
+          }
         >
           {sessionCopied ? 'Copied' : 'Copy'}
         </Button>

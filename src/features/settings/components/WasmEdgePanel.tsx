@@ -5,7 +5,11 @@
  * token counter demo, text similarity, text analysis, and CPU offload metrics.
  */
 
-import type { SimilarityResult, TextStats, WordFreq } from '@jaskier/wasm-worker';
+import type {
+  SimilarityResult,
+  TextStats,
+  WordFreq,
+} from '@jaskier/wasm-worker';
 import { clearWasmCache, getWasmCacheInfo } from '@jaskier/wasm-worker';
 import { useState } from 'react';
 import { useWasmWorker } from '@/shared/hooks/useWasmWorker';
@@ -44,14 +48,24 @@ export function WasmEdgePanel() {
   const [isRunning, setIsRunning] = useState(false);
 
   // ── Similarity tab state ──
-  const [simTextA, setSimTextA] = useState('how to deploy a Rust application to Fly.io');
-  const [simTextB, setSimTextB] = useState('deploying Rust apps on Fly.io platform');
-  const [simResult, setSimResult] = useState<{ cosine: number; levenshtein: number; jaccard: number } | null>(null);
+  const [simTextA, setSimTextA] = useState(
+    'how to deploy a Rust application to Fly.io',
+  );
+  const [simTextB, setSimTextB] = useState(
+    'deploying Rust apps on Fly.io platform',
+  );
+  const [simResult, setSimResult] = useState<{
+    cosine: number;
+    levenshtein: number;
+    jaccard: number;
+  } | null>(null);
   const [batchQuery, setBatchQuery] = useState('deploy rust app');
   const [batchCandidates, setBatchCandidates] = useState(
     'deploy rust application\nconfigure database settings\nrust deployment guide\ncooking recipes\ndeploy node.js app',
   );
-  const [batchResults, setBatchResults] = useState<SimilarityResult[] | null>(null);
+  const [batchResults, setBatchResults] = useState<SimilarityResult[] | null>(
+    null,
+  );
   const [simBenchResult, setSimBenchResult] = useState<string | null>(null);
 
   // ── Analysis tab state ──
@@ -71,7 +85,9 @@ export function WasmEdgePanel() {
       const result = await maskPii(testInput);
       setMaskResult(JSON.stringify(result, null, 2));
     } catch (err) {
-      setMaskResult(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setMaskResult(
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setIsRunning(false);
     }
@@ -87,7 +103,9 @@ export function WasmEdgePanel() {
     if (!isReady) return;
     setIsRunning(true);
     try {
-      const largeInput = testInput.repeat(Math.ceil(50_000 / testInput.length)).slice(0, 50_000);
+      const largeInput = testInput
+        .repeat(Math.ceil(50_000 / testInput.length))
+        .slice(0, 50_000);
       const ms = await benchmark(largeInput, 100);
       const perOp = (ms / 100).toFixed(2);
       const charsPerSec = Math.round((50_000 * 100) / (ms / 1000));
@@ -95,7 +113,9 @@ export function WasmEdgePanel() {
         `100 iterations on 50k chars: ${ms.toFixed(0)}ms total, ${perOp}ms/op, ${charsPerSec.toLocaleString()} chars/sec`,
       );
     } catch (err) {
-      setBenchResult(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setBenchResult(
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setIsRunning(false);
     }
@@ -104,7 +124,9 @@ export function WasmEdgePanel() {
   const handleCacheInfo = async () => {
     const info = await getWasmCacheInfo();
     setCacheInfo(
-      info.exists ? `${info.entries} file(s), ${(info.estimatedBytes / 1024).toFixed(1)} KB` : 'No WASM cache found',
+      info.exists
+        ? `${info.entries} file(s), ${(info.estimatedBytes / 1024).toFixed(1)} KB`
+        : 'No WASM cache found',
     );
   };
 
@@ -147,9 +169,13 @@ export function WasmEdgePanel() {
     try {
       const ms = await benchmarkSimilarity(simTextA, simTextB, 1000);
       const perOp = (ms / 1000).toFixed(3);
-      setSimBenchResult(`1000 comparisons: ${ms.toFixed(0)}ms total, ${perOp}ms/op`);
+      setSimBenchResult(
+        `1000 comparisons: ${ms.toFixed(0)}ms total, ${perOp}ms/op`,
+      );
     } catch (err) {
-      setSimBenchResult(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setSimBenchResult(
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setIsRunning(false);
     }
@@ -197,7 +223,11 @@ export function WasmEdgePanel() {
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              isReady ? 'bg-emerald-400' : error ? 'bg-red-400' : 'bg-yellow-400 animate-pulse'
+              isReady
+                ? 'bg-emerald-400'
+                : error
+                  ? 'bg-red-400'
+                  : 'bg-yellow-400 animate-pulse'
             }`}
           />
           {isReady ? `v${version}` : error ? 'Error' : 'Loading...'}
@@ -205,7 +235,9 @@ export function WasmEdgePanel() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+          {error}
+        </div>
       )}
 
       {/* Tab Navigation */}
@@ -216,7 +248,9 @@ export function WasmEdgePanel() {
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id ? 'bg-neutral-700 text-neutral-100' : 'text-neutral-400 hover:text-neutral-200'
+              activeTab === tab.id
+                ? 'bg-neutral-700 text-neutral-100'
+                : 'text-neutral-400 hover:text-neutral-200'
             }`}
           >
             {tab.label}
@@ -228,7 +262,10 @@ export function WasmEdgePanel() {
       {activeTab === 'pii' && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="wasm-test-input" className="text-sm text-neutral-400">
+            <label
+              htmlFor="wasm-test-input"
+              className="text-sm text-neutral-400"
+            >
               Test Input (PII data)
             </label>
             <textarea
@@ -284,14 +321,17 @@ export function WasmEdgePanel() {
           {tokenCount !== null && (
             <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
               <span className="text-sm text-blue-300">
-                Estimated tokens: <span className="font-mono font-bold">{tokenCount}</span>
+                Estimated tokens:{' '}
+                <span className="font-mono font-bold">{tokenCount}</span>
               </span>
             </div>
           )}
 
           {benchResult && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-              <span className="text-sm text-amber-300 font-mono">{benchResult}</span>
+              <span className="text-sm text-amber-300 font-mono">
+                {benchResult}
+              </span>
             </div>
           )}
 
@@ -305,7 +345,10 @@ export function WasmEdgePanel() {
 
           {maskResult && (
             <div className="space-y-1">
-              <label htmlFor="wasm-mask-result" className="text-sm text-neutral-400">
+              <label
+                htmlFor="wasm-mask-result"
+                className="text-sm text-neutral-400"
+              >
                 PII Masking Result
               </label>
               <pre
@@ -365,21 +408,37 @@ export function WasmEdgePanel() {
 
           {simResult && (
             <div className="grid grid-cols-3 gap-3">
-              <ScoreCard label="Cosine (trigram)" value={simResult.cosine} color="teal" />
-              <ScoreCard label="Levenshtein" value={simResult.levenshtein} color="blue" />
-              <ScoreCard label="Jaccard (words)" value={simResult.jaccard} color="purple" />
+              <ScoreCard
+                label="Cosine (trigram)"
+                value={simResult.cosine}
+                color="teal"
+              />
+              <ScoreCard
+                label="Levenshtein"
+                value={simResult.levenshtein}
+                color="blue"
+              />
+              <ScoreCard
+                label="Jaccard (words)"
+                value={simResult.jaccard}
+                color="purple"
+              />
             </div>
           )}
 
           {simBenchResult && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-              <span className="text-sm text-amber-300 font-mono">{simBenchResult}</span>
+              <span className="text-sm text-amber-300 font-mono">
+                {simBenchResult}
+              </span>
             </div>
           )}
 
           {/* Batch Comparison */}
           <div className="border-t border-neutral-700 pt-4 space-y-2">
-            <h4 className="text-sm font-medium text-neutral-300">Batch Similarity (semantic cache preview)</h4>
+            <h4 className="text-sm font-medium text-neutral-300">
+              Batch Similarity (semantic cache preview)
+            </h4>
             <label htmlFor="batch-query" className="text-sm text-neutral-400">
               Query
             </label>
@@ -389,7 +448,10 @@ export function WasmEdgePanel() {
               onChange={(e) => setBatchQuery(e.target.value)}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 p-2.5 text-sm text-neutral-200 font-mono"
             />
-            <label htmlFor="batch-candidates" className="text-sm text-neutral-400">
+            <label
+              htmlFor="batch-candidates"
+              className="text-sm text-neutral-400"
+            >
               Candidates (one per line)
             </label>
             <textarea
@@ -411,7 +473,9 @@ export function WasmEdgePanel() {
             {batchResults && (
               <div className="space-y-1.5">
                 {batchResults.map((r) => {
-                  const candidateLines = batchCandidates.split('\n').filter((c) => c.trim());
+                  const candidateLines = batchCandidates
+                    .split('\n')
+                    .filter((c) => c.trim());
                   return (
                     <div
                       key={r.index}
@@ -421,9 +485,12 @@ export function WasmEdgePanel() {
                         {candidateLines[r.index]}
                       </div>
                       <div className="flex gap-2 text-xs font-mono shrink-0">
-                        <span className="text-teal-400">{(r.combined * 100).toFixed(1)}%</span>
+                        <span className="text-teal-400">
+                          {(r.combined * 100).toFixed(1)}%
+                        </span>
                         <span className="text-neutral-500">
-                          cos:{(r.cosine * 100).toFixed(0)} jac:{(r.jaccard * 100).toFixed(0)}
+                          cos:{(r.cosine * 100).toFixed(0)} jac:
+                          {(r.jaccard * 100).toFixed(0)}
                         </span>
                       </div>
                     </div>
@@ -439,7 +506,10 @@ export function WasmEdgePanel() {
       {activeTab === 'analysis' && (
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="analysis-input" className="text-sm text-neutral-400">
+            <label
+              htmlFor="analysis-input"
+              className="text-sm text-neutral-400"
+            >
               Input Text
             </label>
             <textarea
@@ -466,7 +536,10 @@ export function WasmEdgePanel() {
               <StatCard label="Sentences" value={textStats.sentences} />
               <StatCard label="Unique words" value={textStats.unique_words} />
               <StatCard label="Characters" value={textStats.chars} />
-              <StatCard label="Avg word length" value={textStats.avg_word_length.toFixed(1)} />
+              <StatCard
+                label="Avg word length"
+                value={textStats.avg_word_length.toFixed(1)}
+              />
               <StatCard
                 label="Reading time"
                 value={
@@ -481,7 +554,9 @@ export function WasmEdgePanel() {
           {textHash && (
             <div className="rounded-lg border border-neutral-600 bg-neutral-800 p-2.5">
               <span className="text-xs text-neutral-400">FNV-1a hash: </span>
-              <span className="text-xs text-neutral-200 font-mono">{textHash}</span>
+              <span className="text-xs text-neutral-200 font-mono">
+                {textHash}
+              </span>
             </div>
           )}
 
@@ -490,7 +565,10 @@ export function WasmEdgePanel() {
               <span className="text-sm text-neutral-400">Keywords</span>
               <div className="flex flex-wrap gap-1.5">
                 {keywords.slice(0, 15).map((kw) => (
-                  <span key={kw} className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-xs text-indigo-300">
+                  <span
+                    key={kw}
+                    className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-xs text-indigo-300"
+                  >
                     {kw}
                   </span>
                 ))}
@@ -500,15 +578,21 @@ export function WasmEdgePanel() {
 
           {wordFreqs && wordFreqs.length > 0 && (
             <div className="space-y-1">
-              <span className="text-sm text-neutral-400">Word Frequency (top 10)</span>
+              <span className="text-sm text-neutral-400">
+                Word Frequency (top 10)
+              </span>
               <div className="space-y-1">
                 {wordFreqs.map((wf) => (
                   <div key={wf.word} className="flex items-center gap-2">
-                    <span className="text-xs text-neutral-200 font-mono w-24 truncate">{wf.word}</span>
+                    <span className="text-xs text-neutral-200 font-mono w-24 truncate">
+                      {wf.word}
+                    </span>
                     <div className="flex-1 h-3 rounded-full bg-neutral-800 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-indigo-500/50"
-                        style={{ width: `${Math.min(wf.percentage * 3, 100)}%` }}
+                        style={{
+                          width: `${Math.min(wf.percentage * 3, 100)}%`,
+                        }}
                       />
                     </div>
                     <span className="text-xs text-neutral-500 font-mono w-16 text-right">
@@ -525,12 +609,13 @@ export function WasmEdgePanel() {
       {/* Architecture Info */}
       <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-3 space-y-1">
         <p className="text-xs text-neutral-500">
-          PII masking, token counting, text similarity, and text analysis run in a dedicated Web Worker via WebAssembly.
-          The main UI thread is never blocked — maintaining 60 FPS during processing.
+          PII masking, token counting, text similarity, and text analysis run in
+          a dedicated Web Worker via WebAssembly. The main UI thread is never
+          blocked — maintaining 60 FPS during processing.
         </p>
         <p className="text-xs text-neutral-500">
-          WASM binaries are cached via Service Worker Cache API for instant 0ms loading on revisits. SIMD acceleration
-          available via feature flag.
+          WASM binaries are cached via Service Worker Cache API for instant 0ms
+          loading on revisits. SIMD acceleration available via feature flag.
         </p>
       </div>
     </div>
@@ -539,7 +624,15 @@ export function WasmEdgePanel() {
 
 // ── Helper Components ──
 
-function ScoreCard({ label, value, color }: { label: string; value: number; color: string }) {
+function ScoreCard({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
   const pct = (value * 100).toFixed(1);
   const colorClasses: Record<string, string> = {
     teal: 'border-teal-500/30 bg-teal-500/10 text-teal-300',
@@ -548,7 +641,9 @@ function ScoreCard({ label, value, color }: { label: string; value: number; colo
   };
 
   return (
-    <div className={`rounded-lg border p-3 text-center ${colorClasses[color] || colorClasses['teal']}`}>
+    <div
+      className={`rounded-lg border p-3 text-center ${colorClasses[color] || colorClasses['teal']}`}
+    >
       <div className="text-xl font-bold font-mono">{pct}%</div>
       <div className="text-xs opacity-75 mt-0.5">{label}</div>
     </div>
@@ -558,7 +653,9 @@ function ScoreCard({ label, value, color }: { label: string; value: number; colo
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-3 text-center">
-      <div className="text-lg font-bold font-mono text-neutral-200">{value}</div>
+      <div className="text-lg font-bold font-mono text-neutral-200">
+        {value}
+      </div>
       <div className="text-xs text-neutral-500 mt-0.5">{label}</div>
     </div>
   );

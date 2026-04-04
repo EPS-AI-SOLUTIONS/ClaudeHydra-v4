@@ -5,7 +5,9 @@ interface MessageRatingProps {
   messageId: string;
 }
 
-export const MessageRating = memo(function MessageRating(_props: MessageRatingProps) {
+export const MessageRating = memo(function MessageRating(
+  _props: MessageRatingProps,
+) {
   // Stub implementation
   return null;
 });

@@ -17,8 +17,8 @@ use claudehydra_backend::state::AppState;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-fn app() -> axum::Router {
-    let state = AppState::new_test();
+async fn app() -> axum::Router {
+    let state = AppState::new_test().await;
     claudehydra_backend::create_test_router(state)
 }
 
@@ -36,7 +36,11 @@ async fn ocr_rejects_unsupported_mime_type() {
         "mime_type": "text/plain"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     let json = body_json(response).await;
@@ -54,7 +58,11 @@ async fn ocr_rejects_video_mime_type() {
         "mime_type": "video/mp4"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
 
@@ -65,7 +73,11 @@ async fn ocr_rejects_audio_mime_type() {
         "mime_type": "audio/mpeg"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
 
@@ -76,7 +88,11 @@ async fn ocr_accepts_png_mime() {
         "mime_type": "image/png"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     // Should pass MIME validation (fails later due to no API key -> 500)
     assert_ne!(response.status(), StatusCode::BAD_REQUEST);
 }
@@ -88,7 +104,11 @@ async fn ocr_accepts_jpeg_mime() {
         "mime_type": "image/jpeg"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_ne!(response.status(), StatusCode::BAD_REQUEST);
 }
 
@@ -99,7 +119,11 @@ async fn ocr_accepts_webp_mime() {
         "mime_type": "image/webp"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_ne!(response.status(), StatusCode::BAD_REQUEST);
 }
 
@@ -110,7 +134,11 @@ async fn ocr_accepts_pdf_mime() {
         "mime_type": "application/pdf"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_ne!(response.status(), StatusCode::BAD_REQUEST);
 }
 
@@ -127,7 +155,11 @@ async fn ocr_rejects_oversized_payload() {
         "mime_type": "image/png"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
 }
 
@@ -142,7 +174,11 @@ async fn ocr_without_credentials_returns_500() {
         "mime_type": "image/png"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     // No Anthropic or Google key -> 500 (OCR processing failed)
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
@@ -162,7 +198,11 @@ async fn ocr_accepts_optional_language_field() {
         "language": "pl"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     // Passes JSON parsing (gets to API call stage, fails with 500 due to no key)
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
@@ -175,7 +215,11 @@ async fn ocr_accepts_optional_preset_field() {
         "preset": "invoice"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
@@ -187,7 +231,11 @@ async fn ocr_accepts_html_output_format() {
         "output_format": "html"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
 
@@ -200,7 +248,11 @@ async fn ocr_accepts_extract_structured_flag() {
         "filename": "faktura_2026.jpg"
     });
 
-    let response = app().oneshot(post_json("/api/ocr", body)).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(post_json("/api/ocr", body))
+        .await
+        .unwrap();
     // Passes body parsing OK (500 due to no credentials)
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
@@ -217,6 +269,7 @@ async fn ocr_stream_rejects_unsupported_mime() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/ocr/stream", body))
         .await
         .unwrap();
@@ -232,6 +285,7 @@ async fn ocr_stream_rejects_oversized_payload() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/ocr/stream", body))
         .await
         .unwrap();
@@ -257,6 +311,7 @@ async fn ocr_batch_rejects_too_many_items() {
     let body = json!({ "items": items });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/ocr/batch/stream", body))
         .await
         .unwrap();
@@ -281,6 +336,7 @@ async fn ocr_batch_accepts_10_items() {
     let body = json!({ "items": items });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/ocr/batch/stream", body))
         .await
         .unwrap();
@@ -305,6 +361,7 @@ async fn ocr_batch_rejects_invalid_mime_in_item() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/ocr/batch/stream", body))
         .await
         .unwrap();
@@ -325,6 +382,7 @@ async fn ocr_batch_rejects_oversized_item() {
     });
 
     let response = app()
+        .await
         .oneshot(post_json("/api/ocr/batch/stream", body))
         .await
         .unwrap();
@@ -338,6 +396,7 @@ async fn ocr_batch_rejects_oversized_item() {
 #[tokio::test]
 async fn ocr_history_returns_error_without_db() {
     let response = app()
+        .await
         .oneshot(jaskier_core::testing::get("/api/ocr/history"))
         .await
         .unwrap();

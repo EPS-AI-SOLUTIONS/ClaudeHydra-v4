@@ -86,7 +86,8 @@ const REFETCH_INTERVAL = 60_000; // 60 seconds
 export function useTokenUsage(days: number) {
   return useQuery({
     queryKey: ['analytics-tokens', days],
-    queryFn: () => apiGet<TokenUsageResponse>(`/api/analytics/tokens?days=${days}`),
+    queryFn: () =>
+      apiGet<TokenUsageResponse>(`/api/analytics/tokens?days=${days}`),
     refetchInterval: REFETCH_INTERVAL,
     retry: 1,
     staleTime: 30_000,
@@ -96,7 +97,8 @@ export function useTokenUsage(days: number) {
 export function useLatency(days: number) {
   return useQuery({
     queryKey: ['analytics-latency', days],
-    queryFn: () => apiGet<LatencyResponse>(`/api/analytics/latency?days=${days}`),
+    queryFn: () =>
+      apiGet<LatencyResponse>(`/api/analytics/latency?days=${days}`),
     refetchInterval: REFETCH_INTERVAL,
     retry: 1,
     staleTime: 30_000,
@@ -106,7 +108,8 @@ export function useLatency(days: number) {
 export function useSuccessRate(days: number) {
   return useQuery({
     queryKey: ['analytics-success-rate', days],
-    queryFn: () => apiGet<SuccessRateResponse>(`/api/analytics/success-rate?days=${days}`),
+    queryFn: () =>
+      apiGet<SuccessRateResponse>(`/api/analytics/success-rate?days=${days}`),
     refetchInterval: REFETCH_INTERVAL,
     retry: 1,
     staleTime: 30_000,
@@ -116,7 +119,10 @@ export function useSuccessRate(days: number) {
 export function useTopTools(days: number, limit = 10) {
   return useQuery({
     queryKey: ['analytics-top-tools', days, limit],
-    queryFn: () => apiGet<TopToolsResponse>(`/api/analytics/top-tools?days=${days}&limit=${limit}`),
+    queryFn: () =>
+      apiGet<TopToolsResponse>(
+        `/api/analytics/top-tools?days=${days}&limit=${limit}`,
+      ),
     refetchInterval: REFETCH_INTERVAL,
     retry: 1,
     staleTime: 30_000,

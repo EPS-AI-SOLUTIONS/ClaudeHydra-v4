@@ -35,11 +35,16 @@ export function useSidebarLogic() {
   // ── Tag management ──────────────────────────────────────────────────────
 
   // Fetch tags for the active session
-  const { data: activeSessionTags } = useSessionTagsQuery(currentSessionId ?? null);
+  const { data: activeSessionTags } = useSessionTagsQuery(
+    currentSessionId ?? null,
+  );
 
   // Fetch all unique tags (for suggestions + filter dropdown)
   const { data: allTagsData } = useAllTagsQuery();
-  const allTagsList = useMemo(() => allTagsData?.tags?.map((t) => t.tag) ?? [], [allTagsData]);
+  const allTagsList = useMemo(
+    () => allTagsData?.tags?.map((t) => t.tag) ?? [],
+    [allTagsData],
+  );
 
   // Tag mutations
   const addTagsMutation = useAddTagsMutation();
@@ -67,7 +72,9 @@ export function useSidebarLogic() {
   const { data: searchResults } = useSearchQuery(searchQuery, filterTags);
 
   const handleTagFilterToggle = useCallback((tag: string) => {
-    setFilterTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+    setFilterTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
   }, []);
 
   const handleClearFilters = useCallback(() => {
@@ -77,16 +84,22 @@ export function useSidebarLogic() {
 
   // Sessions sorted by updatedAt descending, then filtered by search
   const sortedSessions = useMemo(() => {
-    const sorted = [...sessions].sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt));
+    const sorted = [...sessions].sort(
+      (a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt),
+    );
 
     // If we have tag filters or full-text search results, filter to matching session IDs
     if (filterTags.length > 0 || searchQuery.trim()) {
       if (searchResults?.results) {
-        const matchedIds = new Set(searchResults.results.map((r) => r.session_id));
+        const matchedIds = new Set(
+          searchResults.results.map((r) => r.session_id),
+        );
         const filtered = sorted.filter((s) => matchedIds.has(s.id));
         // Also apply title search if provided
         if (sessionSearchQuery) {
-          return filtered.filter((s) => s.title.toLowerCase().includes(sessionSearchQuery));
+          return filtered.filter((s) =>
+            s.title.toLowerCase().includes(sessionSearchQuery),
+          );
         }
         return filtered;
       }
@@ -95,7 +108,9 @@ export function useSidebarLogic() {
     }
 
     if (!sessionSearchQuery) return sorted;
-    return sorted.filter((s) => s.title.toLowerCase().includes(sessionSearchQuery));
+    return sorted.filter((s) =>
+      s.title.toLowerCase().includes(sessionSearchQuery),
+    );
   }, [sessions, sessionSearchQuery, filterTags, searchQuery, searchResults]);
 
   // Collapsible sessions toggle
@@ -121,8 +136,14 @@ export function useSidebarLogic() {
         setFocusedSessionIndex((i) => (i + 1) % sortedSessions.length);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setFocusedSessionIndex((i) => (i - 1 + sortedSessions.length) % sortedSessions.length);
-      } else if (e.key === 'Enter' && focusedSessionIndex >= 0 && sortedSessions[focusedSessionIndex]) {
+        setFocusedSessionIndex(
+          (i) => (i - 1 + sortedSessions.length) % sortedSessions.length,
+        );
+      } else if (
+        e.key === 'Enter' &&
+        focusedSessionIndex >= 0 &&
+        sortedSessions[focusedSessionIndex]
+      ) {
         e.preventDefault();
         handleSelectSession(sortedSessions[focusedSessionIndex].id);
       }

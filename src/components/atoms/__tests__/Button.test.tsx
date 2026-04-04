@@ -9,7 +9,9 @@ describe('Button', () => {
 
   it('renders children text', () => {
     render(<Button>Click me</Button>);
-    expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Click me' }),
+    ).toBeInTheDocument();
   });
 
   it('renders as a button element', () => {
@@ -122,12 +124,20 @@ describe('Button', () => {
   // -------------------------------------------------------------------------
 
   it('renders leftIcon when provided', () => {
-    render(<Button leftIcon={<span data-testid="left-icon">L</span>}>With Icon</Button>);
+    render(
+      <Button leftIcon={<span data-testid="left-icon">L</span>}>
+        With Icon
+      </Button>,
+    );
     expect(screen.getByTestId('left-icon')).toBeInTheDocument();
   });
 
   it('renders rightIcon when provided', () => {
-    render(<Button rightIcon={<span data-testid="right-icon">R</span>}>With Icon</Button>);
+    render(
+      <Button rightIcon={<span data-testid="right-icon">R</span>}>
+        With Icon
+      </Button>,
+    );
     expect(screen.getByTestId('right-icon')).toBeInTheDocument();
   });
 });

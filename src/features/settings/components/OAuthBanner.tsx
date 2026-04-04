@@ -57,8 +57,14 @@ export const OAuthBanner = memo(() => {
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <h3 className={cn('text-sm font-semibold font-mono', theme.text)}>{t('oauth.bannerTitle')}</h3>
-                <p className={cn('text-xs mt-1', theme.textMuted)}>{t('oauth.bannerDesc')}</p>
+                <h3
+                  className={cn('text-sm font-semibold font-mono', theme.text)}
+                >
+                  {t('oauth.bannerTitle')}
+                </h3>
+                <p className={cn('text-xs mt-1', theme.textMuted)}>
+                  {t('oauth.bannerDesc')}
+                </p>
 
                 {/* Actions */}
                 <div className="flex gap-2 mt-3 flex-wrap">
@@ -70,7 +76,12 @@ export const OAuthBanner = memo(() => {
                   >
                     {t('oauth.setupOAuth')}
                   </Button>
-                  <Button variant="ghost" size="sm" leftIcon={<Key size={13} />} onClick={dismiss}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<Key size={13} />}
+                    onClick={dismiss}
+                  >
                     {t('oauth.useApiKey')}
                   </Button>
                 </div>

@@ -6,7 +6,13 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertTriangle, CheckCircle, RefreshCw, WifiOff } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  WifiOff,
+} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '@/shared/api/client';
@@ -24,11 +30,22 @@ interface HistoryResponse {
   total: number;
 }
 
-const eventConfig: Record<string, { icon: typeof Activity; color: string; label: string }> = {
+const eventConfig: Record<
+  string,
+  { icon: typeof Activity; color: string; label: string }
+> = {
   online: { icon: CheckCircle, color: 'text-emerald-400', label: 'Online' },
   unreachable: { icon: WifiOff, color: 'text-red-400', label: 'Unreachable' },
-  not_ready: { icon: AlertTriangle, color: 'text-amber-400', label: 'Not Ready' },
-  restart_initiated: { icon: RefreshCw, color: 'text-blue-400', label: 'Restart' },
+  not_ready: {
+    icon: AlertTriangle,
+    color: 'text-amber-400',
+    label: 'Not Ready',
+  },
+  restart_initiated: {
+    icon: RefreshCw,
+    color: 'text-blue-400',
+    label: 'Restart',
+  },
 };
 
 const defaultEvent = { icon: Activity, color: 'text-zinc-400', label: 'Event' };
@@ -36,7 +53,11 @@ const defaultEvent = { icon: Activity, color: 'text-zinc-400', label: 'Event' };
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso);
-    return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return d.toLocaleTimeString('pl-PL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   } catch {
     return iso;
   }
@@ -73,17 +94,28 @@ export const WatchdogHistory = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Activity size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.watchdog.title')}
         </h3>
       </div>
 
-      <p className={cn('text-xs', theme.textMuted)}>{t('settings.watchdog.description')}</p>
+      <p className={cn('text-xs', theme.textMuted)}>
+        {t('settings.watchdog.description')}
+      </p>
 
       {isLoading ? (
-        <div className={cn('text-xs font-mono', theme.textMuted)}>{t('common.loading')}</div>
+        <div className={cn('text-xs font-mono', theme.textMuted)}>
+          {t('common.loading')}
+        </div>
       ) : events.length === 0 ? (
-        <div className={cn('text-xs font-mono py-4 text-center', theme.textMuted)}>
+        <div
+          className={cn('text-xs font-mono py-4 text-center', theme.textMuted)}
+        >
           {t('settings.watchdog.noEvents')}
         </div>
       ) : (
@@ -101,12 +133,25 @@ export const WatchdogHistory = memo(() => {
                 )}
               >
                 <Icon size={13} className={cn('shrink-0', cfg.color)} />
-                <span className={cn('w-16 shrink-0', theme.textMuted)}>{formatTime(evt.timestamp)}</span>
-                <span className={cn('w-12 shrink-0 text-[10px]', theme.textMuted)}>{formatDate(evt.timestamp)}</span>
-                <span className={cn('font-medium', cfg.color)}>{cfg.label}</span>
-                <span className={cn('shrink-0', theme.textMuted)}>{workerInfo}</span>
+                <span className={cn('w-16 shrink-0', theme.textMuted)}>
+                  {formatTime(evt.timestamp)}
+                </span>
+                <span
+                  className={cn('w-12 shrink-0 text-[10px]', theme.textMuted)}
+                >
+                  {formatDate(evt.timestamp)}
+                </span>
+                <span className={cn('font-medium', cfg.color)}>
+                  {cfg.label}
+                </span>
+                <span className={cn('shrink-0', theme.textMuted)}>
+                  {workerInfo}
+                </span>
                 {evt.error && (
-                  <span className={cn('truncate', theme.textMuted)} title={evt.error}>
+                  <span
+                    className={cn('truncate', theme.textMuted)}
+                    title={evt.error}
+                  >
                     {evt.error}
                   </span>
                 )}

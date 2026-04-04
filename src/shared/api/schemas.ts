@@ -313,6 +313,12 @@ export type WsFallbackMessage = z.infer<typeof wsFallbackSchema>;
 export type WsViewHintMessage = z.infer<typeof wsViewHintSchema>;
 
 export type WsClientMessage =
-  | { type: 'execute'; prompt: string; model?: string; tools_enabled?: boolean; session_id?: string }
+  | {
+      type: 'execute';
+      prompt: string;
+      model?: string;
+      tools_enabled?: boolean;
+      session_id?: string;
+    }
   | { type: 'cancel' }
   | { type: 'ping' };

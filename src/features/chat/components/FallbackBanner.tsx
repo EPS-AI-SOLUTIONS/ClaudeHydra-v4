@@ -58,7 +58,8 @@ export function FallbackBanner({ data, onDismiss }: FallbackBannerProps) {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-200 text-sm font-mono mb-2">
             <AlertTriangle size={16} className="text-amber-400 shrink-0" />
             <span className="flex-1">
-              Przełączono z <strong>{data.from}</strong> na <strong>{data.to}</strong>
+              Przełączono z <strong>{data.from}</strong> na{' '}
+              <strong>{data.to}</strong>
               {' — '}
               {REASON_LABELS[data.reason] ?? data.reason}
             </span>

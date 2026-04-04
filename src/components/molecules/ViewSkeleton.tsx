@@ -43,10 +43,25 @@ export function ViewSkeleton() {
 
       {/* ---- Toolbar skeleton ---- */}
       <div className="flex items-center gap-3">
-        <Skeleton shape="rectangle" width={120} height={32} className="!rounded-md" />
-        <Skeleton shape="rectangle" width={100} height={32} className="!rounded-md" />
+        <Skeleton
+          shape="rectangle"
+          width={120}
+          height={32}
+          className="!rounded-md"
+        />
+        <Skeleton
+          shape="rectangle"
+          width={100}
+          height={32}
+          className="!rounded-md"
+        />
         <div className="flex-1" />
-        <Skeleton shape="rectangle" width={80} height={32} className="!rounded-md" />
+        <Skeleton
+          shape="rectangle"
+          width={80}
+          height={32}
+          className="!rounded-md"
+        />
       </div>
 
       {/* ---- Content area skeleton ---- */}

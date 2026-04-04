@@ -90,17 +90,22 @@ function modelColor(model: string, isLight: boolean): string {
 
 function modelColorText(model: string, isLight: boolean): string {
   const m = model.toLowerCase();
-  if (m.includes('opus')) return isLight ? 'text-purple-600' : 'text-purple-400';
+  if (m.includes('opus'))
+    return isLight ? 'text-purple-600' : 'text-purple-400';
   if (m.includes('sonnet')) return isLight ? 'text-blue-600' : 'text-blue-400';
-  if (m.includes('haiku')) return isLight ? 'text-emerald-600' : 'text-emerald-400';
+  if (m.includes('haiku'))
+    return isLight ? 'text-emerald-600' : 'text-emerald-400';
   return isLight ? 'text-gray-600' : 'text-gray-400';
 }
 
 function tierColor(tier: string, isLight: boolean): string {
   const t = tier.toLowerCase();
-  if (t === 'opus' || t === 'commander') return isLight ? 'bg-purple-500' : 'bg-purple-500';
-  if (t === 'sonnet' || t === 'coordinator') return isLight ? 'bg-blue-500' : 'bg-blue-500';
-  if (t === 'haiku' || t === 'executor') return isLight ? 'bg-emerald-500' : 'bg-emerald-500';
+  if (t === 'opus' || t === 'commander')
+    return isLight ? 'bg-purple-500' : 'bg-purple-500';
+  if (t === 'sonnet' || t === 'coordinator')
+    return isLight ? 'bg-blue-500' : 'bg-blue-500';
+  if (t === 'haiku' || t === 'executor')
+    return isLight ? 'bg-emerald-500' : 'bg-emerald-500';
   return isLight ? 'bg-gray-400' : 'bg-gray-500';
 }
 
@@ -114,25 +119,46 @@ function shortModel(model: string): string {
 // Token Usage Card
 // ---------------------------------------------------------------------------
 
-function TokenUsageCard({ data, isLight }: { data: DailyTokenUsage[]; isLight: boolean }) {
+function TokenUsageCard({
+  data,
+  isLight,
+}: {
+  data: DailyTokenUsage[];
+  isLight: boolean;
+}) {
   const { t } = useTranslation();
 
   if (data.length === 0) {
     return (
       <EmptyState
-        icon={<BarChart3 size={20} className="text-[var(--matrix-text-secondary)]" />}
+        icon={
+          <BarChart3
+            size={20}
+            className="text-[var(--matrix-text-secondary)]"
+          />
+        }
         message={t('analytics.noTokenData', 'No token usage data yet')}
       />
     );
   }
 
   // Aggregate by day (combine all models per day)
-  const byDay = new Map<string, { input: number; output: number; models: Map<string, number> }>();
+  const byDay = new Map<
+    string,
+    { input: number; output: number; models: Map<string, number> }
+  >();
   for (const row of data) {
-    const entry = byDay.get(row.day) ?? { input: 0, output: 0, models: new Map() };
+    const entry = byDay.get(row.day) ?? {
+      input: 0,
+      output: 0,
+      models: new Map(),
+    };
     entry.input += row.input_tokens;
     entry.output += row.output_tokens;
-    entry.models.set(row.model, (entry.models.get(row.model) ?? 0) + row.total_tokens);
+    entry.models.set(
+      row.model,
+      (entry.models.get(row.model) ?? 0) + row.total_tokens,
+    );
     byDay.set(row.day, entry);
   }
 
@@ -147,15 +173,23 @@ function TokenUsageCard({ data, isLight }: { data: DailyTokenUsage[]; isLight: b
         const outputPct = totalPct - inputPct;
         return (
           <div key={day} className="flex items-center gap-3">
-            <span className="font-mono text-xs text-[var(--matrix-text-secondary)] w-20 shrink-0">{day.slice(5)}</span>
+            <span className="font-mono text-xs text-[var(--matrix-text-secondary)] w-20 shrink-0">
+              {day.slice(5)}
+            </span>
             <div className="flex-1 flex h-5 rounded overflow-hidden bg-[var(--matrix-bg-secondary)]">
               <div
-                className={cn('h-full transition-all', isLight ? 'bg-blue-400' : 'bg-blue-500')}
+                className={cn(
+                  'h-full transition-all',
+                  isLight ? 'bg-blue-400' : 'bg-blue-500',
+                )}
                 style={{ width: `${inputPct}%` }}
                 title={`Input: ${formatTokens(d.input)}`}
               />
               <div
-                className={cn('h-full transition-all', isLight ? 'bg-emerald-400' : 'bg-emerald-500')}
+                className={cn(
+                  'h-full transition-all',
+                  isLight ? 'bg-emerald-400' : 'bg-emerald-500',
+                )}
                 style={{ width: `${outputPct}%` }}
                 title={`Output: ${formatTokens(d.output)}`}
               />
@@ -168,11 +202,21 @@ function TokenUsageCard({ data, isLight }: { data: DailyTokenUsage[]; isLight: b
       })}
       <div className="flex items-center gap-4 pt-1 text-xs text-[var(--matrix-text-secondary)]">
         <span className="flex items-center gap-1.5">
-          <span className={cn('w-2.5 h-2.5 rounded-sm', isLight ? 'bg-blue-400' : 'bg-blue-500')} />
+          <span
+            className={cn(
+              'w-2.5 h-2.5 rounded-sm',
+              isLight ? 'bg-blue-400' : 'bg-blue-500',
+            )}
+          />
           Input
         </span>
         <span className="flex items-center gap-1.5">
-          <span className={cn('w-2.5 h-2.5 rounded-sm', isLight ? 'bg-emerald-400' : 'bg-emerald-500')} />
+          <span
+            className={cn(
+              'w-2.5 h-2.5 rounded-sm',
+              isLight ? 'bg-emerald-400' : 'bg-emerald-500',
+            )}
+          />
           Output
         </span>
       </div>
@@ -184,22 +228,38 @@ function TokenUsageCard({ data, isLight }: { data: DailyTokenUsage[]; isLight: b
 // Latency Card
 // ---------------------------------------------------------------------------
 
-function LatencyCard({ data, isLight }: { data: DailyLatency[]; isLight: boolean }) {
+function LatencyCard({
+  data,
+  isLight,
+}: {
+  data: DailyLatency[];
+  isLight: boolean;
+}) {
   const { t } = useTranslation();
 
   if (data.length === 0) {
     return (
       <EmptyState
-        icon={<Clock size={20} className="text-[var(--matrix-text-secondary)]" />}
+        icon={
+          <Clock size={20} className="text-[var(--matrix-text-secondary)]" />
+        }
         message={t('analytics.noLatencyData', 'No latency data yet')}
       />
     );
   }
 
   // Aggregate across all days per tier
-  const byTier = new Map<string, { avg: number[]; p50: number[]; p95: number[]; count: number }>();
+  const byTier = new Map<
+    string,
+    { avg: number[]; p50: number[]; p95: number[]; count: number }
+  >();
   for (const row of data) {
-    const entry = byTier.get(row.tier) ?? { avg: [], p50: [], p95: [], count: 0 };
+    const entry = byTier.get(row.tier) ?? {
+      avg: [],
+      p50: [],
+      p95: [],
+      count: 0,
+    };
     entry.avg.push(row.avg_ms);
     entry.p50.push(row.p50_ms);
     entry.p95.push(row.p95_ms);
@@ -219,13 +279,24 @@ function LatencyCard({ data, isLight }: { data: DailyLatency[]; isLight: boolean
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className={cn('border-b', isLight ? 'border-gray-200' : 'border-white/10')}>
+          <tr
+            className={cn(
+              'border-b',
+              isLight ? 'border-gray-200' : 'border-white/10',
+            )}
+          >
             <th className="text-left py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">
               {t('analytics.tier', 'Tier')}
             </th>
-            <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">Avg</th>
-            <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">P50</th>
-            <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">P95</th>
+            <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">
+              Avg
+            </th>
+            <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">
+              P50
+            </th>
+            <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">
+              P95
+            </th>
             <th className="text-right py-2 px-2 font-medium text-[var(--matrix-text-secondary)]">
               {t('analytics.requests', 'Requests')}
             </th>
@@ -235,17 +306,33 @@ function LatencyCard({ data, isLight }: { data: DailyLatency[]; isLight: boolean
           {tiers.map((row) => (
             <tr
               key={row.tier}
-              className={cn('transition-colors', isLight ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.03]')}
+              className={cn(
+                'transition-colors',
+                isLight ? 'hover:bg-black/[0.02]' : 'hover:bg-white/[0.03]',
+              )}
             >
               <td className="py-2 px-2">
                 <span className="flex items-center gap-2">
-                  <span className={cn('w-2 h-2 rounded-full', tierColor(row.tier, isLight))} />
-                  <span className="font-mono text-sm capitalize">{row.tier}</span>
+                  <span
+                    className={cn(
+                      'w-2 h-2 rounded-full',
+                      tierColor(row.tier, isLight),
+                    )}
+                  />
+                  <span className="font-mono text-sm capitalize">
+                    {row.tier}
+                  </span>
                 </span>
               </td>
-              <td className="text-right py-2 px-2 font-mono text-sm">{formatMs(row.avg)}</td>
-              <td className="text-right py-2 px-2 font-mono text-sm">{formatMs(row.p50)}</td>
-              <td className="text-right py-2 px-2 font-mono text-sm">{formatMs(row.p95)}</td>
+              <td className="text-right py-2 px-2 font-mono text-sm">
+                {formatMs(row.avg)}
+              </td>
+              <td className="text-right py-2 px-2 font-mono text-sm">
+                {formatMs(row.p50)}
+              </td>
+              <td className="text-right py-2 px-2 font-mono text-sm">
+                {formatMs(row.p95)}
+              </td>
               <td className="text-right py-2 px-2 font-mono text-sm text-[var(--matrix-text-secondary)]">
                 {row.count}
               </td>
@@ -261,13 +348,21 @@ function LatencyCard({ data, isLight }: { data: DailyLatency[]; isLight: boolean
 // Success Rate Card
 // ---------------------------------------------------------------------------
 
-function SuccessRateCard({ data, isLight }: { data: ModelSuccessRate[]; isLight: boolean }) {
+function SuccessRateCard({
+  data,
+  isLight,
+}: {
+  data: ModelSuccessRate[];
+  isLight: boolean;
+}) {
   const { t } = useTranslation();
 
   if (data.length === 0) {
     return (
       <EmptyState
-        icon={<Target size={20} className="text-[var(--matrix-text-secondary)]" />}
+        icon={
+          <Target size={20} className="text-[var(--matrix-text-secondary)]" />
+        }
         message={t('analytics.noSuccessData', 'No success rate data yet')}
       />
     );
@@ -289,18 +384,29 @@ function SuccessRateCard({ data, isLight }: { data: ModelSuccessRate[]; isLight:
                 ? 'text-red-600'
                 : 'text-red-400';
         const dotColor =
-          row.success_rate >= 95 ? 'bg-emerald-500' : row.success_rate >= 80 ? 'bg-amber-500' : 'bg-red-500';
+          row.success_rate >= 95
+            ? 'bg-emerald-500'
+            : row.success_rate >= 80
+              ? 'bg-amber-500'
+              : 'bg-red-500';
 
         return (
           <div key={row.model} className="flex items-center gap-3">
-            <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotColor)} />
             <span
-              className={cn('font-mono text-sm truncate flex-1 min-w-0', modelColorText(row.model, isLight))}
+              className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotColor)}
+            />
+            <span
+              className={cn(
+                'font-mono text-sm truncate flex-1 min-w-0',
+                modelColorText(row.model, isLight),
+              )}
               title={row.model}
             >
               {shortModel(row.model)}
             </span>
-            <span className={cn('font-mono text-sm font-bold shrink-0', rateColor)}>
+            <span
+              className={cn('font-mono text-sm font-bold shrink-0', rateColor)}
+            >
               {row.success_rate.toFixed(1)}%
             </span>
             <span className="text-xs text-[var(--matrix-text-secondary)] shrink-0 w-16 text-right">
@@ -317,13 +423,21 @@ function SuccessRateCard({ data, isLight }: { data: ModelSuccessRate[]; isLight:
 // Top Tools Card
 // ---------------------------------------------------------------------------
 
-function TopToolsCard({ data, isLight }: { data: ToolUsageStat[]; isLight: boolean }) {
+function TopToolsCard({
+  data,
+  isLight,
+}: {
+  data: ToolUsageStat[];
+  isLight: boolean;
+}) {
   const { t } = useTranslation();
 
   if (data.length === 0) {
     return (
       <EmptyState
-        icon={<Wrench size={20} className="text-[var(--matrix-text-secondary)]" />}
+        icon={
+          <Wrench size={20} className="text-[var(--matrix-text-secondary)]" />
+        }
         message={t('analytics.noToolData', 'No tool usage data yet')}
       />
     );
@@ -343,12 +457,16 @@ function TopToolsCard({ data, isLight }: { data: ToolUsageStat[]; isLight: boole
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-mono text-sm truncate">{row.tool_name}</span>
+                <span className="font-mono text-sm truncate">
+                  {row.tool_name}
+                </span>
                 {hasErrors && (
                   <span
                     className={cn(
                       'text-[10px] px-1.5 py-0.5 rounded',
-                      isLight ? 'bg-red-100 text-red-600' : 'bg-red-500/15 text-red-400',
+                      isLight
+                        ? 'bg-red-100 text-red-600'
+                        : 'bg-red-500/15 text-red-400',
                     )}
                   >
                     {row.error_count} err
@@ -357,7 +475,10 @@ function TopToolsCard({ data, isLight }: { data: ToolUsageStat[]; isLight: boole
               </div>
               <div className="h-1.5 rounded-full overflow-hidden bg-[var(--matrix-bg-secondary)]">
                 <div
-                  className={cn('h-full rounded-full transition-all', isLight ? 'bg-blue-400' : 'bg-blue-500')}
+                  className={cn(
+                    'h-full rounded-full transition-all',
+                    isLight ? 'bg-blue-400' : 'bg-blue-500',
+                  )}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -399,16 +520,28 @@ function CostCard({
           <p className="text-xs text-[var(--matrix-text-secondary)] uppercase tracking-wider">
             {t('analytics.periodCost', 'Period cost')} ({days}d)
           </p>
-          <p className={cn('text-2xl font-bold font-mono', isLight ? 'text-gray-900' : 'text-white')}>
+          <p
+            className={cn(
+              'text-2xl font-bold font-mono',
+              isLight ? 'text-gray-900' : 'text-white',
+            )}
+          >
             {formatUsd(totalCost)}
           </p>
         </div>
-        <div className={cn('h-10 w-px', isLight ? 'bg-gray-200' : 'bg-white/10')} />
+        <div
+          className={cn('h-10 w-px', isLight ? 'bg-gray-200' : 'bg-white/10')}
+        />
         <div>
           <p className="text-xs text-[var(--matrix-text-secondary)] uppercase tracking-wider">
             {t('analytics.projected', 'Projected monthly')}
           </p>
-          <p className={cn('text-2xl font-bold font-mono', isLight ? 'text-emerald-600' : 'text-emerald-400')}>
+          <p
+            className={cn(
+              'text-2xl font-bold font-mono',
+              isLight ? 'text-emerald-600' : 'text-emerald-400',
+            )}
+          >
             {formatUsd(projectedMonthly)}
           </p>
         </div>
@@ -420,22 +553,43 @@ function CostCard({
           {data.map((row) => (
             <div
               key={`${row.model}-${row.tier}`}
-              className={cn('flex items-center gap-3 px-3 py-2 rounded-lg', isLight ? 'bg-gray-50' : 'bg-white/[0.03]')}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg',
+                isLight ? 'bg-gray-50' : 'bg-white/[0.03]',
+              )}
             >
-              <span className={cn('w-2 h-2 rounded-full shrink-0', modelColor(row.model, isLight))} />
-              <span className={cn('font-mono text-sm flex-1 truncate', modelColorText(row.model, isLight))}>
+              <span
+                className={cn(
+                  'w-2 h-2 rounded-full shrink-0',
+                  modelColor(row.model, isLight),
+                )}
+              />
+              <span
+                className={cn(
+                  'font-mono text-sm flex-1 truncate',
+                  modelColorText(row.model, isLight),
+                )}
+              >
                 {shortModel(row.model)}
               </span>
               <span className="text-xs text-[var(--matrix-text-secondary)]">
-                {formatTokens(row.input_tokens)} in / {formatTokens(row.output_tokens)} out
+                {formatTokens(row.input_tokens)} in /{' '}
+                {formatTokens(row.output_tokens)} out
               </span>
-              <span className="font-mono text-sm font-bold w-16 text-right">{formatUsd(row.total_cost_usd)}</span>
+              <span className="font-mono text-sm font-bold w-16 text-right">
+                {formatUsd(row.total_cost_usd)}
+              </span>
             </div>
           ))}
         </div>
       ) : (
         <EmptyState
-          icon={<DollarSign size={20} className="text-[var(--matrix-text-secondary)]" />}
+          icon={
+            <DollarSign
+              size={20}
+              className="text-[var(--matrix-text-secondary)]"
+            />
+          }
           message={t('analytics.noCostData', 'No cost data yet')}
         />
       )}
@@ -447,7 +601,13 @@ function CostCard({
 // Empty state helper
 // ---------------------------------------------------------------------------
 
-function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
+function EmptyState({
+  icon,
+  message,
+}: {
+  icon: React.ReactNode;
+  message: string;
+}) {
   return (
     <div className="flex flex-col items-center gap-2 py-6">
       {icon}
@@ -481,7 +641,14 @@ function SectionCard({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           {icon}
-          <h2 className={cn('text-base font-semibold', isLight ? 'text-gray-800' : 'text-white/90')}>{title}</h2>
+          <h2
+            className={cn(
+              'text-base font-semibold',
+              isLight ? 'text-gray-800' : 'text-white/90',
+            )}
+          >
+            {title}
+          </h2>
         </div>
         {isLoading && (
           <p className="text-sm text-[var(--matrix-text-secondary)] text-center py-6">
@@ -489,7 +656,9 @@ function SectionCard({
           </p>
         )}
         {isError && (
-          <p className="text-sm text-red-400 text-center py-6">{t('common.loadError', 'Failed to load data')}</p>
+          <p className="text-sm text-red-400 text-center py-6">
+            {t('common.loadError', 'Failed to load data')}
+          </p>
         )}
         {!isLoading && !isError && children}
       </div>
@@ -524,17 +693,31 @@ const AnalyticsViewContent = memo(() => {
         {/* Header */}
         <div className="flex items-center gap-3 flex-wrap">
           <BarChart3 size={22} className="text-[var(--matrix-accent)]" />
-          <h1 className={cn('text-2xl font-bold font-mono tracking-tight', theme.title)}>
+          <h1
+            className={cn(
+              'text-2xl font-bold font-mono tracking-tight',
+              theme.title,
+            )}
+          >
             {t('analytics.title', 'Analytics')}
           </h1>
           <div className="ml-auto">
-            <TimeRangeSelector value={days} onChange={setDays} isLight={isLight} />
+            <TimeRangeSelector
+              value={days}
+              onChange={setDays}
+              isLight={isLight}
+            />
           </div>
         </div>
 
         {/* Cost Estimate — prominent at top */}
         <SectionCard
-          icon={<DollarSign size={18} className={isLight ? 'text-emerald-600' : 'text-emerald-400'} />}
+          icon={
+            <DollarSign
+              size={18}
+              className={isLight ? 'text-emerald-600' : 'text-emerald-400'}
+            />
+          }
           title={t('analytics.costEstimate', 'Cost Estimate')}
           isLight={isLight}
           isLoading={cost.isLoading}
@@ -552,7 +735,12 @@ const AnalyticsViewContent = memo(() => {
         {/* 2-column grid for Token Usage + Success Rate */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SectionCard
-            icon={<BarChart3 size={18} className={isLight ? 'text-blue-600' : 'text-blue-400'} />}
+            icon={
+              <BarChart3
+                size={18}
+                className={isLight ? 'text-blue-600' : 'text-blue-400'}
+              />
+            }
             title={t('analytics.tokenUsage', 'Token Usage')}
             isLight={isLight}
             isLoading={tokens.isLoading}
@@ -562,20 +750,33 @@ const AnalyticsViewContent = memo(() => {
           </SectionCard>
 
           <SectionCard
-            icon={<Target size={18} className={isLight ? 'text-amber-600' : 'text-amber-400'} />}
+            icon={
+              <Target
+                size={18}
+                className={isLight ? 'text-amber-600' : 'text-amber-400'}
+              />
+            }
             title={t('analytics.successRate', 'Success Rate')}
             isLight={isLight}
             isLoading={successRate.isLoading}
             isError={successRate.isError}
           >
-            <SuccessRateCard data={successRate.data?.data ?? []} isLight={isLight} />
+            <SuccessRateCard
+              data={successRate.data?.data ?? []}
+              isLight={isLight}
+            />
           </SectionCard>
         </div>
 
         {/* 2-column grid for Latency + Top Tools */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SectionCard
-            icon={<Clock size={18} className={isLight ? 'text-purple-600' : 'text-purple-400'} />}
+            icon={
+              <Clock
+                size={18}
+                className={isLight ? 'text-purple-600' : 'text-purple-400'}
+              />
+            }
             title={t('analytics.latency', 'Response Latency')}
             isLight={isLight}
             isLoading={latency.isLoading}
@@ -585,7 +786,12 @@ const AnalyticsViewContent = memo(() => {
           </SectionCard>
 
           <SectionCard
-            icon={<Wrench size={18} className={isLight ? 'text-orange-600' : 'text-orange-400'} />}
+            icon={
+              <Wrench
+                size={18}
+                className={isLight ? 'text-orange-600' : 'text-orange-400'}
+              />
+            }
             title={t('analytics.topTools', 'Top Tools')}
             isLight={isLight}
             isLoading={topTools.isLoading}

@@ -1,8 +1,14 @@
 // BE-CH-007 — Integration tests for ClaudeHydra OAuth endpoints.
 //
-// Tests PKCE state generation, OAuth login flow, callback validation,
-// auth status, and logout. All tests use `AppState::new_test()` with
-// `tower::ServiceExt::oneshot()` — no real DB or external APIs.
+// Tests Anthropic provider OAuth PKCE (at /api/auth/anthropic/*) and
+// jaskier-auth unified user auth endpoints.
+//
+// B13 migration: Anthropic provider OAuth moved from /api/auth/* to
+// /api/auth/anthropic/*. Google/GitHub/Vercel provider OAuth removed
+// (skip_provider_oauth = true). User auth handled by jaskier-auth at /api/auth/*.
+//
+// All tests use `AppState::new_test()` with `tower::ServiceExt::oneshot()`
+// — no real DB or external APIs.
 
 use axum::http::StatusCode;
 use jaskier_core::testing::{body_json, get, post_json};
@@ -13,24 +19,28 @@ use claudehydra_backend::state::AppState;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-fn app() -> axum::Router {
-    let state = AppState::new_test();
+async fn app() -> axum::Router {
+    let state = AppState::new_test().await;
     claudehydra_backend::create_test_router(state)
 }
 
-fn app_with_state() -> (axum::Router, AppState) {
-    let state = AppState::new_test();
+async fn app_with_state() -> (axum::Router, AppState) {
+    let state = AppState::new_test().await;
     let router = claudehydra_backend::create_test_router(state.clone());
     (router, state)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  GET /api/auth/status — Anthropic OAuth status
+//  GET /api/auth/anthropic/status — Anthropic provider OAuth status
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-async fn auth_status_returns_unauthenticated_by_default() {
-    let response = app().oneshot(get("/api/auth/status")).await.unwrap();
+async fn anthropic_auth_status_returns_unauthenticated_by_default() {
+    let response = app()
+        .await
+        .oneshot(get("/api/auth/anthropic/status"))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -38,13 +48,14 @@ async fn auth_status_returns_unauthenticated_by_default() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  POST /api/auth/login — Anthropic PKCE login
+//  POST /api/auth/anthropic/login — Anthropic PKCE login
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-async fn auth_login_returns_auth_url_and_state() {
+async fn anthropic_auth_login_returns_auth_url_and_state() {
     let response = app()
-        .oneshot(post_json("/api/auth/login", json!({})))
+        .await
+        .oneshot(post_json("/api/auth/anthropic/login", json!({})))
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -80,18 +91,18 @@ async fn auth_login_returns_auth_url_and_state() {
 }
 
 #[tokio::test]
-async fn auth_login_generates_unique_states() {
-    let (app1, state) = app_with_state();
+async fn anthropic_auth_login_generates_unique_states() {
+    let (app1, state) = app_with_state().await;
     let app2 = claudehydra_backend::create_test_router(state.clone());
 
     let resp1 = app1
-        .oneshot(post_json("/api/auth/login", json!({})))
+        .oneshot(post_json("/api/auth/anthropic/login", json!({})))
         .await
         .unwrap();
     let json1 = body_json(resp1).await;
 
     let resp2 = app2
-        .oneshot(post_json("/api/auth/login", json!({})))
+        .oneshot(post_json("/api/auth/anthropic/login", json!({})))
         .await
         .unwrap();
     let json2 = body_json(resp2).await;
@@ -105,11 +116,11 @@ async fn auth_login_generates_unique_states() {
 }
 
 #[tokio::test]
-async fn auth_login_stores_pkce_state() {
-    let (app, state) = app_with_state();
+async fn anthropic_auth_login_stores_pkce_state() {
+    let (app, state) = app_with_state().await;
 
     let response = app
-        .oneshot(post_json("/api/auth/login", json!({})))
+        .oneshot(post_json("/api/auth/anthropic/login", json!({})))
         .await
         .unwrap();
     let json = body_json(response).await;
@@ -128,18 +139,19 @@ async fn auth_login_stores_pkce_state() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  POST /api/auth/callback — Anthropic OAuth callback
+//  POST /api/auth/anthropic/callback — Anthropic OAuth callback
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-async fn auth_callback_rejects_invalid_state() {
+async fn anthropic_auth_callback_rejects_invalid_state() {
     let body = json!({
         "code": "test-auth-code",
         "state": "invalid-state-param"
     });
 
     let response = app()
-        .oneshot(post_json("/api/auth/callback", body))
+        .await
+        .oneshot(post_json("/api/auth/anthropic/callback", body))
         .await
         .unwrap();
 
@@ -152,13 +164,13 @@ async fn auth_callback_rejects_invalid_state() {
 }
 
 #[tokio::test]
-async fn auth_callback_validates_state_matches_login() {
-    let (app1, state) = app_with_state();
+async fn anthropic_auth_callback_validates_state_matches_login() {
+    let (app1, state) = app_with_state().await;
     let app2 = claudehydra_backend::create_test_router(state.clone());
 
     // Step 1: login to get a valid state param
     let login_resp = app1
-        .oneshot(post_json("/api/auth/login", json!({})))
+        .oneshot(post_json("/api/auth/anthropic/login", json!({})))
         .await
         .unwrap();
     let login_json = body_json(login_resp).await;
@@ -171,7 +183,7 @@ async fn auth_callback_validates_state_matches_login() {
     });
 
     let callback_resp = app2
-        .oneshot(post_json("/api/auth/callback", callback_body))
+        .oneshot(post_json("/api/auth/anthropic/callback", callback_body))
         .await
         .unwrap();
 
@@ -190,16 +202,17 @@ async fn auth_callback_validates_state_matches_login() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  POST /api/auth/logout — Anthropic OAuth logout
+//  POST /api/auth/anthropic/logout — Anthropic provider OAuth logout
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-async fn auth_logout_returns_success() {
+async fn anthropic_auth_logout_returns_success() {
     // Logout should succeed even when not logged in (idempotent).
     // The DB query may fail (connect_lazy to fake DB), but the endpoint
     // should not panic. It returns 200 with logged_out: true either way.
     let response = app()
-        .oneshot(post_json("/api/auth/logout", json!({})))
+        .await
+        .oneshot(post_json("/api/auth/anthropic/logout", json!({})))
         .await
         .unwrap();
 
@@ -212,76 +225,12 @@ async fn auth_logout_returns_success() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  GET /api/auth/google/status — Google OAuth status
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[tokio::test]
-async fn google_auth_status_returns_unauthenticated() {
-    let response = app().oneshot(get("/api/auth/google/status")).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let json = body_json(response).await;
-    // No Google OAuth configured in test → unauthenticated
-    assert_eq!(json["authenticated"], false);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  GET /api/auth/github/status — GitHub OAuth status
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[tokio::test]
-async fn github_auth_status_returns_unauthenticated() {
-    let response = app().oneshot(get("/api/auth/github/status")).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let json = body_json(response).await;
-    assert_eq!(json["authenticated"], false);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  GET /api/auth/vercel/status — Vercel OAuth status
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[tokio::test]
-async fn vercel_auth_status_returns_unauthenticated() {
-    let response = app().oneshot(get("/api/auth/vercel/status")).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let json = body_json(response).await;
-    assert_eq!(json["authenticated"], false);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  POST /api/auth/google/login — Google OAuth login (no client_id)
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[tokio::test]
-async fn google_auth_login_without_client_id_returns_error() {
-    // Without GOOGLE_OAUTH_CLIENT_ID env var, login should indicate
-    // that OAuth is not configured.
-    let response = app()
-        .oneshot(post_json("/api/auth/google/login", json!({})))
-        .await
-        .unwrap();
-
-    let status = response.status();
-    // Should be an error (400 or similar) indicating OAuth not configured
-    assert!(
-        status == StatusCode::BAD_REQUEST
-            || status == StatusCode::NOT_FOUND
-            || status == StatusCode::INTERNAL_SERVER_ERROR
-            || status == StatusCode::OK, // Some implementations return OK with error message in body
-        "Google login without client_id should not succeed: got {status}"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  Auth mode — combined test
+//  GET /api/auth/mode — auth mode (jaskier-auth)
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
 async fn auth_mode_open_when_no_secret() {
-    let response = app().oneshot(get("/api/auth/mode")).await.unwrap();
+    let response = app().await.oneshot(get("/api/auth/mode")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -292,5 +241,49 @@ async fn auth_mode_open_when_no_secret() {
     assert_eq!(
         json["auth_required"], false,
         "No AUTH_SECRET -> auth_required = false"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  POST /api/auth/login — jaskier-auth user login (requires email/password)
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[tokio::test]
+async fn jaskier_auth_login_rejects_empty_body() {
+    let response = app()
+        .await
+        .oneshot(post_json("/api/auth/login", json!({})))
+        .await
+        .unwrap();
+
+    // Should reject — missing email/password fields
+    let status = response.status();
+    assert!(
+        status == StatusCode::BAD_REQUEST
+            || status == StatusCode::UNPROCESSABLE_ENTITY
+            || status == StatusCode::INTERNAL_SERVER_ERROR,
+        "Login with empty body should fail: got {status}"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  POST /api/auth/register — jaskier-auth user registration
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[tokio::test]
+async fn jaskier_auth_register_rejects_empty_body() {
+    let response = app()
+        .await
+        .oneshot(post_json("/api/auth/register", json!({})))
+        .await
+        .unwrap();
+
+    // Should reject — missing required fields
+    let status = response.status();
+    assert!(
+        status == StatusCode::BAD_REQUEST
+            || status == StatusCode::UNPROCESSABLE_ENTITY
+            || status == StatusCode::INTERNAL_SERVER_ERROR,
+        "Register with empty body should fail: got {status}"
     );
 }

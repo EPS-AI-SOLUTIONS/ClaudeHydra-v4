@@ -54,7 +54,10 @@ export function useChatMessages() {
           timestamp: Date.now(),
         };
         compactedSessionsRef.current.add(sessionId);
-        updated = [dividerMessage, ...updated.slice(updated.length - compactionKeep)];
+        updated = [
+          dividerMessage,
+          ...updated.slice(updated.length - compactionKeep),
+        ];
       }
 
       sessionMessagesRef.current[sessionId] = updated;
@@ -98,17 +101,20 @@ export function useChatMessages() {
   }, []);
 
   /** Set loading state for a specific session. Only updates display if session is active. */
-  const setSessionLoading = useCallback((sessionId: string, loading: boolean) => {
-    if (loading) {
-      loadingSessionsRef.current.add(sessionId);
-    } else {
-      loadingSessionsRef.current.delete(sessionId);
-    }
+  const setSessionLoading = useCallback(
+    (sessionId: string, loading: boolean) => {
+      if (loading) {
+        loadingSessionsRef.current.add(sessionId);
+      } else {
+        loadingSessionsRef.current.delete(sessionId);
+      }
 
-    if (sessionId === useViewStore.getState().currentSessionId) {
-      setIsLoading(loading);
-    }
-  }, []);
+      if (sessionId === useViewStore.getState().currentSessionId) {
+        setIsLoading(loading);
+      }
+    },
+    [],
+  );
 
   // ----- Session switch: save & restore messages ---------------------------
 

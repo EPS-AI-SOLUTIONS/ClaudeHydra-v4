@@ -69,7 +69,9 @@ interface UseCollabDocumentReturn {
  * - Session-isolated undo/redo (Y.UndoManager)
  * - Automatic reconnection on disconnect
  */
-export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabDocumentReturn {
+export function useCollabDocument(
+  options: UseCollabDocumentOptions,
+): UseCollabDocumentReturn {
   const {
     appId,
     docKey,
@@ -86,7 +88,9 @@ export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabD
 
   const [content, setContent] = useState('');
   const [peers, setPeers] = useState<CollabPeer[]>([]);
-  const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [status, setStatus] = useState<
+    'connecting' | 'connected' | 'disconnected'
+  >('disconnected');
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
@@ -134,7 +138,12 @@ export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabD
   const connect = useCallback(() => {
     if (providerRef.current) return;
 
-    const provider = new WebsocketProvider(`${backendWsUrl}/ws/sync/${appId}`, docKey, doc, { connect: true });
+    const provider = new WebsocketProvider(
+      `${backendWsUrl}/ws/sync/${appId}`,
+      docKey,
+      doc,
+      { connect: true },
+    );
 
     provider.on('status', ((...args: unknown[]) => {
       const event = args[0] as { status: string };
@@ -155,9 +164,13 @@ export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabD
 
       states.forEach((state: Record<string, unknown>, clientId: number) => {
         if (clientId === doc.clientID) return;
-        const user = state['user'] as { name?: string; color?: string; isAgent?: boolean } | undefined;
+        const user = state['user'] as
+          | { name?: string; color?: string; isAgent?: boolean }
+          | undefined;
         if (user) {
-          const cursor = state['cursor'] as { anchor?: number; head?: number } | undefined;
+          const cursor = state['cursor'] as
+            | { anchor?: number; head?: number }
+            | undefined;
           peerList.push({
             clientId,
             userName: user.name ?? 'Unknown',

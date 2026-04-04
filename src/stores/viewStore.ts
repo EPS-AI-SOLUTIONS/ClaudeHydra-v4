@@ -24,7 +24,14 @@ export const useViewStore = useBaseStore;
 // ── Types ────────────────────────────────────────────────────────────────────
 
 // Re-export shared data types from @jaskier/state
-export type { Artifact, ChatMessage, ChatSession, ChatTab, MessageRole, ViewStoreState } from '@jaskier/state';
+export type {
+  Artifact,
+  ChatMessage,
+  ChatSession,
+  ChatTab,
+  MessageRole,
+  ViewStoreState,
+} from '@jaskier/state';
 
 // CH-specific ViewId includes 'delegations' and 'analytics' beyond the base ViewType
 export type ViewId =

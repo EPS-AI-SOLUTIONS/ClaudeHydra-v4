@@ -9,7 +9,9 @@
 import { lazy, Suspense } from 'react';
 import { ViewSkeleton } from '@/components/molecules/ViewSkeleton';
 
-const SemanticCacheViewContent = lazy(() => import('./SemanticCacheViewContent'));
+const SemanticCacheViewContent = lazy(
+  () => import('./SemanticCacheViewContent'),
+);
 
 export function SemanticCacheView() {
   return (

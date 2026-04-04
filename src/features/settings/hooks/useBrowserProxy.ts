@@ -41,7 +41,8 @@ export function useBrowserProxyStatus(polling = false) {
 export function useBrowserProxyLogin() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiPost<{ status: string; message?: string }>('/api/browser-proxy/login'),
+    mutationFn: () =>
+      apiPost<{ status: string; message?: string }>('/api/browser-proxy/login'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['browser-proxy-status'] });
     },
@@ -51,7 +52,10 @@ export function useBrowserProxyLogin() {
 export function useBrowserProxyReinit() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiPost<{ status: string; workers_ready?: number }>('/api/browser-proxy/reinit'),
+    mutationFn: () =>
+      apiPost<{ status: string; workers_ready?: number }>(
+        '/api/browser-proxy/reinit',
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['browser-proxy-status'] });
     },
@@ -61,7 +65,8 @@ export function useBrowserProxyReinit() {
 export function useBrowserProxyLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiDelete<{ status: string }>('/api/browser-proxy/logout'),
+    mutationFn: () =>
+      apiDelete<{ status: string }>('/api/browser-proxy/logout'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['browser-proxy-status'] });
     },

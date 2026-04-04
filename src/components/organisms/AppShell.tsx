@@ -24,7 +24,10 @@ import { StatusFooter } from '@/components/organisms/StatusFooter';
 import { TabBar } from '@/components/organisms/TabBar';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
-import { useHealthStatus, useSystemStatsQuery } from '@/features/health/hooks/useHealth';
+import {
+  useHealthStatus,
+  useSystemStatsQuery,
+} from '@/features/health/hooks/useHealth';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { useViewStore } from '@/stores/viewStore';
 
@@ -32,7 +35,11 @@ import { useViewStore } from '@/stores/viewStore';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const HEALTH_TO_CONNECTION = { healthy: 'connected', degraded: 'degraded', offline: 'disconnected' } as const;
+const HEALTH_TO_CONNECTION = {
+  healthy: 'connected',
+  degraded: 'degraded',
+  offline: 'disconnected',
+} as const;
 
 /** Format raw model ID (e.g. "claude-sonnet-4-6") into a display name ("Claude Sonnet 4"). */
 function formatModelName(id: string): string {
@@ -42,7 +49,9 @@ function formatModelName(id: string): string {
     .replace(/-preview$/, '')
     .replace(/-latest$/, '');
   const parts = name.split('-');
-  return parts.map((p) => (/^\d/.test(p) ? p : p.charAt(0).toUpperCase() + p.slice(1))).join(' ');
+  return parts
+    .map((p) => (/^\d/.test(p) ? p : p.charAt(0).toUpperCase() + p.slice(1)))
+    .join(' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +108,8 @@ function AppShellInner({ children }: AppShellProps) {
       ...(raw && {
         cpuUsage: Math.round(raw['cpu_usage_percent'] ?? raw['cpu_usage'] ?? 0),
         ramUsage: Math.round(
-          ((raw['memory_used_mb'] ?? raw['memory_used'] ?? 0) / (raw['memory_total_mb'] ?? raw['memory_total'] ?? 1)) *
+          ((raw['memory_used_mb'] ?? raw['memory_used'] ?? 0) /
+            (raw['memory_total_mb'] ?? raw['memory_total'] ?? 1)) *
             100,
         ),
         statsLoaded: true,
@@ -110,7 +120,9 @@ function AppShellInner({ children }: AppShellProps) {
 
   const glassPanel = cn(
     'backdrop-blur-xl border rounded-2xl',
-    isDark ? 'bg-black/40 border-white/10 shadow-2xl' : 'bg-white/40 border-white/20 shadow-lg',
+    isDark
+      ? 'bg-black/40 border-white/10 shadow-2xl'
+      : 'bg-white/40 border-white/20 shadow-lg',
   );
 
   const { createSessionWithSync } = useSessionSync();
@@ -118,7 +130,11 @@ function AppShellInner({ children }: AppShellProps) {
   // Ctrl+T: create new tab (chat view only)
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 't' && useViewStore.getState().currentView === 'chat') {
+      if (
+        e.ctrlKey &&
+        e.key === 't' &&
+        useViewStore.getState().currentView === 'chat'
+      ) {
         e.preventDefault();
         createSessionWithSync();
       }
@@ -167,7 +183,13 @@ function AppShellInner({ children }: AppShellProps) {
           <Sidebar />
 
           {/* Main content area */}
-          <main id="main-content" className={cn('flex-1 flex flex-col min-w-0 overflow-hidden relative', glassPanel)}>
+          <main
+            id="main-content"
+            className={cn(
+              'flex-1 flex flex-col min-w-0 overflow-hidden relative',
+              glassPanel,
+            )}
+          >
             {currentView === 'chat' && <TabBar />}
             {/* View Content — animations handled by ViewRouter */}
             <div className="flex-1 min-h-0 overflow-hidden">{children}</div>

@@ -26,9 +26,14 @@ export const CustomInstructionsSection = memo(() => {
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      await apiPost<Settings>('/api/settings', { ...settings, custom_instructions: draft });
+      await apiPost<Settings>('/api/settings', {
+        ...settings,
+        custom_instructions: draft,
+      });
       await refetch();
-      toast.success(t('settings.customInstructions.saved', 'Custom instructions saved'));
+      toast.success(
+        t('settings.customInstructions.saved', 'Custom instructions saved'),
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -42,7 +47,12 @@ export const CustomInstructionsSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <FileText size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.customInstructions.title', 'Custom Instructions')}
         </h3>
       </div>
@@ -58,7 +68,10 @@ export const CustomInstructionsSection = memo(() => {
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         rows={4}
-        placeholder={t('settings.customInstructions.placeholder', 'e.g., Always respond in Polish...')}
+        placeholder={t(
+          'settings.customInstructions.placeholder',
+          'e.g., Always respond in Polish...',
+        )}
         className={cn(
           'w-full rounded-lg border px-3 py-2 text-sm font-mono resize-y',
           'bg-[var(--matrix-glass)] border-[var(--matrix-border)]',
@@ -69,7 +82,9 @@ export const CustomInstructionsSection = memo(() => {
 
       {isDirty && (
         <Button variant="ghost" size="sm" onClick={save} disabled={saving}>
-          {saving ? t('common.saving', 'Saving...') : t('settings.customInstructions.save', 'Save Instructions')}
+          {saving
+            ? t('common.saving', 'Saving...')
+            : t('settings.customInstructions.save', 'Save Instructions')}
         </Button>
       )}
     </div>

@@ -3,7 +3,10 @@
  * Thin wrapper around @jaskier/core useSettingsQuery with CH-specific telemetry sync.
  */
 
-import { createTelemetryChecker, useSettingsQuery as useSharedSettingsQuery } from '@jaskier/core';
+import {
+  createTelemetryChecker,
+  useSettingsQuery as useSharedSettingsQuery,
+} from '@jaskier/core';
 import { apiGet, apiPost } from '@/shared/api/client';
 import type { Settings } from '@/shared/api/schemas';
 

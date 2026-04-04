@@ -567,10 +567,9 @@ fn ch_auto_qa_routes() -> Router<AppState> {
 pub fn create_router(state: AppState) -> Router {
     let hydra_router = build_hydra_router(state.clone(), build_ch_config(state.clone()));
 
-    // jaskier-auth unified user authentication routes (register, login, Google OAuth,
-    // token refresh, logout, profile, sessions, passkeys, 2FA).
-    let jaskier_auth_routes: Router<AppState> =
-        Router::new().nest("/api/auth", jaskier_auth::auth_router::<AppState>());
+    // NOTE: jaskier-auth routes are already mounted inside build_ch_config via
+    // `jaskier_auth_routes: Some(...)` — do NOT merge them again here to avoid
+    // "Overlapping method route" panics.
 
     // ai_gateway routes merged first — higher priority than old auth routes.
     // .with_state() converts Router<AppState> → Router<()> so it can merge
@@ -578,8 +577,6 @@ pub fn create_router(state: AppState) -> Router {
     let gateway_routes = ai_gateway::handlers::ai_gateway_router::<AppState>()
         .merge(ch_vault_public_routes())
         .merge(ch_vault_protected_routes(state.clone()))
-        // Unified user auth (jaskier-auth): /api/auth/*
-        .merge(jaskier_auth_routes)
         // Anthropic provider OAuth (moved from /api/auth/* to /api/auth/anthropic/*)
         .merge(ch_anthropic_provider_auth_routes())
         // Webhooks: Grafana incidents
@@ -620,16 +617,14 @@ pub fn create_router(state: AppState) -> Router {
 pub fn create_test_router(state: AppState) -> Router {
     let hydra_router = build_hydra_test_router(state.clone(), build_ch_config(state.clone()));
 
-    // jaskier-auth unified user authentication routes (test router)
-    let jaskier_auth_routes: Router<AppState> =
-        Router::new().nest("/api/auth", jaskier_auth::auth_router::<AppState>());
+    // NOTE: jaskier-auth routes are already mounted inside build_ch_config via
+    // `jaskier_auth_routes: Some(...)` — do NOT merge them again here to avoid
+    // "Overlapping method route" panics.
 
     // ai_gateway routes merged first — higher priority than old auth routes.
     let gateway_routes = ai_gateway::handlers::ai_gateway_router::<AppState>()
         .merge(ch_vault_public_routes())
         .merge(ch_vault_protected_routes(state.clone()))
-        // Unified user auth (jaskier-auth): /api/auth/*
-        .merge(jaskier_auth_routes)
         // Anthropic provider OAuth (moved to /api/auth/anthropic/*)
         .merge(ch_anthropic_provider_auth_routes())
         // Webhooks: Grafana incidents

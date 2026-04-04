@@ -27,7 +27,10 @@ export const SettingsView = memo(() => {
   const theme = useViewTheme();
 
   return (
-    <div data-testid="settings-view" className="h-full flex flex-col items-center p-8 overflow-y-auto">
+    <div
+      data-testid="settings-view"
+      className="h-full flex flex-col items-center p-8 overflow-y-auto"
+    >
       <motion.div
         className="w-full max-w-2xl space-y-6"
         initial={{ opacity: 0, y: 12 }}
@@ -37,7 +40,12 @@ export const SettingsView = memo(() => {
         {/* Header */}
         <div className="flex items-center gap-3">
           <Settings size={22} className="text-[var(--matrix-accent)]" />
-          <h1 className={cn('text-2xl font-bold font-mono tracking-tight', theme.title)}>
+          <h1
+            className={cn(
+              'text-2xl font-bold font-mono tracking-tight',
+              theme.title,
+            )}
+          >
             {t('settings.title', 'Settings')}
           </h1>
         </div>

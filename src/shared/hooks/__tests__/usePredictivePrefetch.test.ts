@@ -15,7 +15,9 @@ vi.mock('@/shared/config/env', () => ({
 }));
 
 // Must import after mocks
-const { usePredictivePrefetch, dispatchViewHint } = await import('../usePredictivePrefetch');
+const { usePredictivePrefetch, dispatchViewHint } = await import(
+  '../usePredictivePrefetch'
+);
 
 describe('usePredictivePrefetch', () => {
   beforeEach(() => {

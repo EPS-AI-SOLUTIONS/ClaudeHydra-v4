@@ -61,7 +61,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('[ErrorBoundary] Caught error:', error, errorInfo.componentStack);
+    console.error(
+      '[ErrorBoundary] Caught error:',
+      error,
+      errorInfo.componentStack,
+    );
 
     // Stale chunk after deploy — reload the page automatically
     if (isDynamicImportError(error)) {
@@ -96,7 +100,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                 <h2 className="text-lg font-bold font-mono text-[var(--matrix-text-primary)]">
                   {i18n.t('common.somethingWentWrong')}
                 </h2>
-                <p className="text-sm text-[var(--matrix-text-dim)] mt-1">{i18n.t('common.unexpectedError')}</p>
+                <p className="text-sm text-[var(--matrix-text-dim)] mt-1">
+                  {i18n.t('common.unexpectedError')}
+                </p>
               </div>
 
               {this.state.error && (
@@ -105,7 +111,12 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
                 </pre>
               )}
 
-              <Button variant="primary" size="md" leftIcon={<RotateCcw size={16} />} onClick={this.handleRetry}>
+              <Button
+                variant="primary"
+                size="md"
+                leftIcon={<RotateCcw size={16} />}
+                onClick={this.handleRetry}
+              >
                 {i18n.t('common.tryAgain')}
               </Button>
             </div>

@@ -39,13 +39,40 @@ type AuthStatus = 'connected' | 'disconnected' | 'expiring' | 'error';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const PROVIDER_META: Record<string, { icon: string; color: string; accent: string }> = {
-  anthropic: { icon: '\u{1F7E3}', color: 'text-purple-400', accent: 'border-purple-500/30' },
-  openai: { icon: '\u{1F7E2}', color: 'text-green-400', accent: 'border-green-500/30' },
-  google: { icon: '\u{1F535}', color: 'text-blue-400', accent: 'border-blue-500/30' },
-  xai: { icon: '\u26A1', color: 'text-yellow-400', accent: 'border-yellow-500/30' },
-  deepseek: { icon: '\u{1F537}', color: 'text-cyan-400', accent: 'border-cyan-500/30' },
-  ollama: { icon: '\u{1F999}', color: 'text-orange-400', accent: 'border-orange-500/30' },
+const PROVIDER_META: Record<
+  string,
+  { icon: string; color: string; accent: string }
+> = {
+  anthropic: {
+    icon: '\u{1F7E3}',
+    color: 'text-purple-400',
+    accent: 'border-purple-500/30',
+  },
+  openai: {
+    icon: '\u{1F7E2}',
+    color: 'text-green-400',
+    accent: 'border-green-500/30',
+  },
+  google: {
+    icon: '\u{1F535}',
+    color: 'text-blue-400',
+    accent: 'border-blue-500/30',
+  },
+  xai: {
+    icon: '\u26A1',
+    color: 'text-yellow-400',
+    accent: 'border-yellow-500/30',
+  },
+  deepseek: {
+    icon: '\u{1F537}',
+    color: 'text-cyan-400',
+    accent: 'border-cyan-500/30',
+  },
+  ollama: {
+    icon: '\u{1F999}',
+    color: 'text-orange-400',
+    accent: 'border-orange-500/30',
+  },
 };
 
 const cardVariants = {
@@ -54,7 +81,10 @@ const cardVariants = {
   exit: { opacity: 0, scale: 0.95, y: -8, transition: { duration: 0.15 } },
 };
 
-const STATUS_BADGE: Record<AuthStatus, { variant: 'accent' | 'default' | 'error'; color: string }> = {
+const STATUS_BADGE: Record<
+  AuthStatus,
+  { variant: 'accent' | 'default' | 'error'; color: string }
+> = {
   connected: { variant: 'accent', color: 'text-emerald-400' },
   disconnected: { variant: 'default', color: 'text-zinc-500' },
   expiring: { variant: 'default', color: 'text-amber-400' },
@@ -94,7 +124,11 @@ function formatVerified(iso: string | null): string {
 
 function getMeta(provider: string) {
   return (
-    PROVIDER_META[provider.toLowerCase()] ?? { icon: '\u{1F916}', color: 'text-zinc-400', accent: 'border-zinc-500/30' }
+    PROVIDER_META[provider.toLowerCase()] ?? {
+      icon: '\u{1F916}',
+      color: 'text-zinc-400',
+      accent: 'border-zinc-500/30',
+    }
   );
 }
 
@@ -111,7 +145,15 @@ interface ProviderCardProps {
 }
 
 const ProviderCard = memo<ProviderCardProps>(
-  ({ provider: p, onConnect, onDisconnect, onTest, isConnecting, isDisconnecting, isTesting }) => {
+  ({
+    provider: p,
+    onConnect,
+    onDisconnect,
+    onTest,
+    isConnecting,
+    isDisconnecting,
+    isTesting,
+  }) => {
     const { t } = useTranslation();
     const theme = useViewTheme();
     const meta = getMeta(p.provider);
@@ -148,12 +190,28 @@ const ProviderCard = memo<ProviderCardProps>(
         {/* Header: Icon + Name + Status */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-xl leading-none shrink-0" role="img" aria-label={p.provider}>
+            <span
+              className="text-xl leading-none shrink-0"
+              role="img"
+              aria-label={p.provider}
+            >
               {meta.icon}
             </span>
             <div className="min-w-0">
-              <h4 className={cn('text-sm font-semibold font-mono truncate', theme.text)}>{p.plan_name}</h4>
-              <span className={cn('text-[10px] font-mono uppercase tracking-wider', theme.textMuted)}>
+              <h4
+                className={cn(
+                  'text-sm font-semibold font-mono truncate',
+                  theme.text,
+                )}
+              >
+                {p.plan_name}
+              </h4>
+              <span
+                className={cn(
+                  'text-[10px] font-mono uppercase tracking-wider',
+                  theme.textMuted,
+                )}
+              >
                 {p.provider}
               </span>
             </div>
@@ -190,15 +248,22 @@ const ProviderCard = memo<ProviderCardProps>(
               {p.plan_tier}
             </span>
           )}
-          <span className={cn('text-xs font-mono', theme.textMuted)}>{formatCost(p.monthly_cost_cents)}</span>
-          <span className={cn('text-[10px] font-mono ml-auto', theme.textMuted)}>{p.auth_type}</span>
+          <span className={cn('text-xs font-mono', theme.textMuted)}>
+            {formatCost(p.monthly_cost_cents)}
+          </span>
+          <span
+            className={cn('text-[10px] font-mono ml-auto', theme.textMuted)}
+          >
+            {p.auth_type}
+          </span>
         </div>
 
         {/* Last verified */}
         <div className="flex items-center gap-1.5">
           <Clock size={10} className={theme.textMuted} />
           <span className={cn('text-[10px] font-mono', theme.textMuted)}>
-            {t('settings.providers.lastVerified', 'Verified')}: {formatVerified(p.last_verified)}
+            {t('settings.providers.lastVerified', 'Verified')}:{' '}
+            {formatVerified(p.last_verified)}
           </span>
         </div>
 
@@ -206,7 +271,9 @@ const ProviderCard = memo<ProviderCardProps>(
         {p.last_error && (
           <div className="flex items-start gap-1.5 text-red-400">
             <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-            <span className="text-[10px] font-mono leading-tight line-clamp-2">{p.last_error}</span>
+            <span className="text-[10px] font-mono leading-tight line-clamp-2">
+              {p.last_error}
+            </span>
           </div>
         )}
 
@@ -230,7 +297,13 @@ const ProviderCard = memo<ProviderCardProps>(
               <Button
                 variant="ghost"
                 size="sm"
-                leftIcon={isTesting ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
+                leftIcon={
+                  isTesting ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Wifi size={12} />
+                  )
+                }
                 onClick={() => onTest(p.provider)}
                 isLoading={isTesting}
                 disabled={isTesting}
@@ -267,33 +340,53 @@ const SummaryFooter = memo<{ providers: ProviderInfo[] }>(({ providers }) => {
   const theme = useViewTheme();
 
   const connected = providers.filter((p) => p.is_connected);
-  const totalCostCents = connected.reduce((sum, p) => sum + p.monthly_cost_cents, 0);
+  const totalCostCents = connected.reduce(
+    (sum, p) => sum + p.monthly_cost_cents,
+    0,
+  );
   const hasErrors = providers.some((p) => p.last_error);
 
   return (
-    <div className={cn('flex items-center justify-between flex-wrap gap-3 pt-4 mt-2', 'border-t border-white/10')}>
+    <div
+      className={cn(
+        'flex items-center justify-between flex-wrap gap-3 pt-4 mt-2',
+        'border-t border-white/10',
+      )}
+    >
       {/* Connected count */}
       <div className="flex items-center gap-2">
         <Zap size={14} className="text-[var(--matrix-accent)]" />
         <span className={cn('text-xs font-mono', theme.text)}>
-          {t('settings.providers.connectedCount', '{{count}}/{{total}} connected', {
-            count: connected.length,
-            total: providers.length,
-          })}
+          {t(
+            'settings.providers.connectedCount',
+            '{{count}}/{{total}} connected',
+            {
+              count: connected.length,
+              total: providers.length,
+            },
+          )}
         </span>
       </div>
 
       {/* Total cost */}
       <div className="flex items-center gap-2">
         <span className={cn('text-xs font-mono font-semibold', theme.text)}>
-          {t('settings.providers.totalCost', 'Total')}: ${(totalCostCents / 100).toFixed(0)}/mo
+          {t('settings.providers.totalCost', 'Total')}: $
+          {(totalCostCents / 100).toFixed(0)}/mo
         </span>
       </div>
 
       {/* Vault health */}
       <div className="flex items-center gap-1.5">
-        <div className={cn('w-2 h-2 rounded-full', hasErrors ? 'bg-red-500 animate-pulse' : 'bg-emerald-500')} />
-        <span className={cn('text-[10px] font-mono', theme.textMuted)}>{t('settings.providers.vault', 'Vault')}</span>
+        <div
+          className={cn(
+            'w-2 h-2 rounded-full',
+            hasErrors ? 'bg-red-500 animate-pulse' : 'bg-emerald-500',
+          )}
+        />
+        <span className={cn('text-[10px] font-mono', theme.textMuted)}>
+          {t('settings.providers.vault', 'Vault')}
+        </span>
       </div>
     </div>
   );
@@ -324,26 +417,43 @@ export default function AiProvidersSection() {
   // ── Mutations ──
 
   const [actionTarget, setActionTarget] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<'connect' | 'disconnect' | 'test' | null>(null);
+  const [actionType, setActionType] = useState<
+    'connect' | 'disconnect' | 'test' | null
+  >(null);
 
   const connectMutation = useMutation({
     mutationFn: async (provider: string) => {
       setActionTarget(provider);
       setActionType('connect');
-      const res = await apiPost<{ authorize_url?: string }>(`/api/ai/providers/${provider}/connect`, {});
+      const res = await apiPost<{ authorize_url?: string }>(
+        `/api/ai/providers/${provider}/connect`,
+        {},
+      );
       return { provider, ...res };
     },
     onSuccess: (data) => {
       if (data.authorize_url) {
         window.open(data.authorize_url, '_blank', 'noopener,noreferrer');
-        toast.info(t('settings.providers.oauthRedirect', 'Opening authorization page...'));
+        toast.info(
+          t(
+            'settings.providers.oauthRedirect',
+            'Opening authorization page...',
+          ),
+        );
       } else {
-        toast.success(t('settings.providers.connectSuccess', '{{provider}} connected', { provider: data.provider }));
+        toast.success(
+          t('settings.providers.connectSuccess', '{{provider}} connected', {
+            provider: data.provider,
+          }),
+        );
       }
       queryClient.invalidateQueries({ queryKey: ['ai-providers'] });
     },
     onError: (err: Error) => {
-      toast.error(err.message || t('settings.providers.connectError', 'Connection failed'));
+      toast.error(
+        err.message ||
+          t('settings.providers.connectError', 'Connection failed'),
+      );
     },
     onSettled: () => {
       setActionTarget(null);
@@ -359,11 +469,18 @@ export default function AiProvidersSection() {
       return provider;
     },
     onSuccess: (provider) => {
-      toast.success(t('settings.providers.disconnectSuccess', '{{provider}} disconnected', { provider }));
+      toast.success(
+        t('settings.providers.disconnectSuccess', '{{provider}} disconnected', {
+          provider,
+        }),
+      );
       queryClient.invalidateQueries({ queryKey: ['ai-providers'] });
     },
     onError: (err: Error) => {
-      toast.error(err.message || t('settings.providers.disconnectError', 'Disconnect failed'));
+      toast.error(
+        err.message ||
+          t('settings.providers.disconnectError', 'Disconnect failed'),
+      );
     },
     onSettled: () => {
       setActionTarget(null);
@@ -375,7 +492,10 @@ export default function AiProvidersSection() {
     mutationFn: async (provider: string) => {
       setActionTarget(provider);
       setActionType('test');
-      const res = await apiPost<{ ok: boolean; latency_ms?: number }>(`/api/ai/providers/${provider}/test`, {});
+      const res = await apiPost<{ ok: boolean; latency_ms?: number }>(
+        `/api/ai/providers/${provider}/test`,
+        {},
+      );
       return { provider, ...res };
     },
     onSuccess: (data) => {
@@ -387,12 +507,18 @@ export default function AiProvidersSection() {
           }),
         );
       } else {
-        toast.error(t('settings.providers.testFailed', '{{provider}} test failed', { provider: data.provider }));
+        toast.error(
+          t('settings.providers.testFailed', '{{provider}} test failed', {
+            provider: data.provider,
+          }),
+        );
       }
       queryClient.invalidateQueries({ queryKey: ['ai-providers'] });
     },
     onError: (err: Error) => {
-      toast.error(err.message || t('settings.providers.testError', 'Test failed'));
+      toast.error(
+        err.message || t('settings.providers.testError', 'Test failed'),
+      );
     },
     onSettled: () => {
       setActionTarget(null);
@@ -402,11 +528,20 @@ export default function AiProvidersSection() {
 
   // ── Handlers ──
 
-  const handleConnect = useCallback((provider: string) => connectMutation.mutate(provider), [connectMutation]);
+  const handleConnect = useCallback(
+    (provider: string) => connectMutation.mutate(provider),
+    [connectMutation],
+  );
 
-  const handleDisconnect = useCallback((provider: string) => disconnectMutation.mutate(provider), [disconnectMutation]);
+  const handleDisconnect = useCallback(
+    (provider: string) => disconnectMutation.mutate(provider),
+    [disconnectMutation],
+  );
 
-  const handleTest = useCallback((provider: string) => testMutation.mutate(provider), [testMutation]);
+  const handleTest = useCallback(
+    (provider: string) => testMutation.mutate(provider),
+    [testMutation],
+  );
 
   // ── Render ──
 
@@ -416,7 +551,12 @@ export default function AiProvidersSection() {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Shield size={18} className="text-[var(--matrix-accent)]" />
-          <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+          <h3
+            className={cn(
+              'text-sm font-semibold font-mono uppercase tracking-wider',
+              theme.text,
+            )}
+          >
             {t('settings.providers.title', 'AI Providers')}
           </h3>
         </div>
@@ -424,7 +564,9 @@ export default function AiProvidersSection() {
         <Button
           variant="ghost"
           size="sm"
-          leftIcon={<RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />}
+          leftIcon={
+            <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
+          }
           onClick={() => refetch()}
           disabled={isLoading}
           className="text-xs"
@@ -443,7 +585,10 @@ export default function AiProvidersSection() {
       {/* Loading state */}
       {isLoading && !providers && (
         <div className="flex items-center justify-center gap-2 py-8">
-          <Loader2 size={20} className="text-[var(--matrix-accent)] animate-spin" />
+          <Loader2
+            size={20}
+            className="text-[var(--matrix-accent)] animate-spin"
+          />
           <span className={cn('text-sm font-mono', theme.textMuted)}>
             {t('settings.providers.loading', 'Loading providers...')}
           </span>
@@ -455,7 +600,10 @@ export default function AiProvidersSection() {
         <div className="flex items-center gap-2 py-4 text-red-400">
           <AlertTriangle size={16} />
           <span className="text-xs font-mono">
-            {t('settings.providers.fetchError', 'Failed to load providers. Check backend connection.')}
+            {t(
+              'settings.providers.fetchError',
+              'Failed to load providers. Check backend connection.',
+            )}
           </span>
         </div>
       )}
@@ -471,8 +619,12 @@ export default function AiProvidersSection() {
                 onConnect={handleConnect}
                 onDisconnect={handleDisconnect}
                 onTest={handleTest}
-                isConnecting={actionTarget === p.provider && actionType === 'connect'}
-                isDisconnecting={actionTarget === p.provider && actionType === 'disconnect'}
+                isConnecting={
+                  actionTarget === p.provider && actionType === 'connect'
+                }
+                isDisconnecting={
+                  actionTarget === p.provider && actionType === 'disconnect'
+                }
                 isTesting={actionTarget === p.provider && actionType === 'test'}
               />
             ))}
@@ -491,7 +643,9 @@ export default function AiProvidersSection() {
       )}
 
       {/* Summary Footer */}
-      {providers && providers.length > 0 && <SummaryFooter providers={providers} />}
+      {providers && providers.length > 0 && (
+        <SummaryFooter providers={providers} />
+      )}
     </div>
   );
 }

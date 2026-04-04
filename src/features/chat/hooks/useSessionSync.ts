@@ -77,7 +77,9 @@ export function useSessionSync() {
 
     // One-time migration: push any localStorage-only sessions to DB
     if (!localStorage.getItem(MIGRATION_FLAG)) {
-      const localOnly = sessions.filter((local) => !dbSessions.some((db) => db.id === local.id));
+      const localOnly = sessions.filter(
+        (local) => !dbSessions.some((db) => db.id === local.id),
+      );
       for (const session of localOnly) {
         createMutation.mutate({ title: session.title });
       }
@@ -112,7 +114,9 @@ export function useSessionSync() {
         {
           onSuccess: (created) => {
             // Replace temp session with real one from API
-            useViewStore.getState().replaceSession(tempId, created.id, created.title);
+            useViewStore
+              .getState()
+              .replaceSession(tempId, created.id, created.title);
           },
           onError: () => {
             // Remove temp session and notify user
@@ -158,7 +162,12 @@ export function useSessionSync() {
 
   const addMessageWithSync = useCallback(
     (sessionId: string, role: string, content: string, model?: string) => {
-      addMessageMutation.mutate({ sessionId, role, content, ...(model !== undefined && { model }) });
+      addMessageMutation.mutate({
+        sessionId,
+        role,
+        content,
+        ...(model !== undefined && { model }),
+      });
     },
     [addMessageMutation],
   );

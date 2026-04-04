@@ -9,7 +9,15 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { Badge, Button, cn } from '@jaskier/ui';
 import type { TFunction } from 'i18next';
-import { Bot, Clock, MessageSquare, Network, Plus, Sparkles, Users } from 'lucide-react';
+import {
+  Bot,
+  Clock,
+  MessageSquare,
+  Network,
+  Plus,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,8 +34,16 @@ import { type ChatSession, useViewStore } from '@/stores/viewStore';
 const FEATURE_BADGES = [
   { key: 'home.badges.agents', fallback: '12 Agents', icon: Users },
   { key: 'home.badges.claudeApi', fallback: 'Claude API', icon: Bot },
-  { key: 'home.badges.mcpIntegration', fallback: 'MCP Integration', icon: Network },
-  { key: 'home.badges.streamingChat', fallback: 'Streaming Chat', icon: MessageSquare },
+  {
+    key: 'home.badges.mcpIntegration',
+    fallback: 'MCP Integration',
+    icon: Network,
+  },
+  {
+    key: 'home.badges.streamingChat',
+    fallback: 'Streaming Chat',
+    icon: MessageSquare,
+  },
 ] as const;
 
 const MAX_RECENT_SESSIONS = 5;
@@ -40,9 +56,11 @@ function timeAgo(timestamp: number, t: TFunction): string {
   const diff = Date.now() - timestamp;
   const minutes = Math.floor(diff / 60_000);
   if (minutes < 1) return t('time.justNow', 'just now');
-  if (minutes < 60) return t('time.minutesAgo', { defaultValue: '{{m}}m ago', m: minutes });
+  if (minutes < 60)
+    return t('time.minutesAgo', { defaultValue: '{{m}}m ago', m: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t('time.hoursAgo', { defaultValue: '{{h}}h ago', h: hours });
+  if (hours < 24)
+    return t('time.hoursAgo', { defaultValue: '{{h}}h ago', h: hours });
   const days = Math.floor(hours / 24);
   if (days === 1) return t('time.yesterday', 'yesterday');
   return t('time.daysAgo', { defaultValue: '{{d}}d ago', d: days });
@@ -119,15 +137,27 @@ const SessionRow = memo<SessionRowProps>(({ session, onOpen, theme }) => {
     >
       <MessageSquare
         size={16}
-        className={cn('shrink-0 transition-colors', 'group-hover:text-[var(--matrix-accent)]', theme.iconMuted)}
+        className={cn(
+          'shrink-0 transition-colors',
+          'group-hover:text-[var(--matrix-accent)]',
+          theme.iconMuted,
+        )}
       />
       <div className="flex-1 min-w-0">
-        <p className={cn('text-sm truncate transition-colors', 'group-hover:text-[var(--matrix-accent)]', theme.text)}>
+        <p
+          className={cn(
+            'text-sm truncate transition-colors',
+            'group-hover:text-[var(--matrix-accent)]',
+            theme.text,
+          )}
+        >
           {session.title}
         </p>
       </div>
       <div className="flex flex-col items-end shrink-0">
-        <span className={cn('text-[10px] font-mono', theme.textMuted)}>{timeAgo(session.createdAt, t)}</span>
+        <span className={cn('text-[10px] font-mono', theme.textMuted)}>
+          {timeAgo(session.createdAt, t)}
+        </span>
         {(session.messageCount ?? 0) > 0 && (
           <span className={cn('text-[10px] font-mono', theme.textMuted)}>
             {session.messageCount} {t('home.msg', 'msg')}
@@ -155,7 +185,10 @@ export const HomePage = memo(() => {
   const { createSessionWithSync } = useSessionSync();
 
   const recentSessions = useMemo(
-    () => [...sessions].sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_RECENT_SESSIONS),
+    () =>
+      [...sessions]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, MAX_RECENT_SESSIONS),
     [sessions],
   );
 
@@ -169,12 +202,18 @@ export const HomePage = memo(() => {
   );
 
   return (
-    <div data-testid="home-view" className="h-full flex flex-col items-center p-8 overflow-y-auto">
+    <div
+      data-testid="home-view"
+      className="h-full flex flex-col items-center p-8 overflow-y-auto"
+    >
       <div className="my-auto flex flex-col items-center w-full">
         {/* ====== Hero Card ====== */}
         <motion.div
           data-testid="welcome-hero"
-          className={cn('flex flex-col items-center gap-6 p-8 rounded-3xl max-w-lg w-full', theme.card)}
+          className={cn(
+            'flex flex-col items-center gap-6 p-8 rounded-3xl max-w-lg w-full',
+            theme.card,
+          )}
           variants={heroVariants}
           initial="hidden"
           animate="visible"
@@ -198,11 +237,19 @@ export const HomePage = memo(() => {
 
           {/* Title */}
           <div className="text-center">
-            <h1 className={cn('text-3xl font-bold font-mono tracking-tight', theme.title)}>
+            <h1
+              className={cn(
+                'text-3xl font-bold font-mono tracking-tight',
+                theme.title,
+              )}
+            >
               {t('home.appName', 'ClaudeHydra')}
             </h1>
             <p className={cn('text-sm mt-1.5 max-w-xs', theme.textMuted)}>
-              {t('home.subtitle', 'AI Swarm Control Center — start a new chat or continue a previous conversation.')}
+              {t(
+                'home.subtitle',
+                'AI Swarm Control Center — start a new chat or continue a previous conversation.',
+              )}
             </p>
           </div>
 
@@ -223,7 +270,12 @@ export const HomePage = memo(() => {
           </motion.div>
 
           {/* CTA Button */}
-          <motion.div className="w-full mt-2" variants={ctaVariants} initial="hidden" animate="visible">
+          <motion.div
+            className="w-full mt-2"
+            variants={ctaVariants}
+            initial="hidden"
+            animate="visible"
+          >
             <Button
               variant="primary"
               size="md"
@@ -255,14 +307,24 @@ export const HomePage = memo(() => {
             >
               <div className="flex items-center gap-2 mb-3">
                 <Clock size={14} className={theme.iconMuted} />
-                <span className={cn('text-xs uppercase tracking-wider font-mono', theme.textMuted)}>
+                <span
+                  className={cn(
+                    'text-xs uppercase tracking-wider font-mono',
+                    theme.textMuted,
+                  )}
+                >
                   {t('home.recentChats', 'Recent Chats')}
                 </span>
               </div>
 
               <div className="space-y-2">
                 {recentSessions.map((session) => (
-                  <SessionRow key={session.id} session={session} onOpen={handleOpenSession} theme={theme} />
+                  <SessionRow
+                    key={session.id}
+                    session={session}
+                    onOpen={handleOpenSession}
+                    theme={theme}
+                  />
                 ))}
               </div>
             </motion.div>
@@ -279,7 +341,10 @@ export const HomePage = memo(() => {
               exit={{ opacity: 0 }}
               transition={{ delay: 0.35 }}
             >
-              <Sparkles size={32} className={cn(theme.iconMuted, 'opacity-40')} />
+              <Sparkles
+                size={32}
+                className={cn(theme.iconMuted, 'opacity-40')}
+              />
               <p className={cn('text-sm', theme.textMuted)}>
                 {t('home.noChats', 'No chats yet. Start a new conversation!')}
               </p>

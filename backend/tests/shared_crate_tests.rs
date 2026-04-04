@@ -16,15 +16,15 @@ use tower::ServiceExt;
 use claudehydra_backend::state::AppState;
 
 /// Helper: build a fresh test router (no rate limiter, no real DB).
-fn app() -> axum::Router {
-    let state = AppState::new_test();
+async fn app() -> axum::Router {
+    let state = AppState::new_test().await;
     claudehydra_backend::create_test_router(state)
 }
 
 /// Helper: build an AppState for unit-level trait tests.
 /// Must be called inside a tokio runtime (PgPool::connect_lazy needs it).
-fn test_state() -> AppState {
-    AppState::new_test()
+async fn test_state() -> AppState {
+    AppState::new_test().await
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -34,7 +34,7 @@ fn test_state() -> AppState {
 #[tokio::test]
 async fn has_auth_secret_returns_none_in_test_mode() {
     use jaskier_core::auth::HasAuthSecret;
-    let state = test_state();
+    let state = test_state().await;
     assert!(
         state.auth_secret().is_none(),
         "test state should have no auth secret (dev mode)"
@@ -48,7 +48,7 @@ async fn has_auth_secret_returns_none_in_test_mode() {
 #[tokio::test]
 async fn has_log_buffer_returns_working_buffer() {
     use jaskier_core::logs::{HasLogBuffer, LogEntry};
-    let state = test_state();
+    let state = test_state().await;
     let buf = state.log_buffer();
 
     // Initially empty
@@ -69,7 +69,7 @@ async fn has_log_buffer_returns_working_buffer() {
 #[tokio::test]
 async fn log_buffer_has_1000_capacity_in_test_state() {
     use jaskier_core::logs::{HasLogBuffer, LogEntry};
-    let state = test_state();
+    let state = test_state().await;
     let buf = state.log_buffer();
 
     // Push 1100 entries
@@ -92,7 +92,7 @@ async fn log_buffer_has_1000_capacity_in_test_state() {
 
 #[tokio::test]
 async fn circuit_breaker_starts_closed_in_app_state() {
-    let state = test_state();
+    let state = test_state().await;
     assert!(
         state.circuit_breaker.check().await.is_ok(),
         "circuit breaker should be CLOSED at init"
@@ -101,14 +101,14 @@ async fn circuit_breaker_starts_closed_in_app_state() {
 
 #[tokio::test]
 async fn circuit_breaker_record_success_keeps_closed() {
-    let state = test_state();
+    let state = test_state().await;
     state.circuit_breaker.record_success().await;
     assert!(state.circuit_breaker.check().await.is_ok());
 }
 
 #[tokio::test]
 async fn circuit_breaker_trips_after_threshold_failures() {
-    let state = test_state();
+    let state = test_state().await;
     // Trip the breaker (threshold is 3)
     for _ in 0..3 {
         state.circuit_breaker.record_failure().await;
@@ -121,7 +121,7 @@ async fn circuit_breaker_trips_after_threshold_failures() {
 
 #[tokio::test]
 async fn circuit_breaker_resets_on_success_after_failures() {
-    let state = test_state();
+    let state = test_state().await;
     // Fail twice (below threshold)
     state.circuit_breaker.record_failure().await;
     state.circuit_breaker.record_failure().await;
@@ -133,7 +133,7 @@ async fn circuit_breaker_resets_on_success_after_failures() {
 
 #[tokio::test]
 async fn circuit_breaker_is_shared_across_clones() {
-    let state1 = test_state();
+    let state1 = test_state().await;
     let state2 = state1.clone();
     // Same Arc<CircuitBreaker>
     assert!(Arc::ptr_eq(
@@ -154,7 +154,7 @@ async fn circuit_breaker_is_shared_across_clones() {
 #[tokio::test]
 async fn google_oauth_table_names_use_ch_prefix() {
     use jaskier_net_sec::oauth::google::HasGoogleOAuthState;
-    let state = test_state();
+    let state = test_state().await;
     assert_eq!(state.google_auth_table(), "ch_google_auth");
     assert_eq!(state.default_port(), "8082");
 }
@@ -162,21 +162,21 @@ async fn google_oauth_table_names_use_ch_prefix() {
 #[tokio::test]
 async fn github_oauth_table_uses_ch_prefix() {
     use jaskier_net_sec::oauth::github::HasGitHubOAuthState;
-    let state = test_state();
+    let state = test_state().await;
     assert_eq!(state.github_oauth_table(), "ch_oauth_github");
 }
 
 #[tokio::test]
 async fn vercel_oauth_table_uses_ch_prefix() {
     use jaskier_net_sec::oauth::vercel::HasVercelOAuthState;
-    let state = test_state();
+    let state = test_state().await;
     assert_eq!(state.vercel_oauth_table(), "ch_oauth_vercel");
 }
 
 #[tokio::test]
 async fn service_tokens_table_uses_ch_prefix() {
     use jaskier_net_sec::oauth::service_tokens::HasServiceTokensState;
-    let state = test_state();
+    let state = test_state().await;
     assert_eq!(state.service_tokens_table(), "ch_service_tokens");
 }
 
@@ -187,7 +187,7 @@ async fn service_tokens_table_uses_ch_prefix() {
 #[tokio::test]
 async fn model_registry_table_names_use_ch_prefix() {
     use jaskier_core::model_registry::HasModelRegistryState;
-    let state = test_state();
+    let state = test_state().await;
     assert_eq!(state.model_pins_table(), "ch_model_pins");
     assert_eq!(state.settings_table(), "ch_settings");
     assert_eq!(state.audit_log_table(), "ch_audit_log");
@@ -196,7 +196,7 @@ async fn model_registry_table_names_use_ch_prefix() {
 #[tokio::test]
 async fn model_cache_initially_empty() {
     use jaskier_core::model_registry::HasModelRegistryState;
-    let state = test_state();
+    let state = test_state().await;
     let cache = state.model_cache().read().await;
     assert!(
         cache.models.is_empty(),
@@ -211,7 +211,7 @@ async fn model_cache_initially_empty() {
 #[tokio::test]
 async fn sessions_table_names_use_ch_prefix() {
     use jaskier_core::sessions::HasSessionsState;
-    let state = test_state();
+    let state = test_state().await;
     assert_eq!(state.sessions_table(), "ch_sessions");
     assert_eq!(state.messages_table(), "ch_messages");
     assert_eq!(state.settings_table(), "ch_settings");
@@ -230,7 +230,7 @@ async fn sessions_table_names_use_ch_prefix() {
 #[tokio::test]
 async fn watchdog_browser_proxy_status_defaults() {
     use jaskier_browser::watchdog::HasWatchdogState;
-    let state = test_state();
+    let state = test_state().await;
     let status = state.browser_proxy_status().read().await;
     // configured depends on BROWSER_PROXY_URL env var — don't assert it
     assert!(!status.reachable);
@@ -241,7 +241,7 @@ async fn watchdog_browser_proxy_status_defaults() {
 #[tokio::test]
 async fn watchdog_health_history_empty_at_start() {
     use jaskier_browser::watchdog::HasWatchdogState;
-    let state = test_state();
+    let state = test_state().await;
     let events = state.browser_proxy_history().recent(100);
     assert!(events.is_empty());
 }
@@ -252,7 +252,7 @@ async fn watchdog_health_history_empty_at_start() {
 
 #[tokio::test]
 async fn logs_backend_returns_200_with_empty_logs() {
-    let response = app().oneshot(get("/api/logs/backend")).await.unwrap();
+    let response = app().await.oneshot(get("/api/logs/backend")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -262,7 +262,11 @@ async fn logs_backend_returns_200_with_empty_logs() {
 
 #[tokio::test]
 async fn logs_backend_clear_returns_200() {
-    let response = app().oneshot(delete("/api/logs/backend")).await.unwrap();
+    let response = app()
+        .await
+        .oneshot(delete("/api/logs/backend"))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -276,6 +280,7 @@ async fn logs_backend_clear_returns_200() {
 #[tokio::test]
 async fn browser_proxy_status_returns_200() {
     let response = app()
+        .await
         .oneshot(get("/api/browser-proxy/status"))
         .await
         .unwrap();
@@ -293,7 +298,7 @@ async fn browser_proxy_status_returns_200() {
 #[tokio::test]
 async fn auth_middleware_allows_all_in_dev_mode() {
     // The test state has no AUTH_SECRET → dev mode → all routes pass through
-    let response = app().oneshot(get("/api/agents")).await.unwrap();
+    let response = app().await.oneshot(get("/api/agents")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 }
 

@@ -18,7 +18,16 @@ import {
 } from '@xyflow/react';
 import React, { useCallback, useRef, useState } from 'react';
 import '@xyflow/react/dist/style.css';
-import { Bot, Database, Download, Image as ImageIcon, Play, Save, Shield, Wrench } from 'lucide-react';
+import {
+  Bot,
+  Database,
+  Download,
+  Image as ImageIcon,
+  Play,
+  Save,
+  Shield,
+  Wrench,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 // ── Custom Nodes ─────────────────────────────────────────────────────────────
@@ -48,11 +57,21 @@ function AgentNode({ data }: { data: NodeData }) {
   return (
     <div style={{ ...nodeStyle, border: '2px solid #3b82f6' }}>
       <Handle type="target" position={Position.Top} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', marginBottom: '8px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 'bold',
+          marginBottom: '8px',
+        }}
+      >
         <Bot size={16} color="#60a5fa" />
         {data.label}
       </div>
-      <div style={{ color: '#94a3b8', fontSize: '10px' }}>Model: {data.model || 'Unknown'}</div>
+      <div style={{ color: '#94a3b8', fontSize: '10px' }}>
+        Model: {data.model || 'Unknown'}
+      </div>
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -62,11 +81,21 @@ function McpNode({ data }: { data: NodeData }) {
   return (
     <div style={{ ...nodeStyle, border: '2px solid #eab308' }}>
       <Handle type="target" position={Position.Top} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', marginBottom: '8px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 'bold',
+          marginBottom: '8px',
+        }}
+      >
         <Wrench size={16} color="#facc15" />
         {data.label}
       </div>
-      <div style={{ color: '#94a3b8', fontSize: '10px' }}>Server: {data.server || 'Local'}</div>
+      <div style={{ color: '#94a3b8', fontSize: '10px' }}>
+        Server: {data.server || 'Local'}
+      </div>
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -76,11 +105,21 @@ function DbNode({ data }: { data: NodeData }) {
   return (
     <div style={{ ...nodeStyle, border: '2px solid #22c55e' }}>
       <Handle type="target" position={Position.Top} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', marginBottom: '8px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 'bold',
+          marginBottom: '8px',
+        }}
+      >
         <Database size={16} color="#4ade80" />
         {data.label}
       </div>
-      <div style={{ color: '#94a3b8', fontSize: '10px' }}>Type: {data.dbType || 'SQL'}</div>
+      <div style={{ color: '#94a3b8', fontSize: '10px' }}>
+        Type: {data.dbType || 'SQL'}
+      </div>
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
@@ -88,9 +127,23 @@ function DbNode({ data }: { data: NodeData }) {
 
 function SandboxNode({ data }: { data: NodeData }) {
   return (
-    <div style={{ ...nodeStyle, border: '2px solid #10b981', background: '#0f2e1f' }}>
+    <div
+      style={{
+        ...nodeStyle,
+        border: '2px solid #10b981',
+        background: '#0f2e1f',
+      }}
+    >
       <Handle type="target" position={Position.Top} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', marginBottom: '8px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontWeight: 'bold',
+          marginBottom: '8px',
+        }}
+      >
         <Shield size={16} color="#10b981" />
         {data.label}
       </div>
@@ -213,12 +266,21 @@ function DraggableItem({
   const handleDragStart = (event: React.DragEvent) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.setData('application/reactflow-label', label);
-    event.dataTransfer.setData('application/reactflow-data', JSON.stringify(extraData));
+    event.dataTransfer.setData(
+      'application/reactflow-data',
+      JSON.stringify(extraData),
+    );
     event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
-    <div role="option" tabIndex={0} style={itemStyle} onDragStart={handleDragStart} draggable>
+    <div
+      role="option"
+      tabIndex={0}
+      style={itemStyle}
+      onDragStart={handleDragStart}
+      draggable
+    >
       {children}
     </div>
   );
@@ -238,9 +300,27 @@ function Sidebar() {
       role="listbox"
       aria-label="Toolbox"
     >
-      <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#e2e8f0', marginBottom: '16px' }}>Toolbox</div>
+      <div
+        style={{
+          fontSize: '14px',
+          fontWeight: 'bold',
+          color: '#e2e8f0',
+          marginBottom: '16px',
+        }}
+      >
+        Toolbox
+      </div>
 
-      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase' }}>Agents</div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: '#94a3b8',
+          marginBottom: '8px',
+          textTransform: 'uppercase',
+        }}
+      >
+        Agents
+      </div>
       <DraggableItem
         nodeType="agent"
         label="Claude Agent"
@@ -262,10 +342,18 @@ function Sidebar() {
       >
         <Bot size={14} color="#60a5fa" /> Gemini
       </DraggableItem>
-      <DraggableItem nodeType="agent" label="Grok Agent" extraData={{ model: 'grok-beta', peerId: 'grokhydra' }}>
+      <DraggableItem
+        nodeType="agent"
+        label="Grok Agent"
+        extraData={{ model: 'grok-beta', peerId: 'grokhydra' }}
+      >
         <Bot size={14} color="#60a5fa" /> Grok
       </DraggableItem>
-      <DraggableItem nodeType="agent" label="OpenAI Agent" extraData={{ model: 'gpt-4o', peerId: 'openaihydra' }}>
+      <DraggableItem
+        nodeType="agent"
+        label="OpenAI Agent"
+        extraData={{ model: 'gpt-4o', peerId: 'openaihydra' }}
+      >
         <Bot size={14} color="#60a5fa" /> OpenAI
       </DraggableItem>
 
@@ -280,10 +368,18 @@ function Sidebar() {
       >
         MCP Servers
       </div>
-      <DraggableItem nodeType="mcp" label="Playwright MCP" extraData={{ server: 'playwright' }}>
+      <DraggableItem
+        nodeType="mcp"
+        label="Playwright MCP"
+        extraData={{ server: 'playwright' }}
+      >
         <Wrench size={14} color="#facc15" /> Playwright
       </DraggableItem>
-      <DraggableItem nodeType="mcp" label="Repomix MCP" extraData={{ server: 'repomix' }}>
+      <DraggableItem
+        nodeType="mcp"
+        label="Repomix MCP"
+        extraData={{ server: 'repomix' }}
+      >
         <Wrench size={14} color="#facc15" /> Repomix
       </DraggableItem>
 
@@ -298,10 +394,18 @@ function Sidebar() {
       >
         Databases
       </div>
-      <DraggableItem nodeType="database" label="Postgres" extraData={{ dbType: 'PostgreSQL 17' }}>
+      <DraggableItem
+        nodeType="database"
+        label="Postgres"
+        extraData={{ dbType: 'PostgreSQL 17' }}
+      >
         <Database size={14} color="#4ade80" /> Postgres
       </DraggableItem>
-      <DraggableItem nodeType="database" label="Qdrant Vector" extraData={{ dbType: 'Vector DB' }}>
+      <DraggableItem
+        nodeType="database"
+        label="Qdrant Vector"
+        extraData={{ dbType: 'Vector DB' }}
+      >
         <Database size={14} color="#4ade80" /> Qdrant
       </DraggableItem>
 
@@ -316,13 +420,25 @@ function Sidebar() {
       >
         Sandbox
       </div>
-      <DraggableItem nodeType="sandbox" label="Node.js Sandbox" extraData={{ language: 'node', isolated: true }}>
+      <DraggableItem
+        nodeType="sandbox"
+        label="Node.js Sandbox"
+        extraData={{ language: 'node', isolated: true }}
+      >
         <Shield size={14} color="#10b981" /> Node.js
       </DraggableItem>
-      <DraggableItem nodeType="sandbox" label="Python Sandbox" extraData={{ language: 'python', isolated: true }}>
+      <DraggableItem
+        nodeType="sandbox"
+        label="Python Sandbox"
+        extraData={{ language: 'python', isolated: true }}
+      >
         <Shield size={14} color="#10b981" /> Python
       </DraggableItem>
-      <DraggableItem nodeType="sandbox" label="Bash Sandbox" extraData={{ language: 'bash', isolated: true }}>
+      <DraggableItem
+        nodeType="sandbox"
+        label="Bash Sandbox"
+        extraData={{ language: 'bash', isolated: true }}
+      >
         <Shield size={14} color="#10b981" /> Bash
       </DraggableItem>
     </div>
@@ -363,7 +479,10 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
 
     const latestEvent = events[0];
     if (!latestEvent) return;
-    if (latestEvent.eventType === 'peer_working' || latestEvent.eventType === 'delegation_sent') {
+    if (
+      latestEvent.eventType === 'peer_working' ||
+      latestEvent.eventType === 'delegation_sent'
+    ) {
       setEdges((eds) =>
         eds.map((e) => ({
           ...e,
@@ -371,7 +490,10 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
           style: { stroke: '#3b82f6', strokeWidth: 3 },
         })),
       );
-    } else if (latestEvent.eventType === 'task_completed' || latestEvent.eventType === 'peer_completed') {
+    } else if (
+      latestEvent.eventType === 'task_completed' ||
+      latestEvent.eventType === 'peer_completed'
+    ) {
       setEdges((eds) =>
         eds.map((e) => ({
           ...e,
@@ -380,7 +502,10 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
         })),
       );
       setIsRunning(false);
-    } else if (latestEvent.eventType === 'task_failed' || latestEvent.eventType === 'peer_error') {
+    } else if (
+      latestEvent.eventType === 'task_failed' ||
+      latestEvent.eventType === 'peer_error'
+    ) {
       setEdges((eds) =>
         eds.map((e) => ({
           ...e,
@@ -394,7 +519,16 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
 
   const onConnect = useCallback(
     (params: Connection) =>
-      setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#3b82f6', strokeWidth: 2 } }, eds)),
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            animated: true,
+            style: { stroke: '#3b82f6', strokeWidth: 2 },
+          },
+          eds,
+        ),
+      ),
     [setEdges],
   );
 
@@ -474,7 +608,9 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
     const currentEdges = reactFlowInstance.getEdges();
 
     // Find all agent nodes in the graph
-    const agentNodes = currentNodes.filter((n: Node) => n.type === 'agent' && n.data?.['peerId']);
+    const agentNodes = currentNodes.filter(
+      (n: Node) => n.type === 'agent' && n.data?.['peerId'],
+    );
 
     if (agentNodes.length === 0) {
       toast.error('No agents found in the architecture');
@@ -498,7 +634,12 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
       eds.map((e) => ({
         ...e,
         animated: connectedEdges.some((ce: Edge) => ce.id === e.id),
-        style: { stroke: connectedEdges.some((ce: Edge) => ce.id === e.id) ? '#3b82f6' : '#334155', strokeWidth: 2 },
+        style: {
+          stroke: connectedEdges.some((ce: Edge) => ce.id === e.id)
+            ? '#3b82f6'
+            : '#334155',
+          strokeWidth: 2,
+        },
       })),
     );
 
@@ -542,7 +683,9 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
             proOptions={{ hideAttribution: true }}
           >
             <Background color="#1e293b" gap={24} />
-            <Controls style={{ background: '#1e293b', borderColor: '#334155' }} />
+            <Controls
+              style={{ background: '#1e293b', borderColor: '#334155' }}
+            />
 
             <Panel position="top-right">
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -598,10 +741,17 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
                     borderRadius: '6px',
                     color: '#fff',
                     fontSize: '12px',
-                    cursor: isRunning || nodes.length === 0 ? 'not-allowed' : 'pointer',
+                    cursor:
+                      isRunning || nodes.length === 0
+                        ? 'not-allowed'
+                        : 'pointer',
                   }}
                 >
-                  {isRunning ? <Bot size={14} className="animate-pulse" /> : <Play size={14} />}
+                  {isRunning ? (
+                    <Bot size={14} className="animate-pulse" />
+                  ) : (
+                    <Play size={14} />
+                  )}
                   {isRunning ? 'Running...' : 'Execute'}
                 </button>
               </div>

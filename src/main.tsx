@@ -1,6 +1,9 @@
 import { FeatureErrorFallback } from '@jaskier/hydra-app/components/molecules';
 import { ErrorBoundary } from '@jaskier/ui';
-import { QueryClientProvider, QueryErrorResetBoundary } from '@tanstack/react-query';
+import {
+  QueryClientProvider,
+  QueryErrorResetBoundary,
+} from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
 import { lazy, type ReactNode, StrictMode, Suspense } from 'react';
 import { preconnect, prefetchDNS, preload } from 'react-dom';
@@ -18,10 +21,17 @@ preload(
 preload('/logo.png', { as: 'image' });
 
 const ReactQueryDevtools = lazy(() =>
-  import('@tanstack/react-query-devtools').then((m) => ({ default: m.ReactQueryDevtools })),
+  import('@tanstack/react-query-devtools').then((m) => ({
+    default: m.ReactQueryDevtools,
+  })),
 );
 
-import { type AuthConfig, AuthProvider, LoginButton, useAuth } from '@jaskier/auth';
+import {
+  type AuthConfig,
+  AuthProvider,
+  LoginButton,
+  useAuth,
+} from '@jaskier/auth';
 import { OfflineBanner } from '@/components/molecules/OfflineBanner';
 import { ViewSkeleton } from '@/components/molecules/ViewSkeleton';
 import { AppShell } from '@/components/organisms/AppShell';
@@ -54,9 +64,16 @@ if ('serviceWorker' in navigator) {
           if (!newWorker) return;
 
           newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            if (
+              newWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
               // New version available — prompt user
-              if (confirm('Nowa wersja aplikacji jest dostępna. Czy chcesz odświeżyć?')) {
+              if (
+                confirm(
+                  'Nowa wersja aplikacji jest dostępna. Czy chcesz odświeżyć?',
+                )
+              ) {
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
                 window.location.reload();
               }
@@ -83,11 +100,19 @@ const viewImports = {
   agents: () => import('@/features/agents/components/AgentsView'),
   settings: () => import('@/features/settings/components/SettingsView'),
   logs: () => import('@/features/logs/components/LogsView'),
-  delegations: () => import('@/features/delegations/components/DelegationsView'),
+  delegations: () =>
+    import('@/features/delegations/components/DelegationsView'),
   analytics: () => import('@/features/analytics/components/AnalyticsView'),
-  swarm: () => import('@/features/swarm/components/SwarmView').then((m) => ({ default: m.SwarmView })),
-  'semantic-cache': () => import('@/features/semantic-cache/components/SemanticCacheView'),
-  collab: () => import('@/features/collab/components/CollabView').then((m) => ({ default: m.CollabView })),
+  swarm: () =>
+    import('@/features/swarm/components/SwarmView').then((m) => ({
+      default: m.SwarmView,
+    })),
+  'semantic-cache': () =>
+    import('@/features/semantic-cache/components/SemanticCacheView'),
+  collab: () =>
+    import('@/features/collab/components/CollabView').then((m) => ({
+      default: m.CollabView,
+    })),
 } as const;
 
 const HomePage = lazy(viewImports.home);
@@ -116,28 +141,52 @@ function ViewRouter() {
         return <HomePage />;
       case 'agents':
         return (
-          <ErrorBoundary fallback={<FeatureErrorFallback feature="Agents" onRetry={() => window.location.reload()} />}>
+          <ErrorBoundary
+            fallback={
+              <FeatureErrorFallback
+                feature="Agents"
+                onRetry={() => window.location.reload()}
+              />
+            }
+          >
             <AgentsView />
           </ErrorBoundary>
         );
       case 'settings':
         return (
           <ErrorBoundary
-            fallback={<FeatureErrorFallback feature="Settings" onRetry={() => window.location.reload()} />}
+            fallback={
+              <FeatureErrorFallback
+                feature="Settings"
+                onRetry={() => window.location.reload()}
+              />
+            }
           >
             <SettingsView />
           </ErrorBoundary>
         );
       case 'logs':
         return (
-          <ErrorBoundary fallback={<FeatureErrorFallback feature="Logs" onRetry={() => window.location.reload()} />}>
+          <ErrorBoundary
+            fallback={
+              <FeatureErrorFallback
+                feature="Logs"
+                onRetry={() => window.location.reload()}
+              />
+            }
+          >
             <LazyLogsView />
           </ErrorBoundary>
         );
       case 'delegations':
         return (
           <ErrorBoundary
-            fallback={<FeatureErrorFallback feature="Delegations" onRetry={() => window.location.reload()} />}
+            fallback={
+              <FeatureErrorFallback
+                feature="Delegations"
+                onRetry={() => window.location.reload()}
+              />
+            }
           >
             <LazyDelegationsView />
           </ErrorBoundary>
@@ -145,21 +194,38 @@ function ViewRouter() {
       case 'analytics':
         return (
           <ErrorBoundary
-            fallback={<FeatureErrorFallback feature="Analytics" onRetry={() => window.location.reload()} />}
+            fallback={
+              <FeatureErrorFallback
+                feature="Analytics"
+                onRetry={() => window.location.reload()}
+              />
+            }
           >
             <LazyAnalyticsView />
           </ErrorBoundary>
         );
       case 'swarm':
         return (
-          <ErrorBoundary fallback={<FeatureErrorFallback feature="Swarm" onRetry={() => window.location.reload()} />}>
+          <ErrorBoundary
+            fallback={
+              <FeatureErrorFallback
+                feature="Swarm"
+                onRetry={() => window.location.reload()}
+              />
+            }
+          >
             <LazySwarmView />
           </ErrorBoundary>
         );
       case 'semantic-cache':
         return (
           <ErrorBoundary
-            fallback={<FeatureErrorFallback feature="Semantic Cache" onRetry={() => window.location.reload()} />}
+            fallback={
+              <FeatureErrorFallback
+                feature="Semantic Cache"
+                onRetry={() => window.location.reload()}
+              />
+            }
           >
             <LazySemanticCacheView />
           </ErrorBoundary>
@@ -167,7 +233,12 @@ function ViewRouter() {
       case 'collab':
         return (
           <ErrorBoundary
-            fallback={<FeatureErrorFallback feature="Collaboration" onRetry={() => window.location.reload()} />}
+            fallback={
+              <FeatureErrorFallback
+                feature="Collaboration"
+                onRetry={() => window.location.reload()}
+              />
+            }
           >
             <LazyCollabView />
           </ErrorBoundary>
@@ -179,7 +250,14 @@ function ViewRouter() {
     <div className="h-full overflow-hidden relative">
       {/* Chat always mounted — preserves WebSocket connection across view switches */}
       <div className={isChatView ? 'h-full w-full' : 'hidden'}>
-        <ErrorBoundary fallback={<FeatureErrorFallback feature="Chat" onRetry={() => window.location.reload()} />}>
+        <ErrorBoundary
+          fallback={
+            <FeatureErrorFallback
+              feature="Chat"
+              onRetry={() => window.location.reload()}
+            />
+          }
+        >
           <Suspense fallback={<ViewSkeleton />}>
             <ClaudeChatView />
           </Suspense>
@@ -200,7 +278,9 @@ function ViewRouter() {
             <QueryErrorResetBoundary>
               {() => (
                 <ErrorBoundary>
-                  <Suspense fallback={<ViewSkeleton />}>{renderNonChatView()}</Suspense>
+                  <Suspense fallback={<ViewSkeleton />}>
+                    {renderNonChatView()}
+                  </Suspense>
                 </ErrorBoundary>
               )}
             </QueryErrorResetBoundary>
@@ -212,8 +292,11 @@ function ViewRouter() {
 }
 
 const authConfig: AuthConfig = {
-  apiUrl: (import.meta.env['VITE_AUTH_API_URL'] as string | undefined) || 'http://localhost:8086',
-  googleClientId: (import.meta.env['VITE_GOOGLE_CLIENT_ID'] as string | undefined) || '',
+  apiUrl:
+    (import.meta.env['VITE_AUTH_API_URL'] as string | undefined) ||
+    'http://localhost:8086',
+  googleClientId:
+    (import.meta.env['VITE_GOOGLE_CLIENT_ID'] as string | undefined) || '',
   appId: 'claudehydra',
 };
 

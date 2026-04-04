@@ -2,7 +2,16 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Button, cn, Input } from '@jaskier/ui';
-import { ChevronDown, ChevronRight, Network, Plus, Power, PowerOff, Trash2, Wrench } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Network,
+  Plus,
+  Power,
+  PowerOff,
+  Trash2,
+  Wrench,
+} from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -45,7 +54,13 @@ function AddServerForm({ onClose }: { onClose: () => void }) {
   }, [name, url, authToken, timeout, createMutation, onClose, t]);
 
   return (
-    <div className={cn('space-y-3 p-4 rounded-lg border', theme.border, theme.card)}>
+    <div
+      className={cn(
+        'space-y-3 p-4 rounded-lg border',
+        theme.border,
+        theme.card,
+      )}
+    >
       <Input
         placeholder={t('mcp.name', 'Server Name')}
         value={name}
@@ -53,7 +68,10 @@ function AddServerForm({ onClose }: { onClose: () => void }) {
         className="font-mono text-sm"
       />
       <Input
-        placeholder={t('mcp.url', 'Server URL (e.g. http://localhost:3000/mcp)')}
+        placeholder={t(
+          'mcp.url',
+          'Server URL (e.g. http://localhost:3000/mcp)',
+        )}
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         className="font-mono text-sm"
@@ -66,7 +84,10 @@ function AddServerForm({ onClose }: { onClose: () => void }) {
         className="font-mono text-sm"
       />
       <div className="flex items-center gap-2">
-        <label htmlFor="mcp-timeout" className={cn('text-xs font-mono', theme.textMuted)}>
+        <label
+          htmlFor="mcp-timeout"
+          className={cn('text-xs font-mono', theme.textMuted)}
+        >
           {t('mcp.timeout', 'Timeout (s)')}
         </label>
         <Input
@@ -83,8 +104,14 @@ function AddServerForm({ onClose }: { onClose: () => void }) {
         <Button variant="ghost" size="sm" onClick={onClose}>
           {t('common.cancel', 'Cancel')}
         </Button>
-        <Button size="sm" onClick={handleSubmit} disabled={!name.trim() || !url.trim() || createMutation.isPending}>
-          {createMutation.isPending ? t('common.loading', 'Loading...') : t('mcp.addServer', 'Add Server')}
+        <Button
+          size="sm"
+          onClick={handleSubmit}
+          disabled={!name.trim() || !url.trim() || createMutation.isPending}
+        >
+          {createMutation.isPending
+            ? t('common.loading', 'Loading...')
+            : t('mcp.addServer', 'Add Server')}
         </Button>
       </div>
     </div>
@@ -99,23 +126,40 @@ function ServerToolsList({ serverId }: { serverId: string }) {
   const { data: tools, isLoading } = useMcpServerTools(serverId);
 
   if (isLoading) {
-    return <p className={cn('text-xs font-mono pl-6', theme.textMuted)}>{t('common.loading', 'Loading...')}</p>;
+    return (
+      <p className={cn('text-xs font-mono pl-6', theme.textMuted)}>
+        {t('common.loading', 'Loading...')}
+      </p>
+    );
   }
 
   const toolsList = Array.isArray(tools) ? tools : [];
 
   if (!toolsList.length) {
-    return <p className={cn('text-xs font-mono pl-6', theme.textMuted)}>{t('mcp.noTools', 'No tools discovered')}</p>;
+    return (
+      <p className={cn('text-xs font-mono pl-6', theme.textMuted)}>
+        {t('mcp.noTools', 'No tools discovered')}
+      </p>
+    );
   }
 
   return (
     <div className="pl-6 space-y-1">
       {toolsList.map((tool) => (
         <div key={tool.id} className="flex items-start gap-2">
-          <Wrench size={12} className="text-[var(--matrix-accent)] mt-0.5 shrink-0" />
+          <Wrench
+            size={12}
+            className="text-[var(--matrix-accent)] mt-0.5 shrink-0"
+          />
           <div>
-            <span className={cn('text-xs font-mono font-medium', theme.text)}>{tool.tool_name}</span>
-            {tool.description && <p className={cn('text-[10px] font-mono', theme.textMuted)}>{tool.description}</p>}
+            <span className={cn('text-xs font-mono font-medium', theme.text)}>
+              {tool.tool_name}
+            </span>
+            {tool.description && (
+              <p className={cn('text-[10px] font-mono', theme.textMuted)}>
+                {tool.description}
+              </p>
+            )}
           </div>
         </div>
       ))}
@@ -134,7 +178,10 @@ function ServerRow({ server }: { server: McpServer }) {
   const deleteMutation = useDeleteMcpServer();
 
   const isConnected = server.enabled;
-  const busy = connectMutation.isPending || disconnectMutation.isPending || deleteMutation.isPending;
+  const busy =
+    connectMutation.isPending ||
+    disconnectMutation.isPending ||
+    deleteMutation.isPending;
 
   const handleToggle = useCallback(async () => {
     try {
@@ -175,11 +222,22 @@ function ServerRow({ server }: { server: McpServer }) {
           )}
         </button>
 
-        <div className={cn('w-2 h-2 rounded-full shrink-0', isConnected ? 'bg-emerald-400' : 'bg-zinc-500')} />
+        <div
+          className={cn(
+            'w-2 h-2 rounded-full shrink-0',
+            isConnected ? 'bg-emerald-400' : 'bg-zinc-500',
+          )}
+        />
 
-        <span className={cn('text-sm font-mono font-medium flex-1', theme.text)}>{server.name}</span>
+        <span
+          className={cn('text-sm font-mono font-medium flex-1', theme.text)}
+        >
+          {server.name}
+        </span>
 
-        <span className={cn('text-[10px] font-mono', theme.textMuted)}>{server.url ?? server.command}</span>
+        <span className={cn('text-[10px] font-mono', theme.textMuted)}>
+          {server.url ?? server.command}
+        </span>
 
         <Button
           variant="ghost"
@@ -191,7 +249,13 @@ function ServerRow({ server }: { server: McpServer }) {
           {isConnected ? <PowerOff size={14} /> : <Power size={14} />}
         </Button>
 
-        <Button variant="ghost" size="sm" onClick={handleDelete} disabled={busy} aria-label="Delete">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleDelete}
+          disabled={busy}
+          aria-label="Delete"
+        >
           <Trash2 size={14} className="text-red-400" />
         </Button>
       </div>
@@ -215,26 +279,46 @@ export const McpServersSection = memo(() => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Network size={18} className="text-[var(--matrix-accent)]" />
-          <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+          <h3
+            className={cn(
+              'text-sm font-semibold font-mono uppercase tracking-wider',
+              theme.text,
+            )}
+          >
             {t('mcp.title', 'MCP Servers')}
           </h3>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setShowAddForm(!showAddForm)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAddForm(!showAddForm)}
+        >
           <Plus size={14} />
-          <span className="ml-1 text-xs">{t('mcp.addServer', 'Add Server')}</span>
+          <span className="ml-1 text-xs">
+            {t('mcp.addServer', 'Add Server')}
+          </span>
         </Button>
       </div>
 
       <p className={cn('text-xs', theme.textMuted)}>
-        {t('mcp.description', 'Connect external MCP servers to extend agent capabilities with additional tools.')}
+        {t(
+          'mcp.description',
+          'Connect external MCP servers to extend agent capabilities with additional tools.',
+        )}
       </p>
 
       {showAddForm && <AddServerForm onClose={() => setShowAddForm(false)} />}
 
-      {isLoading && <p className={cn('text-xs font-mono', theme.textMuted)}>{t('common.loading', 'Loading...')}</p>}
+      {isLoading && (
+        <p className={cn('text-xs font-mono', theme.textMuted)}>
+          {t('common.loading', 'Loading...')}
+        </p>
+      )}
 
       {!isLoading && !servers.length && !showAddForm && (
-        <p className={cn('text-xs font-mono', theme.textMuted)}>{t('mcp.noServers', 'No MCP servers configured')}</p>
+        <p className={cn('text-xs font-mono', theme.textMuted)}>
+          {t('mcp.noServers', 'No MCP servers configured')}
+        </p>
       )}
 
       <div className="space-y-2">

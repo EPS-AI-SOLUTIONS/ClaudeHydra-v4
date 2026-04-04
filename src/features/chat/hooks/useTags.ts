@@ -53,7 +53,8 @@ interface SearchResponse {
 export function useSessionTagsQuery(sessionId: string | null) {
   return useQuery<SessionTagsResponse>({
     queryKey: ['session-tags', sessionId],
-    queryFn: () => apiGet<SessionTagsResponse>(`/api/sessions/${sessionId}/tags`),
+    queryFn: () =>
+      apiGet<SessionTagsResponse>(`/api/sessions/${sessionId}/tags`),
     enabled: !!sessionId,
     staleTime: 30_000,
   });
@@ -78,7 +79,8 @@ export function useSearchQuery(query: string, tags: string[], enabled = true) {
 
   return useQuery<SearchResponse>({
     queryKey: ['session-search', query, tags],
-    queryFn: () => apiGet<SearchResponse>(`/api/sessions/search?${params.toString()}`),
+    queryFn: () =>
+      apiGet<SearchResponse>(`/api/sessions/search?${params.toString()}`),
     enabled: enabled && hasSearch,
     staleTime: 15_000,
   });
@@ -90,15 +92,24 @@ export function useSearchQuery(query: string, tags: string[], enabled = true) {
 export function useAddTagsMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<SessionTagsResponse, Error, { sessionId: string; tags: string[] }>({
-    mutationFn: ({ sessionId, tags }) => apiPost<SessionTagsResponse>(`/api/sessions/${sessionId}/tags`, { tags }),
+  return useMutation<
+    SessionTagsResponse,
+    Error,
+    { sessionId: string; tags: string[] }
+  >({
+    mutationFn: ({ sessionId, tags }) =>
+      apiPost<SessionTagsResponse>(`/api/sessions/${sessionId}/tags`, { tags }),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['session-tags', variables.sessionId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['session-tags', variables.sessionId],
+      });
       void queryClient.invalidateQueries({ queryKey: ['all-tags'] });
       void queryClient.invalidateQueries({ queryKey: ['session-search'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to add tags');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to add tags',
+      );
     },
   });
 }
@@ -107,16 +118,26 @@ export function useAddTagsMutation() {
 export function useRemoveTagMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ session_id: string; removed: string }, Error, { sessionId: string; tag: string }>({
+  return useMutation<
+    { session_id: string; removed: string },
+    Error,
+    { sessionId: string; tag: string }
+  >({
     mutationFn: ({ sessionId, tag }) =>
-      apiDelete<{ session_id: string; removed: string }>(`/api/sessions/${sessionId}/tags/${encodeURIComponent(tag)}`),
+      apiDelete<{ session_id: string; removed: string }>(
+        `/api/sessions/${sessionId}/tags/${encodeURIComponent(tag)}`,
+      ),
     onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['session-tags', variables.sessionId] });
+      void queryClient.invalidateQueries({
+        queryKey: ['session-tags', variables.sessionId],
+      });
       void queryClient.invalidateQueries({ queryKey: ['all-tags'] });
       void queryClient.invalidateQueries({ queryKey: ['session-search'] });
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove tag');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove tag',
+      );
     },
   });
 }

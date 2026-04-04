@@ -12,20 +12,20 @@ use claudehydra_backend::state::AppState;
 /// Build a test app router without requiring a real database.
 /// Uses `create_test_router` — no GovernorLayer (rate limiter needs peer IP
 /// which `oneshot()` doesn't provide).
-fn test_app() -> axum::Router {
-    let state = AppState::new_test();
+async fn test_app() -> axum::Router {
+    let state = AppState::new_test().await;
     claudehydra_backend::create_test_router(state)
 }
 
 #[tokio::test]
 async fn health_endpoint_returns_ok() {
-    let response = test_app().oneshot(get("/api/health")).await.unwrap();
+    let response = test_app().await.oneshot(get("/api/health")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn health_endpoint_returns_json_with_status_field() {
-    let response = test_app().oneshot(get("/api/health")).await.unwrap();
+    let response = test_app().await.oneshot(get("/api/health")).await.unwrap();
     let json = body_json(response).await;
     assert!(
         json.get("status").is_some(),
@@ -35,7 +35,11 @@ async fn health_endpoint_returns_json_with_status_field() {
 
 #[tokio::test]
 async fn auth_mode_endpoint_returns_ok() {
-    let response = test_app().oneshot(get("/api/auth/mode")).await.unwrap();
+    let response = test_app()
+        .await
+        .oneshot(get("/api/auth/mode"))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -47,7 +51,11 @@ async fn auth_mode_endpoint_returns_ok() {
 
 #[tokio::test]
 async fn readiness_endpoint_exists() {
-    let response = test_app().oneshot(get("/api/health/ready")).await.unwrap();
+    let response = test_app()
+        .await
+        .oneshot(get("/api/health/ready"))
+        .await
+        .unwrap();
     // Readiness may return 503 if not marked ready yet, but should not 404
     assert_ne!(response.status(), StatusCode::NOT_FOUND);
 }
@@ -55,6 +63,7 @@ async fn readiness_endpoint_exists() {
 #[tokio::test]
 async fn nonexistent_route_returns_404() {
     let response = test_app()
+        .await
         .oneshot(get("/api/does-not-exist"))
         .await
         .unwrap();

@@ -10,7 +10,9 @@ vi.mock('react-i18next', () => ({
 
 // Mock @jaskier/ui Skeleton
 vi.mock('@jaskier/ui', () => ({
-  Skeleton: ({ ...props }: Record<string, unknown>) => <div data-testid="skeleton" {...props} />,
+  Skeleton: ({ ...props }: Record<string, unknown>) => (
+    <div data-testid="skeleton" {...props} />
+  ),
 }));
 
 import { ViewSkeleton } from '../ViewSkeleton';
@@ -24,7 +26,10 @@ describe('ViewSkeleton', () => {
 
   it('renders loading view label', () => {
     render(<ViewSkeleton />);
-    expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'Loading view');
+    expect(screen.getByRole('status')).toHaveAttribute(
+      'aria-label',
+      'Loading view',
+    );
   });
 
   it('renders multiple skeleton placeholders', () => {

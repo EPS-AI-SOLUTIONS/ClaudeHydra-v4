@@ -5,12 +5,21 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/shared/api/client';
-import type { OAuthCallbackResponse, OAuthLoginResponse, OAuthStatus } from '@/shared/api/schemas';
+import type {
+  OAuthCallbackResponse,
+  OAuthLoginResponse,
+  OAuthStatus,
+} from '@/shared/api/schemas';
 
 const OAUTH_DISMISSED_KEY = 'jaskier_oauth_dismissed';
 const OAUTH_QUERY_KEY = ['oauth-status'] as const;
 
-type OAuthPhase = 'idle' | 'waiting_code' | 'exchanging' | 'authenticated' | 'error';
+type OAuthPhase =
+  | 'idle'
+  | 'waiting_code'
+  | 'exchanging'
+  | 'authenticated'
+  | 'error';
 
 interface UseOAuthStatusReturn {
   status: OAuthStatus | undefined;
@@ -35,7 +44,9 @@ function readDismissed(): boolean {
   }
 }
 
-function parseCallbackUrl(input: string): { code: string; state: string } | null {
+function parseCallbackUrl(
+  input: string,
+): { code: string; state: string } | null {
   try {
     const url = new URL(input.trim());
     const code = url.searchParams.get('code');
@@ -65,7 +76,8 @@ export function useOAuthStatus(): UseOAuthStatusReturn {
   });
 
   // Derive phase from backend status + local state
-  const phase: OAuthPhase = status?.authenticated && !status.expired ? 'authenticated' : localPhase;
+  const phase: OAuthPhase =
+    status?.authenticated && !status.expired ? 'authenticated' : localPhase;
 
   const loginMutation = useMutation({
     mutationFn: () => apiPost<OAuthLoginResponse>('/api/auth/login'),
@@ -162,6 +174,9 @@ export function useOAuthStatus(): UseOAuthStatusReturn {
     cancel,
     authUrl,
     errorMessage,
-    isMutating: loginMutation.isPending || callbackMutation.isPending || logoutMutation.isPending,
+    isMutating:
+      loginMutation.isPending ||
+      callbackMutation.isPending ||
+      logoutMutation.isPending,
   };
 }

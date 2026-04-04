@@ -46,7 +46,9 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
       async (path: string) => {
         setSaving(true);
         try {
-          await apiPatch(`/api/sessions/${sessionId}/working-directory`, { working_directory: path });
+          await apiPatch(`/api/sessions/${sessionId}/working-directory`, {
+            working_directory: path,
+          });
           onDirectoryChange(path);
           setValue(path);
           setEditing(false);
@@ -67,7 +69,11 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
     const handleBrowse = useCallback(async () => {
       setBrowsing(true);
       try {
-        const res = await apiPost<{ path?: string; cancelled?: boolean; error?: string }>('/api/files/browse', {
+        const res = await apiPost<{
+          path?: string;
+          cancelled?: boolean;
+          error?: string;
+        }>('/api/files/browse', {
           initial_path: currentFolder || '',
         });
         if (res.error) {
@@ -76,7 +82,9 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
           saveFolder(res.path);
         }
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to open folder dialog');
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to open folder dialog',
+        );
       } finally {
         setBrowsing(false);
       }
@@ -114,7 +122,10 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
               exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-[var(--matrix-bg-secondary)]/50"
             >
-              <FolderOpen size={18} className="shrink-0 text-[var(--matrix-accent)]" />
+              <FolderOpen
+                size={18}
+                className="shrink-0 text-[var(--matrix-accent)]"
+              />
               <input
                 ref={inputRef}
                 type="text"
@@ -172,9 +183,19 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                     className="shrink-0 p-1.5 rounded-md transition-colors text-[var(--matrix-accent)] hover:bg-[var(--matrix-accent)]/10"
                     title={t('settings.workingFolder.browse', 'Browse folders')}
                   >
-                    {browsing ? <Loader2 size={18} className="animate-spin" /> : <FolderOpen size={18} />}
+                    {browsing ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <FolderOpen size={18} />
+                    )}
                   </button>
-                  <span className={cn('text-sm font-mono truncate', theme.textMuted)} title={currentFolder}>
+                  <span
+                    className={cn(
+                      'text-sm font-mono truncate',
+                      theme.textMuted,
+                    )}
+                    title={currentFolder}
+                  >
                     {displayPath}
                   </span>
                   <button
@@ -214,7 +235,11 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                     'hover:text-[var(--matrix-accent)]',
                   )}
                 >
-                  {browsing ? <Loader2 size={18} className="animate-spin" /> : <FolderOpen size={18} />}
+                  {browsing ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <FolderOpen size={18} />
+                  )}
                   {browsing
                     ? t('settings.workingFolder.opening', 'Opening dialog…')
                     : t('settings.workingFolder.set', 'Set working folder…')}

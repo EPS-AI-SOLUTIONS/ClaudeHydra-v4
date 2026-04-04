@@ -36,7 +36,10 @@ export function SessionSearch({ onSearch, className }: SessionSearchProps) {
 
   return (
     <div className={cn('relative flex items-center', className)}>
-      <Search size={13} className="absolute left-2.5 text-[var(--matrix-text-secondary)]/60 pointer-events-none" />
+      <Search
+        size={13}
+        className="absolute left-2.5 text-[var(--matrix-text-secondary)]/60 pointer-events-none"
+      />
       <input
         type="text"
         value={value}

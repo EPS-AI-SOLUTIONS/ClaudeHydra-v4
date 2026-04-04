@@ -35,7 +35,8 @@ export function useMcpServers() {
 export function useMcpServerTools(serverId: string | null) {
   return useQuery<McpDiscoveredTool[]>({
     queryKey: ['mcp-server-tools', serverId],
-    queryFn: () => apiGet<McpDiscoveredTool[]>(`/api/mcp/servers/${serverId}/tools`),
+    queryFn: () =>
+      apiGet<McpDiscoveredTool[]>(`/api/mcp/servers/${serverId}/tools`),
     enabled: !!serverId,
     staleTime: 30_000,
   });
@@ -44,8 +45,13 @@ export function useMcpServerTools(serverId: string | null) {
 export function useCreateMcpServer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; transport: string; url?: string; auth_token?: string; timeout_secs?: number }) =>
-      apiPost('/api/mcp/servers', body),
+    mutationFn: (body: {
+      name: string;
+      transport: string;
+      url?: string;
+      auth_token?: string;
+      timeout_secs?: number;
+    }) => apiPost('/api/mcp/servers', body),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['mcp-servers'] }),
   });
 }

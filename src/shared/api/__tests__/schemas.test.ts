@@ -100,8 +100,24 @@ describe('agentSchema', () => {
 describe('agentsListSchema', () => {
   it('parses array of agents', () => {
     const agents = [
-      { id: '1', name: 'A', role: 'r', specialization: 's', tier: 't', status: 'active', description: 'd' },
-      { id: '2', name: 'B', role: 'r', specialization: 's', tier: 't', status: 'idle', description: 'd' },
+      {
+        id: '1',
+        name: 'A',
+        role: 'r',
+        specialization: 's',
+        tier: 't',
+        status: 'active',
+        description: 'd',
+      },
+      {
+        id: '2',
+        name: 'B',
+        role: 'r',
+        specialization: 's',
+        tier: 't',
+        status: 'idle',
+        description: 'd',
+      },
     ];
     expect(agentsListSchema.parse(agents)).toHaveLength(2);
   });
@@ -133,7 +149,13 @@ describe('claudeModelSchema', () => {
 describe('claudeModelsSchema', () => {
   it('parses array of Claude models', () => {
     const models = [
-      { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', tier: 'Commander', provider: 'anthropic', available: true },
+      {
+        id: 'claude-opus-4-6',
+        name: 'Claude Opus 4.6',
+        tier: 'Commander',
+        provider: 'anthropic',
+        available: true,
+      },
       {
         id: 'claude-sonnet-4-6',
         name: 'Claude Sonnet 4.6',
@@ -181,7 +203,9 @@ describe('claudeChatResponseSchema', () => {
 // ===========================================================================
 describe('usageSchema', () => {
   it('parses valid usage', () => {
-    expect(usageSchema.parse({ input_tokens: 100, output_tokens: 200 })).toEqual({
+    expect(
+      usageSchema.parse({ input_tokens: 100, output_tokens: 200 }),
+    ).toEqual({
       input_tokens: 100,
       output_tokens: 200,
     });

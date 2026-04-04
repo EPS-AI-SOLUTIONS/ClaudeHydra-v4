@@ -5,14 +5,35 @@
  * display. Integrates with the Swarm for CI-like test-before-apply workflows.
  */
 
-import { Box, CheckCircle2, Clock, Container, Loader2, Play, Plus, Shield, Trash2, XCircle } from 'lucide-react';
+import {
+  Box,
+  CheckCircle2,
+  Clock,
+  Container,
+  Loader2,
+  Play,
+  Plus,
+  Shield,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useState } from 'react';
-import { type SandboxExecution, type SandboxLanguage, type SandboxSession, useSandbox } from '../hooks/useSandbox';
+import {
+  type SandboxExecution,
+  type SandboxLanguage,
+  type SandboxSession,
+  useSandbox,
+} from '../hooks/useSandbox';
 
 // ── Language Config ──────────────────────────────────────────────────────────
 
-const LANGUAGES: { id: SandboxLanguage; label: string; color: string; icon: string }[] = [
+const LANGUAGES: {
+  id: SandboxLanguage;
+  label: string;
+  color: string;
+  icon: string;
+}[] = [
   { id: 'node', label: 'Node.js', color: '#22c55e', icon: 'JS' },
   { id: 'python', label: 'Python', color: '#3b82f6', icon: 'PY' },
   { id: 'rust', label: 'Rust', color: '#f59e0b', icon: 'RS' },
@@ -89,7 +110,14 @@ export function SandboxPanel() {
   return (
     <div style={{ display: 'flex', height: '100%', background: '#0a0a0f' }}>
       {/* ── Main editor area ────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+        }}
+      >
         {/* ── Top bar ────────────────────────────────────────────────────── */}
         <div
           style={{
@@ -103,14 +131,23 @@ export function SandboxPanel() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Shield size={16} color="#10b981" />
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}>Sandbox</span>
+            <span
+              style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}
+            >
+              Sandbox
+            </span>
           </div>
 
-          <div style={{ width: '1px', height: '20px', background: '#334155' }} />
+          <div
+            style={{ width: '1px', height: '20px', background: '#334155' }}
+          />
 
           {/* Docker status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Container size={14} color={health?.docker_available ? '#22c55e' : '#f59e0b'} />
+            <Container
+              size={14}
+              color={health?.docker_available ? '#22c55e' : '#f59e0b'}
+            />
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
               {health?.docker_available ? 'Docker' : 'Fallback'}
             </span>
@@ -118,7 +155,8 @@ export function SandboxPanel() {
 
           {/* Stats */}
           <span style={{ fontSize: '11px', color: '#64748b' }}>
-            {stats.activeSessions} sessions · {stats.totalExecutions} runs · {stats.successRate}% pass
+            {stats.activeSessions} sessions · {stats.totalExecutions} runs ·{' '}
+            {stats.successRate}% pass
           </span>
 
           <div style={{ flex: 1 }} />
@@ -168,7 +206,8 @@ export function SandboxPanel() {
                 fontSize: '12px',
                 fontWeight: language === lang.id ? 600 : 400,
                 border: `1px solid ${language === lang.id ? lang.color : '#334155'}`,
-                background: language === lang.id ? `${lang.color}15` : 'transparent',
+                background:
+                  language === lang.id ? `${lang.color}15` : 'transparent',
                 color: language === lang.id ? lang.color : '#94a3b8',
                 cursor: 'pointer',
               }}
@@ -179,7 +218,8 @@ export function SandboxPanel() {
                   fontWeight: 700,
                   padding: '1px 4px',
                   borderRadius: '3px',
-                  background: language === lang.id ? `${lang.color}30` : '#1e293b',
+                  background:
+                    language === lang.id ? `${lang.color}30` : '#1e293b',
                   color: language === lang.id ? lang.color : '#64748b',
                 }}
               >
@@ -243,13 +283,24 @@ export function SandboxPanel() {
               cursor: 'pointer',
             }}
           >
-            {isCreating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+            {isCreating ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : (
+              <Plus size={12} />
+            )}
             New Session
           </button>
         </div>
 
         {/* ── Code editor ───────────────────────────────────────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }}
+        >
           <textarea
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -263,7 +314,8 @@ export function SandboxPanel() {
               border: 'none',
               padding: '16px',
               fontSize: '13px',
-              fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+              fontFamily:
+                "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
               lineHeight: 1.6,
               resize: 'none',
               outline: 'none',
@@ -373,12 +425,26 @@ export function SandboxPanel() {
             }}
           >
             <div style={{ padding: '12px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '10px' }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#e2e8f0',
+                  marginBottom: '10px',
+                }}
+              >
                 Sandbox Sessions
               </div>
 
               {sessions.length === 0 ? (
-                <div style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', padding: '20px 0' }}>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    textAlign: 'center',
+                    padding: '20px 0',
+                  }}
+                >
                   No active sessions. Click "New Session" to create one.
                 </div>
               ) : (
@@ -433,7 +499,14 @@ function ExecutionOutput({ execution }: { execution: SandboxExecution }) {
   return (
     <div style={{ padding: '12px 16px' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '8px',
+        }}
+      >
         {isSuccess ? (
           <CheckCircle2 size={14} color="#22c55e" />
         ) : isTimeout ? (
@@ -451,7 +524,8 @@ function ExecutionOutput({ execution }: { execution: SandboxExecution }) {
           {isSuccess ? 'Success' : isTimeout ? 'Timeout' : 'Error'}
         </span>
         <span style={{ fontSize: '11px', color: '#64748b' }}>
-          exit: {execution.exit_code ?? '—'} · {execution.duration_ms}ms · {execution.language}
+          exit: {execution.exit_code ?? '—'} · {execution.duration_ms}ms ·{' '}
+          {execution.language}
         </span>
       </div>
 
@@ -557,7 +631,13 @@ function SessionCard({
       }}
       onClick={onSelect}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span
             style={{
@@ -571,7 +651,13 @@ function SessionCard({
           >
             {langConfig?.icon ?? '?'}
           </span>
-          <span style={{ fontSize: '12px', color: '#e2e8f0', fontWeight: isActive ? 600 : 400 }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: '#e2e8f0',
+              fontWeight: isActive ? 600 : 400,
+            }}
+          >
             {session.id.slice(0, 8)}
           </span>
         </div>
@@ -606,7 +692,8 @@ function SessionCard({
       <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>
         {session.execution_count} runs
         {session.container_id ? ' · Docker' : ' · fallback'}
-        {session.resource_limits.memory_mb && ` · ${session.resource_limits.memory_mb}MB`}
+        {session.resource_limits.memory_mb &&
+          ` · ${session.resource_limits.memory_mb}MB`}
       </div>
     </button>
   );
@@ -626,9 +713,19 @@ function ExecutionRow({ execution }: { execution: SandboxExecution }) {
         borderLeft: `2px solid ${isSuccess ? '#22c55e' : '#ef4444'}`,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {isSuccess ? <CheckCircle2 size={10} color="#22c55e" /> : <XCircle size={10} color="#ef4444" />}
+          {isSuccess ? (
+            <CheckCircle2 size={10} color="#22c55e" />
+          ) : (
+            <XCircle size={10} color="#ef4444" />
+          )}
           <span
             style={{
               fontSize: '10px',
@@ -642,7 +739,9 @@ function ExecutionRow({ execution }: { execution: SandboxExecution }) {
             {langConfig?.icon ?? '?'}
           </span>
         </div>
-        <span style={{ fontSize: '10px', color: '#64748b' }}>{execution.duration_ms}ms</span>
+        <span style={{ fontSize: '10px', color: '#64748b' }}>
+          {execution.duration_ms}ms
+        </span>
       </div>
       <div
         style={{

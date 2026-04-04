@@ -60,7 +60,8 @@ describe('processMarkdownSync', () => {
   });
 
   it('strips <iframe>, <object>, <embed>, <form> tags', () => {
-    const input = '<iframe src="evil"></iframe><object data="x"></object><embed src="y"><form action="z"></form>';
+    const input =
+      '<iframe src="evil"></iframe><object data="x"></object><embed src="y"><form action="z"></form>';
     const result = processMarkdownSync(input);
     expect(result).not.toContain('<iframe');
     expect(result).not.toContain('<object');

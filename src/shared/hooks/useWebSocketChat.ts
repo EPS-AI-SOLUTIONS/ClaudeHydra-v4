@@ -46,7 +46,10 @@ interface WsCallbacks {
   onToken?: (content: string, sessionId: string | null) => void;
   onToolCall?: (msg: WsToolCallMessage, sessionId: string | null) => void;
   onToolResult?: (msg: WsToolResultMessage, sessionId: string | null) => void;
-  onToolProgress?: (msg: WsToolProgressMessage, sessionId: string | null) => void;
+  onToolProgress?: (
+    msg: WsToolProgressMessage,
+    sessionId: string | null,
+  ) => void;
   onIteration?: (msg: WsIterationMessage, sessionId: string | null) => void;
   onComplete?: (msg: WsCompleteMessage, sessionId: string | null) => void;
   onError?: (message: string, sessionId: string | null) => void;
@@ -60,7 +63,9 @@ interface WsCallbacks {
 function getWsUrl(): string {
   const backendUrl = env.VITE_BACKEND_URL;
   const authSecret = env.VITE_AUTH_SECRET;
-  const tokenParam = authSecret ? `?token=${encodeURIComponent(authSecret)}` : '';
+  const tokenParam = authSecret
+    ? `?token=${encodeURIComponent(authSecret)}`
+    : '';
 
   if (backendUrl) {
     return `${backendUrl.replace(/^http/, 'ws')}/ws/chat${tokenParam}`;
@@ -75,9 +80,12 @@ function getWsUrl(): string {
 // MESSAGE PARSER (Zod validation)
 // ============================================================================
 
-function parseServerMessage(
-  raw: unknown,
-): { type: string; content?: string; message?: string; [key: string]: unknown } | null {
+function parseServerMessage(raw: unknown): {
+  type: string;
+  content?: string;
+  message?: string;
+  [key: string]: unknown;
+} | null {
   const parsed = wsServerMessageSchema.safeParse(raw);
   if (!parsed.success) return null;
   const msg = parsed.data as WsServerMessage & { [key: string]: unknown };
@@ -127,7 +135,12 @@ export function useWebSocketChat(callbacks: WsCallbacks) {
   // Adapt sendExecute signature: shared uses (prompt, mode, model, session_id)
   // CH uses (prompt, model, toolsEnabled, sessionId)
   const sendExecute = useCallback(
-    (prompt: string, model?: string, toolsEnabled?: boolean, sessionId?: string) => {
+    (
+      prompt: string,
+      model?: string,
+      toolsEnabled?: boolean,
+      sessionId?: string,
+    ) => {
       // Map CH's toolsEnabled to a mode string for the shared hook
       const mode = toolsEnabled !== false ? 'tools' : 'chat';
       result.sendExecute(prompt, mode, model, sessionId);
@@ -137,7 +150,11 @@ export function useWebSocketChat(callbacks: WsCallbacks) {
 
   // Derive a simplified connection status for UI display
   const connectionStatus: ConnectionStatus =
-    result.status === 'connected' ? 'connected' : result.status === 'reconnecting' ? 'reconnecting' : 'disconnected';
+    result.status === 'connected'
+      ? 'connected'
+      : result.status === 'reconnecting'
+        ? 'reconnecting'
+        : 'disconnected';
 
   return {
     status: result.status,

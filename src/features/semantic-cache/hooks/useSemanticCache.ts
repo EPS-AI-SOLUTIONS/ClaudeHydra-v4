@@ -147,7 +147,9 @@ export function useDeleteEntry() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const resp = await fetch(`${API_BASE}/entries/${id}`, { method: 'DELETE' });
+      const resp = await fetch(`${API_BASE}/entries/${id}`, {
+        method: 'DELETE',
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       return resp.json();
     },
@@ -161,7 +163,10 @@ export function useDeleteEntry() {
 export function useInvalidateCache() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (params: { git_commit_hash?: string; flush_all?: boolean }) => {
+    mutationFn: async (params: {
+      git_commit_hash?: string;
+      flush_all?: boolean;
+    }) => {
       const resp = await fetch(`${API_BASE}/invalidate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -219,7 +219,7 @@ impl AppState {
     /// Test-only constructor — uses `connect_lazy` so no real DB is needed.
     #[doc(hidden)]
     #[allow(clippy::expect_used, clippy::unwrap_used)]
-    pub fn new_test() -> Self {
+    pub async fn new_test() -> Self {
         let agents = Arc::new(RwLock::new(init_witcher_agents()));
 
         let http_client = reqwest::Client::builder()
@@ -239,22 +239,25 @@ impl AppState {
         let (a2a_unit_tx, _) = tokio::sync::broadcast::channel::<()>(100);
 
         let log_buffer = Arc::new(jaskier_hydra_state::LogRingBuffer::new(1000));
-        let base = tokio::runtime::Runtime::new().unwrap().block_on(async {
-            BaseHydraState::new(
-                db.clone(),
-                log_buffer,
-                BaseHydraConfig {
-                    app_name: "ClaudeHydra_Test",
-                    google_auth_table: "ch_google_auth",
-                    agents_table: "ch_agents_config",
-                    mcp_servers_table: "ch_mcp_servers",
-                    mcp_tools_table: "ch_mcp_discovered_tools",
-                    api_key_env_vars: &["ANTHROPIC_API_KEY"],
-                    circuit_provider: "anthropic",
-                },
-            )
-            .await
-        });
+        let mut base = BaseHydraState::new(
+            db.clone(),
+            log_buffer,
+            BaseHydraConfig {
+                app_name: "ClaudeHydra_Test",
+                google_auth_table: "ch_google_auth",
+                agents_table: "ch_agents_config",
+                mcp_servers_table: "ch_mcp_servers",
+                mcp_tools_table: "ch_mcp_discovered_tools",
+                api_key_env_vars: &["ANTHROPIC_API_KEY"],
+                circuit_provider: "anthropic",
+            },
+        )
+        .await;
+
+        // Force dev mode in tests — ignore AUTH_SECRET from the host environment.
+        // Without this, tests run on machines with AUTH_SECRET set would see
+        // has_auth_secret() == true, causing unexpected 401s on public routes.
+        base.auth_secret = None;
 
         let ai_gateway_state = Arc::new(AiGatewayState {
             providers: ai_gateway::default_provider_configs(),

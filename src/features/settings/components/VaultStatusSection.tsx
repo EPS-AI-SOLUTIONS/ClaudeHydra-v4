@@ -2,7 +2,11 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Badge, Button, cn, Input } from '@jaskier/ui';
-import type { AuditEntry, NamespaceInfo, VaultHealth } from '@jaskier/vault-client';
+import type {
+  AuditEntry,
+  NamespaceInfo,
+  VaultHealth,
+} from '@jaskier/vault-client';
 import {
   resolveVaultStatus,
   VAULT_API,
@@ -86,7 +90,10 @@ export default function VaultStatusSection() {
 
   // ── Derived state ──
 
-  const status = useMemo(() => resolveVaultStatus(vaultHealth ?? null), [vaultHealth]);
+  const status = useMemo(
+    () => resolveVaultStatus(vaultHealth ?? null),
+    [vaultHealth],
+  );
   const statusCfg = VAULT_STATUS_CONFIG[status];
 
   // ── Handlers ──
@@ -126,17 +133,32 @@ export default function VaultStatusSection() {
         <div className="flex items-center gap-2">
           <Mountain size={18} className="text-[var(--matrix-accent)]" />
           <div>
-            <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+            <h3
+              className={cn(
+                'text-sm font-semibold font-mono uppercase tracking-wider',
+                theme.text,
+              )}
+            >
               {t('settings.vault.title', 'Skarbiec Krasnali')}
             </h3>
-            <p className={cn('text-[10px] font-mono', theme.textMuted)}>Jaskier Vault — The Sentinel</p>
+            <p className={cn('text-[10px] font-mono', theme.textMuted)}>
+              Jaskier Vault — The Sentinel
+            </p>
           </div>
         </div>
 
         {/* Status dot */}
         <div className="flex items-center gap-2">
-          <span className={cn('w-2.5 h-2.5 rounded-full', statusCfg.color, statusCfg.pulseClass)} />
-          <span className={cn('text-xs font-mono font-semibold', theme.text)}>{statusCfg.label}</span>
+          <span
+            className={cn(
+              'w-2.5 h-2.5 rounded-full',
+              statusCfg.color,
+              statusCfg.pulseClass,
+            )}
+          />
+          <span className={cn('text-xs font-mono font-semibold', theme.text)}>
+            {statusCfg.label}
+          </span>
         </div>
       </div>
 
@@ -157,7 +179,11 @@ export default function VaultStatusSection() {
         <StatCard
           theme={theme}
           label={t('settings.vault.lastAudit', 'Last Audit')}
-          value={vaultHealth?.last_audit ? formatTimestamp(vaultHealth.last_audit) : '—'}
+          value={
+            vaultHealth?.last_audit
+              ? formatTimestamp(vaultHealth.last_audit)
+              : '—'
+          }
           icon={<Shield size={14} />}
           small
         />
@@ -205,19 +231,32 @@ export default function VaultStatusSection() {
             'hover:text-[var(--matrix-accent)] transition-colors',
           )}
         >
-          {namespacesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {namespacesOpen ? (
+            <ChevronDown size={14} />
+          ) : (
+            <ChevronRight size={14} />
+          )}
           {t('settings.vault.namespaces', 'Namespace Browser')}
         </button>
 
         <AnimatePresence>
           {namespacesOpen && (
-            <motion.div key="ns-list" {...collapseVariants} className="overflow-hidden">
+            <motion.div
+              key="ns-list"
+              {...collapseVariants}
+              className="overflow-hidden"
+            >
               <div className="space-y-3 pt-2">
                 {namespaces && namespaces.length > 0 ? (
-                  namespaces.map((ns) => <NamespaceRow key={ns.name} ns={ns} theme={theme} />)
+                  namespaces.map((ns) => (
+                    <NamespaceRow key={ns.name} ns={ns} theme={theme} />
+                  ))
                 ) : (
                   <p className={cn('text-xs font-mono', theme.textMuted)}>
-                    {t('settings.vault.noNamespaces', 'No namespaces available')}
+                    {t(
+                      'settings.vault.noNamespaces',
+                      'No namespaces available',
+                    )}
                   </p>
                 )}
               </div>
@@ -228,14 +267,23 @@ export default function VaultStatusSection() {
 
       {/* ── Recent audit log ── */}
       <div className="space-y-2">
-        <h4 className={cn('text-xs font-mono font-semibold uppercase tracking-wider', theme.text)}>
+        <h4
+          className={cn(
+            'text-xs font-mono font-semibold uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.vault.recentAudit', 'Recent Audit Log')}
         </h4>
 
         {auditEntries && auditEntries.length > 0 ? (
           <div className="space-y-1">
             {auditEntries.map((entry) => (
-              <AuditRow key={`${entry.timestamp}-${entry.action}-${entry.service}`} entry={entry} theme={theme} />
+              <AuditRow
+                key={`${entry.timestamp}-${entry.action}-${entry.service}`}
+                entry={entry}
+                theme={theme}
+              />
             ))}
           </div>
         ) : (
@@ -246,7 +294,12 @@ export default function VaultStatusSection() {
       </div>
 
       {/* ── Emergency controls (collapsed by default) ── */}
-      <div className={cn('border rounded-lg', emergencyOpen ? 'border-red-500/50' : 'border-red-500/20')}>
+      <div
+        className={cn(
+          'border rounded-lg',
+          emergencyOpen ? 'border-red-500/50' : 'border-red-500/20',
+        )}
+      >
         <button
           type="button"
           onClick={() => setEmergencyOpen((p) => !p)}
@@ -257,13 +310,21 @@ export default function VaultStatusSection() {
           )}
         >
           <ShieldAlert size={14} />
-          {emergencyOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {emergencyOpen ? (
+            <ChevronDown size={12} />
+          ) : (
+            <ChevronRight size={12} />
+          )}
           {t('settings.vault.emergency', 'Emergency Controls')}
         </button>
 
         <AnimatePresence>
           {emergencyOpen && (
-            <motion.div key="emergency" {...collapseVariants} className="overflow-hidden">
+            <motion.div
+              key="emergency"
+              {...collapseVariants}
+              className="overflow-hidden"
+            >
               <div className="px-3 pb-3 space-y-4">
                 <p className="text-xs text-red-400/80 font-mono">
                   {t(
@@ -276,10 +337,20 @@ export default function VaultStatusSection() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Trash2 size={14} className="text-red-400" />
-                    <span className={cn('text-xs font-mono font-semibold', theme.text)}>Vault Panic</span>
+                    <span
+                      className={cn(
+                        'text-xs font-mono font-semibold',
+                        theme.text,
+                      )}
+                    >
+                      Vault Panic
+                    </span>
                   </div>
                   <p className={cn('text-[10px] font-mono', theme.textMuted)}>
-                    {t('settings.vault.panicDesc', 'Destroys all credentials. Type PANIC to confirm.')}
+                    {t(
+                      'settings.vault.panicDesc',
+                      'Destroys all credentials. Type PANIC to confirm.',
+                    )}
                   </p>
                   <div className="flex items-center gap-2">
                     <Input
@@ -305,12 +376,23 @@ export default function VaultStatusSection() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <RefreshCw size={14} className="text-amber-400" />
-                    <span className={cn('text-xs font-mono font-semibold', theme.text)}>
-                      {t('settings.vault.rotateTitle', 'Rotate All Credentials')}
+                    <span
+                      className={cn(
+                        'text-xs font-mono font-semibold',
+                        theme.text,
+                      )}
+                    >
+                      {t(
+                        'settings.vault.rotateTitle',
+                        'Rotate All Credentials',
+                      )}
                     </span>
                   </div>
                   <p className={cn('text-[10px] font-mono', theme.textMuted)}>
-                    {t('settings.vault.rotateDesc', 'Triggers credential rotation for all providers.')}
+                    {t(
+                      'settings.vault.rotateDesc',
+                      'Triggers credential rotation for all providers.',
+                    )}
                   </p>
                   <Button
                     variant="ghost"
@@ -339,7 +421,8 @@ export default function VaultStatusSection() {
         )}
       >
         <ExternalLink size={12} />
-        {t('settings.vault.openDashboard', 'Otworz pelny dashboard Vault')} &rarr;
+        {t('settings.vault.openDashboard', 'Otworz pelny dashboard Vault')}{' '}
+        &rarr;
       </a>
     </div>
   );
@@ -356,64 +439,117 @@ interface StatCardProps {
   badge?: boolean;
 }
 
-const StatCard = memo(({ theme, label, value, icon, small, badge }: StatCardProps) => (
-  <div className={cn('rounded-lg p-2.5 bg-[var(--matrix-glass)] border border-white/5')}>
-    <div className="flex items-center gap-1.5 mb-1">
-      <span className="text-[var(--matrix-accent)]">{icon}</span>
-      <span className={cn('text-[10px] font-mono uppercase tracking-wider', theme.textMuted)}>{label}</span>
+const StatCard = memo(
+  ({ theme, label, value, icon, small, badge }: StatCardProps) => (
+    <div
+      className={cn(
+        'rounded-lg p-2.5 bg-[var(--matrix-glass)] border border-white/5',
+      )}
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-[var(--matrix-accent)]">{icon}</span>
+        <span
+          className={cn(
+            'text-[10px] font-mono uppercase tracking-wider',
+            theme.textMuted,
+          )}
+        >
+          {label}
+        </span>
+      </div>
+      {badge ? (
+        <Badge variant="accent" size="sm">
+          {value}
+        </Badge>
+      ) : (
+        <span
+          className={cn(
+            'font-mono font-bold',
+            small ? 'text-xs' : 'text-lg',
+            theme.text,
+          )}
+        >
+          {value}
+        </span>
+      )}
     </div>
-    {badge ? (
-      <Badge variant="accent" size="sm">
-        {value}
-      </Badge>
-    ) : (
-      <span className={cn('font-mono font-bold', small ? 'text-xs' : 'text-lg', theme.text)}>{value}</span>
-    )}
-  </div>
-));
+  ),
+);
 
 StatCard.displayName = 'StatCard';
 
-const NamespaceRow = memo(({ ns, theme }: { ns: NamespaceInfo; theme: ReturnType<typeof useViewTheme> }) => (
-  <div className="space-y-1">
-    <span className={cn('text-xs font-mono font-semibold', theme.text)}>{ns.name}</span>
-    <div className="flex flex-wrap gap-2 pl-2">
-      {ns.services.map((svc) => (
-        <div key={svc.name} className="flex items-center gap-1.5">
-          <span className={cn('w-1.5 h-1.5 rounded-full', svc.connected ? 'bg-emerald-500' : 'bg-red-500/60')} />
-          <span className={cn('text-[10px] font-mono', theme.textMuted)}>{svc.name}</span>
-        </div>
-      ))}
+const NamespaceRow = memo(
+  ({
+    ns,
+    theme,
+  }: {
+    ns: NamespaceInfo;
+    theme: ReturnType<typeof useViewTheme>;
+  }) => (
+    <div className="space-y-1">
+      <span className={cn('text-xs font-mono font-semibold', theme.text)}>
+        {ns.name}
+      </span>
+      <div className="flex flex-wrap gap-2 pl-2">
+        {ns.services.map((svc) => (
+          <div key={svc.name} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                svc.connected ? 'bg-emerald-500' : 'bg-red-500/60',
+              )}
+            />
+            <span className={cn('text-[10px] font-mono', theme.textMuted)}>
+              {svc.name}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-));
+  ),
+);
 
 NamespaceRow.displayName = 'NamespaceRow';
 
-const AuditRow = memo(({ entry, theme }: { entry: AuditEntry; theme: ReturnType<typeof useViewTheme> }) => (
-  <div
-    className={cn(
-      'flex items-center gap-3 px-2 py-1 rounded text-[10px] font-mono',
-      'bg-[var(--matrix-glass)] border border-white/5',
-    )}
-  >
-    <span className={cn('min-w-[100px]', theme.textMuted)}>{formatTimestamp(entry.timestamp)}</span>
-    <Badge variant={entry.action === 'DELEGATE' ? 'accent' : 'default'} size="sm">
-      {entry.action}
-    </Badge>
-    {entry.agent && entry.agent !== 'unknown' && <span className="text-[9px] text-blue-400/80">{entry.agent}</span>}
-    <span className={cn('flex-1 truncate', theme.text)}>
-      {entry.namespace}/{entry.service}
-    </span>
-    <span
+const AuditRow = memo(
+  ({
+    entry,
+    theme,
+  }: {
+    entry: AuditEntry;
+    theme: ReturnType<typeof useViewTheme>;
+  }) => (
+    <div
       className={cn(
-        'text-[9px] font-semibold uppercase',
-        entry.result === 'success' ? 'text-emerald-400' : 'text-red-400',
+        'flex items-center gap-3 px-2 py-1 rounded text-[10px] font-mono',
+        'bg-[var(--matrix-glass)] border border-white/5',
       )}
     >
-      {entry.result}
-    </span>
-  </div>
-));
+      <span className={cn('min-w-[100px]', theme.textMuted)}>
+        {formatTimestamp(entry.timestamp)}
+      </span>
+      <Badge
+        variant={entry.action === 'DELEGATE' ? 'accent' : 'default'}
+        size="sm"
+      >
+        {entry.action}
+      </Badge>
+      {entry.agent && entry.agent !== 'unknown' && (
+        <span className="text-[9px] text-blue-400/80">{entry.agent}</span>
+      )}
+      <span className={cn('flex-1 truncate', theme.text)}>
+        {entry.namespace}/{entry.service}
+      </span>
+      <span
+        className={cn(
+          'text-[9px] font-semibold uppercase',
+          entry.result === 'success' ? 'text-emerald-400' : 'text-red-400',
+        )}
+      >
+        {entry.result}
+      </span>
+    </div>
+  ),
+);
 
 AuditRow.displayName = 'AuditRow';

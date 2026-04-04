@@ -27,7 +27,10 @@ export const TemperatureSection = memo(() => {
       const clamped = Math.round(Math.max(MIN, Math.min(MAX, value)) * 10) / 10;
       setSaving(true);
       try {
-        await apiPost<Settings>('/api/settings', { ...settings, temperature: clamped });
+        await apiPost<Settings>('/api/settings', {
+          ...settings,
+          temperature: clamped,
+        });
         await refetch();
         toast.success(t('settings.temperature.saved', 'Temperature updated'));
       } catch (err) {
@@ -43,7 +46,12 @@ export const TemperatureSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Thermometer size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.temperature.title', 'Temperature')}
         </h3>
       </div>
@@ -87,12 +95,22 @@ export const TemperatureSection = memo(() => {
           <Plus size={14} />
         </Button>
 
-        <span className={cn('text-lg font-mono font-bold min-w-[3ch] text-center', theme.text)}>
+        <span
+          className={cn(
+            'text-lg font-mono font-bold min-w-[3ch] text-center',
+            theme.text,
+          )}
+        >
           {current.toFixed(1)}
         </span>
       </div>
 
-      <div className={cn('flex justify-between text-[10px] font-mono px-1', theme.textMuted)}>
+      <div
+        className={cn(
+          'flex justify-between text-[10px] font-mono px-1',
+          theme.textMuted,
+        )}
+      >
         <span>0.0 (precise)</span>
         <span>2.0 (creative)</span>
       </div>

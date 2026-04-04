@@ -45,4 +45,6 @@ if (typeof globalThis.indexedDB === 'undefined') {
   });
 }
 
-global.fetch = vi.fn(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })));
+global.fetch = vi.fn(() =>
+  Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
+);

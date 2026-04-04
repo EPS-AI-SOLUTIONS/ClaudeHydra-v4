@@ -2,7 +2,16 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import { Activity, AlertTriangle, CheckCircle2, Clock, Loader2, Network, RefreshCw, Users } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Network,
+  RefreshCw,
+  Users,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +46,13 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-function TaskRow({ task, theme }: { task: DelegationTask; theme: ReturnType<typeof useViewTheme> }) {
+function TaskRow({
+  task,
+  theme,
+}: {
+  task: DelegationTask;
+  theme: ReturnType<typeof useViewTheme>;
+}) {
   const [expanded, setExpanded] = useState(false);
   const tierClass = TIER_COLORS[task.agent_tier] || TIER_COLORS['executor'];
   const StatusIcon = STATUS_ICONS[task.status] || Activity;
@@ -57,25 +72,52 @@ function TaskRow({ task, theme }: { task: DelegationTask; theme: ReturnType<type
             ? 'border-amber-500/30 bg-amber-500/5'
             : 'border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)]',
         'hover:bg-[var(--matrix-bg-tertiary)]',
-        task.call_depth > 1 && 'ml-6 border-l-2 border-l-[var(--matrix-accent)]',
+        task.call_depth > 1 &&
+          'ml-6 border-l-2 border-l-[var(--matrix-accent)]',
       )}
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex items-center gap-3">
         <StatusIcon
           size={16}
-          className={cn(isError ? 'text-red-400' : isWorking ? 'text-amber-400 animate-spin' : 'text-emerald-400')}
+          className={cn(
+            isError
+              ? 'text-red-400'
+              : isWorking
+                ? 'text-amber-400 animate-spin'
+                : 'text-emerald-400',
+          )}
         />
-        <span className={cn('px-2 py-0.5 text-xs font-bold rounded border', tierClass)}>
+        <span
+          className={cn(
+            'px-2 py-0.5 text-xs font-bold rounded border',
+            tierClass,
+          )}
+        >
           {task.agent_tier.toUpperCase()}
         </span>
-        <span className={cn('font-medium text-sm', 'text-[var(--matrix-text-primary)]')}>{task.agent_name}</span>
-        <span className={cn('text-xs ml-auto', theme.textMuted)}>{timeAgo(task.created_at)}</span>
-        <span className={cn('text-xs tabular-nums', theme.textMuted)}>{formatDuration(task.duration_ms)}</span>
-        <span className="text-xs text-[var(--matrix-text-secondary)]">d{task.call_depth}</span>
+        <span
+          className={cn(
+            'font-medium text-sm',
+            'text-[var(--matrix-text-primary)]',
+          )}
+        >
+          {task.agent_name}
+        </span>
+        <span className={cn('text-xs ml-auto', theme.textMuted)}>
+          {timeAgo(task.created_at)}
+        </span>
+        <span className={cn('text-xs tabular-nums', theme.textMuted)}>
+          {formatDuration(task.duration_ms)}
+        </span>
+        <span className="text-xs text-[var(--matrix-text-secondary)]">
+          d{task.call_depth}
+        </span>
       </div>
 
-      <p className={cn('text-xs mt-1.5 truncate', theme.textMuted)}>{task.task_prompt}</p>
+      <p className={cn('text-xs mt-1.5 truncate', theme.textMuted)}>
+        {task.task_prompt}
+      </p>
 
       <AnimatePresence>
         {expanded && (
@@ -85,7 +127,12 @@ function TaskRow({ task, theme }: { task: DelegationTask; theme: ReturnType<type
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className={cn('mt-2 pt-2 border-t border-[var(--matrix-border)] text-xs space-y-1', theme.textMuted)}>
+            <div
+              className={cn(
+                'mt-2 pt-2 border-t border-[var(--matrix-border)] text-xs space-y-1',
+                theme.textMuted,
+              )}
+            >
               <p>
                 <strong>Model:</strong> {task.model_used}
               </p>
@@ -120,14 +167,20 @@ function DelegationsView() {
   const { data, isLoading, isError, refetch } = useDelegations(autoRefresh);
 
   const allTasks = data?.tasks ?? [];
-  const stats = data?.stats ?? { total: 0, completed: 0, errors: 0, avg_duration_ms: null };
+  const stats = data?.stats ?? {
+    total: 0,
+    completed: 0,
+    errors: 0,
+    avg_duration_ms: null,
+  };
 
   const tasks = allTasks.filter((task) => {
     if (tierFilter !== 'all' && task.agent_tier !== tierFilter) return false;
     if (statusFilter !== 'all') {
       if (statusFilter === 'failed') return task.is_error;
       if (statusFilter === 'working') return task.status === 'working';
-      if (statusFilter === 'completed') return task.status === 'completed' && !task.is_error;
+      if (statusFilter === 'completed')
+        return task.status === 'completed' && !task.is_error;
     }
     return true;
   });
@@ -138,7 +191,12 @@ function DelegationsView() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Network size={20} className="text-[var(--matrix-accent)]" />
-          <h1 className={cn('text-lg font-bold', 'text-[var(--matrix-text-primary)]')}>
+          <h1
+            className={cn(
+              'text-lg font-bold',
+              'text-[var(--matrix-text-primary)]',
+            )}
+          >
             {t('delegations.title', 'Agent Delegations')}
           </h1>
         </div>
@@ -150,7 +208,9 @@ function DelegationsView() {
           >
             {TIERS.map((tier) => (
               <option key={tier} value={tier}>
-                {tier === 'all' ? t('delegations.allTiers', 'All Tiers') : tier.charAt(0).toUpperCase() + tier.slice(1)}
+                {tier === 'all'
+                  ? t('delegations.allTiers', 'All Tiers')
+                  : tier.charAt(0).toUpperCase() + tier.slice(1)}
               </option>
             ))}
           </select>
@@ -177,7 +237,9 @@ function DelegationsView() {
                 : 'bg-[var(--matrix-bg-secondary)] text-[var(--matrix-text-secondary)] border border-[var(--matrix-border)]',
             )}
           >
-            {autoRefresh ? t('logs.autoRefreshOn', 'Live') : t('logs.autoRefreshOff', 'Paused')}
+            {autoRefresh
+              ? t('logs.autoRefreshOn', 'Live')
+              : t('logs.autoRefreshOff', 'Paused')}
           </button>
           <button
             type="button"
@@ -193,14 +255,24 @@ function DelegationsView() {
       {/* Stats cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: t('delegations.total', 'Total'), value: stats.total, icon: Users, color: 'text-blue-400' },
+          {
+            label: t('delegations.total', 'Total'),
+            value: stats.total,
+            icon: Users,
+            color: 'text-blue-400',
+          },
           {
             label: t('delegations.completed', 'Completed'),
             value: stats.completed,
             icon: CheckCircle2,
             color: 'text-emerald-400',
           },
-          { label: t('delegations.errors', 'Errors'), value: stats.errors, icon: AlertTriangle, color: 'text-red-400' },
+          {
+            label: t('delegations.errors', 'Errors'),
+            value: stats.errors,
+            icon: AlertTriangle,
+            color: 'text-red-400',
+          },
           {
             label: t('delegations.avgDuration', 'Avg Duration'),
             value: formatDuration(stats.avg_duration_ms),
@@ -212,13 +284,24 @@ function DelegationsView() {
           return (
             <div
               key={stat.label}
-              className={cn('rounded-lg border border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)] p-3')}
+              className={cn(
+                'rounded-lg border border-[var(--matrix-border)] bg-[var(--matrix-bg-secondary)] p-3',
+              )}
             >
               <div className="flex items-center gap-2 mb-1">
                 <Icon size={14} className={stat.color} />
-                <span className={cn('text-xs', theme.textMuted)}>{stat.label}</span>
+                <span className={cn('text-xs', theme.textMuted)}>
+                  {stat.label}
+                </span>
               </div>
-              <p className={cn('text-xl font-bold tabular-nums', 'text-[var(--matrix-text-primary)]')}>{stat.value}</p>
+              <p
+                className={cn(
+                  'text-xl font-bold tabular-nums',
+                  'text-[var(--matrix-text-primary)]',
+                )}
+              >
+                {stat.value}
+              </p>
             </div>
           );
         })}
@@ -227,7 +310,10 @@ function DelegationsView() {
       {/* Task list */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 size={24} className="animate-spin text-[var(--matrix-accent)]" />
+          <Loader2
+            size={24}
+            className="animate-spin text-[var(--matrix-accent)]"
+          />
         </div>
       )}
 

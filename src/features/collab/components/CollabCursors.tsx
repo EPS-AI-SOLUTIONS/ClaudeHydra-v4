@@ -24,9 +24,16 @@ export function CollabCursors({ peers }: CollabCursorsProps) {
             borderLeft: `3px solid ${peer.userColor}`,
           }}
         >
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: peer.userColor }} />
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: peer.userColor }}
+          />
           <span className="opacity-80">{peer.userName}</span>
-          {peer.isAgent && <span className="rounded bg-blue-500/20 px-1 text-blue-400 text-[10px]">AI</span>}
+          {peer.isAgent && (
+            <span className="rounded bg-blue-500/20 px-1 text-blue-400 text-[10px]">
+              AI
+            </span>
+          )}
         </div>
       ))}
     </div>

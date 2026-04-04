@@ -28,7 +28,10 @@ interface ConnectionStatusBadgeProps {
 // Status config
 // ---------------------------------------------------------------------------
 
-const STATUS_CONFIG: Record<ConnectionStatus, { color: string; label: string; dotClass: string }> = {
+const STATUS_CONFIG: Record<
+  ConnectionStatus,
+  { color: string; label: string; dotClass: string }
+> = {
   connected: {
     color: 'text-emerald-400',
     label: 'WS Connected',
@@ -61,7 +64,9 @@ export const ConnectionStatusBadge = memo(function ConnectionStatusBadge({
   if (connectionStatus === 'connected') {
     return (
       <div className="flex items-center gap-1.5" title="WebSocket connected">
-        <span className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
+        <span
+          className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`}
+        />
         <Wifi size={12} className={config.color} />
       </div>
     );
@@ -72,7 +77,9 @@ export const ConnectionStatusBadge = memo(function ConnectionStatusBadge({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       className={`flex items-center gap-1.5 text-xs font-mono ${config.color}`}
-      title={connectionGaveUp ? 'Connection failed — click to retry' : config.label}
+      title={
+        connectionGaveUp ? 'Connection failed — click to retry' : config.label
+      }
     >
       {/* Animated dot for reconnecting */}
       {connectionStatus === 'reconnecting' ? (
@@ -82,10 +89,16 @@ export const ConnectionStatusBadge = memo(function ConnectionStatusBadge({
           transition={{ duration: 1.2, repeat: Infinity }}
         />
       ) : (
-        <span className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`} />
+        <span
+          className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`}
+        />
       )}
 
-      {connectionStatus === 'reconnecting' ? <RefreshCw size={12} className="animate-spin" /> : <WifiOff size={12} />}
+      {connectionStatus === 'reconnecting' ? (
+        <RefreshCw size={12} className="animate-spin" />
+      ) : (
+        <WifiOff size={12} />
+      )}
 
       <span>{config.label}</span>
 

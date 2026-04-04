@@ -18,7 +18,12 @@ declare module 'y-websocket' {
   }
 
   export class WebsocketProvider {
-    constructor(serverUrl: string, roomname: string, doc: Doc, opts?: Record<string, unknown>);
+    constructor(
+      serverUrl: string,
+      roomname: string,
+      doc: Doc,
+      opts?: Record<string, unknown>,
+    );
     awareness: Awareness;
     wsconnected: boolean;
     synced: boolean;
@@ -70,9 +75,15 @@ declare module '@jaskier/vault-client' {
     total_secrets: number;
   }
 
-  export type VaultStatusLevel = 'healthy' | 'degraded' | 'critical' | 'offline';
+  export type VaultStatusLevel =
+    | 'healthy'
+    | 'degraded'
+    | 'critical'
+    | 'offline';
 
-  export function resolveVaultStatus(health: VaultHealth | null): VaultStatusLevel;
+  export function resolveVaultStatus(
+    health: VaultHealth | null,
+  ): VaultStatusLevel;
 
   export const VAULT_API: {
     health: string;

@@ -30,7 +30,12 @@ interface UseChatStreamingOptions {
   selectedModel: string;
   toolsEnabled: boolean;
   messageState: ReturnType<typeof useChatMessages>;
-  addMessageWithSync: (sessionId: string, role: string, content: string, model?: string) => void;
+  addMessageWithSync: (
+    sessionId: string,
+    role: string,
+    content: string,
+    model?: string,
+  ) => void;
   renameSessionWithSync: (id: string, newTitle: string) => void;
   generateTitleWithSync: (id: string) => Promise<void>;
   addPrompt: (content: string) => void;
@@ -55,8 +60,13 @@ export function useChatStreaming({
 }: UseChatStreamingOptions) {
   const isOnline = useOnlineStatus();
 
-  const { sessionMessagesRef, loadingSessionsRef, abortControllersRef, updateSessionMessages, setSessionLoading } =
-    messageState;
+  const {
+    sessionMessagesRef,
+    loadingSessionsRef,
+    abortControllersRef,
+    updateSessionMessages,
+    setSessionLoading,
+  } = messageState;
 
   const handleSend = useCallback(
     async (text: string, attachments: Attachment[]) => {
@@ -95,11 +105,14 @@ export function useChatStreaming({
       };
 
       // Capture messages BEFORE adding new ones — used to build API context
-      const previousMessages = [...(sessionMessagesRef.current[sessionId] ?? [])];
+      const previousMessages = [
+        ...(sessionMessagesRef.current[sessionId] ?? []),
+      ];
 
       // Auto-name session on first user message
       if (previousMessages.length === 0) {
-        const autoTitle = text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
+        const autoTitle =
+          text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
         renameSessionWithSync(sessionId, autoTitle || 'New Chat');
       }
 
@@ -123,7 +136,9 @@ export function useChatStreaming({
       updateSessionMessages(sessionId, (prev) => {
         // Confirm the pending user message now that we're starting the stream
         return prev
-          .map((m) => (m.id === userMessageId ? { ...m, status: 'confirmed' as const } : m))
+          .map((m) =>
+            m.id === userMessageId ? { ...m, status: 'confirmed' as const } : m,
+          )
           .concat(assistantMessage);
       });
 
@@ -191,17 +206,27 @@ export function useChatStreaming({
             updateSessionMessages(sessionId, (prev) => {
               const lastMsg = prev[prev.length - 1];
               if (lastMsg?.streaming && lastMsg.toolInteractions) {
-                const updatedInteractions = lastMsg.toolInteractions.map((ti) =>
-                  ti.id === toolUseId
-                    ? {
-                        ...ti,
-                        ...(event.result !== undefined && { result: event.result }),
-                        ...(event.is_error !== undefined && { isError: event.is_error }),
-                        status: (event.is_error ? 'error' : 'completed') as ToolInteraction['status'],
-                      }
-                    : ti,
+                const updatedInteractions = lastMsg.toolInteractions.map(
+                  (ti) =>
+                    ti.id === toolUseId
+                      ? {
+                          ...ti,
+                          ...(event.result !== undefined && {
+                            result: event.result,
+                          }),
+                          ...(event.is_error !== undefined && {
+                            isError: event.is_error,
+                          }),
+                          status: (event.is_error
+                            ? 'error'
+                            : 'completed') as ToolInteraction['status'],
+                        }
+                      : ti,
                 );
-                return [...prev.slice(0, -1), { ...lastMsg, toolInteractions: updatedInteractions }];
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastMsg, toolInteractions: updatedInteractions },
+                ];
               }
               return prev;
             });
@@ -233,7 +258,12 @@ export function useChatStreaming({
               onComplete?.();
               // Persist assistant response to DB
               if (responseBuffer) {
-                addMessageWithSync(sessionId, 'assistant', responseBuffer, event.model ?? selectedModel);
+                addMessageWithSync(
+                  sessionId,
+                  'assistant',
+                  responseBuffer,
+                  event.model ?? selectedModel,
+                );
               }
               // Background title generation with 2s delay
               if (previousMessages.length === 0) {
@@ -257,8 +287,12 @@ export function useChatStreaming({
         toast.error('Failed to get response');
         updateSessionMessages(sessionId, (prev) => {
           // Remove the empty streaming assistant message and mark the user message as error
-          const withoutStreaming = prev.filter((m) => !(m.streaming && m.role === 'assistant' && !m.content));
-          return withoutStreaming.map((m) => (m.id === userMessageId ? { ...m, status: 'error' as const } : m));
+          const withoutStreaming = prev.filter(
+            (m) => !(m.streaming && m.role === 'assistant' && !m.content),
+          );
+          return withoutStreaming.map((m) =>
+            m.id === userMessageId ? { ...m, status: 'error' as const } : m,
+          );
         });
         setSessionLoading(sessionId, false);
         delete abortControllersRef.current[sessionId];

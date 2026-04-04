@@ -39,15 +39,23 @@ async function authenticateWithPasskey(email?: string): Promise<void> {
   });
 
   if (!startRes.ok) {
-    const body = await startRes.json().catch(() => ({ error: startRes.statusText }));
-    throw new Error((body as { error?: string }).error ?? 'Failed to start passkey login');
+    const body = await startRes
+      .json()
+      .catch(() => ({ error: startRes.statusText }));
+    throw new Error(
+      (body as { error?: string }).error ?? 'Failed to start passkey login',
+    );
   }
 
   const startData = await startRes.json();
 
   // Step 2: Call navigator.credentials.get (WebAuthn browser API)
-  const requestOptions = parseRequestOptionsFromJSON(startData.challenge.publicKey);
-  const credential = await navigator.credentials.get({ publicKey: requestOptions });
+  const requestOptions = parseRequestOptionsFromJSON(
+    startData.challenge.publicKey,
+  );
+  const credential = await navigator.credentials.get({
+    publicKey: requestOptions,
+  });
 
   // Step 3: Send assertion to backend
   const finishRes = await fetch(`${API_BASE}/api/auth/webauthn/login/finish`, {
@@ -61,8 +69,12 @@ async function authenticateWithPasskey(email?: string): Promise<void> {
   });
 
   if (!finishRes.ok) {
-    const body = await finishRes.json().catch(() => ({ error: finishRes.statusText }));
-    throw new Error((body as { error?: string }).error ?? 'Passkey verification failed');
+    const body = await finishRes
+      .json()
+      .catch(() => ({ error: finishRes.statusText }));
+    throw new Error(
+      (body as { error?: string }).error ?? 'Passkey verification failed',
+    );
   }
 }
 
@@ -95,9 +107,13 @@ export const PasskeyLoginSection = memo(() => {
       await authenticateWithPasskey();
       setIsSuccess(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Passkey login failed';
+      const message =
+        err instanceof Error ? err.message : 'Passkey login failed';
       // Don't show error if user cancelled the WebAuthn dialog
-      if (message.includes('AbortError') || message.includes('NotAllowedError')) {
+      if (
+        message.includes('AbortError') ||
+        message.includes('NotAllowedError')
+      ) {
         setError(null);
       } else {
         setError(message);
@@ -124,22 +140,39 @@ export const PasskeyLoginSection = memo(() => {
             className={cn(
               'relative rounded-2xl p-4',
               'border',
-              isLight ? 'bg-white/60 border-gray-200/50 shadow-sm' : 'bg-white/[0.03] border-white/10',
+              isLight
+                ? 'bg-white/60 border-gray-200/50 shadow-sm'
+                : 'bg-white/[0.03] border-white/10',
             )}
           >
             <div className="flex items-center gap-4">
               {/* Icon */}
-              <div className={cn('shrink-0 p-2.5 rounded-xl', isLight ? 'bg-indigo-50' : 'bg-indigo-500/10')}>
-                <Fingerprint size={20} className={cn(isLight ? 'text-indigo-600' : 'text-indigo-400')} />
+              <div
+                className={cn(
+                  'shrink-0 p-2.5 rounded-xl',
+                  isLight ? 'bg-indigo-50' : 'bg-indigo-500/10',
+                )}
+              >
+                <Fingerprint
+                  size={20}
+                  className={cn(
+                    isLight ? 'text-indigo-600' : 'text-indigo-400',
+                  )}
+                />
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <h3 className={cn('text-sm font-semibold font-mono', theme.text)}>
+                <h3
+                  className={cn('text-sm font-semibold font-mono', theme.text)}
+                >
                   {t('passkey.title', 'Sign in with Passkey')}
                 </h3>
                 <p className={cn('text-xs mt-0.5', theme.textMuted)}>
-                  {t('passkey.description', 'Use your fingerprint, face, or security key for passwordless login')}
+                  {t(
+                    'passkey.description',
+                    'Use your fingerprint, face, or security key for passwordless login',
+                  )}
                 </p>
               </div>
 
@@ -178,7 +211,10 @@ export const PasskeyLoginSection = memo(() => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className={cn('text-xs mt-2 px-2', isLight ? 'text-red-600' : 'text-red-400')}
+                  className={cn(
+                    'text-xs mt-2 px-2',
+                    isLight ? 'text-red-600' : 'text-red-400',
+                  )}
                 >
                   {error}
                 </motion.p>

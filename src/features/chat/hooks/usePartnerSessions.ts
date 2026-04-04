@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchPartnerSession, fetchPartnerSessions } from '@/shared/api/partner-client';
+import {
+  fetchPartnerSession,
+  fetchPartnerSessions,
+} from '@/shared/api/partner-client';
 
 export function usePartnerSessions() {
   return useQuery({

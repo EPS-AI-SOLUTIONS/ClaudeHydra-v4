@@ -22,7 +22,9 @@ describe('SearchOverlay', () => {
   it('calls onClose when Escape is pressed', () => {
     const onClose = vi.fn();
     render(<SearchOverlay messages={mockMessages} onClose={onClose} />);
-    fireEvent.keyDown(screen.getByLabelText('Search messages'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByLabelText('Search messages'), {
+      key: 'Escape',
+    });
     expect(onClose).toHaveBeenCalledOnce();
   });
 

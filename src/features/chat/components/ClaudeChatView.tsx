@@ -22,7 +22,11 @@ import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import type { ModelOption } from '@/components/molecules/ModelSelector';
 import { useAutoScroll } from '@/features/chat/hooks/useAutoScroll';
-import { type ClaudeModel, FALLBACK_CLAUDE_MODELS, useClaudeModels } from '@/features/chat/hooks/useClaudeModels';
+import {
+  type ClaudeModel,
+  FALLBACK_CLAUDE_MODELS,
+  useClaudeModels,
+} from '@/features/chat/hooks/useClaudeModels';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
 import { useWebSocketChat } from '@/shared/hooks/useWebSocketChat';
@@ -75,12 +79,21 @@ export function ClaudeChatView() {
   const { messages, isLoading, clearChat, loadFullHistory } = messageState;
 
   // DB sync
-  const { addMessageWithSync, renameSessionWithSync, generateTitleWithSync } = useSessionSync();
+  const { addMessageWithSync, renameSessionWithSync, generateTitleWithSync } =
+    useSessionSync();
   const currentSessionId = useViewStore(useShallow((s) => s.currentSessionId));
-  const activeSession = useViewStore(useShallow((s) => s.sessions.find((cs) => cs.id === s.currentSessionId)));
-  const setSessionWorkingDirectory = useViewStore(useShallow((s) => s.setSessionWorkingDirectory));
-  const activeArtifact = useViewStore(useShallow((s) => s.activeArtifact)) as Artifact | null;
-  const setActiveArtifact = useViewStore(useShallow((s) => s.setActiveArtifact));
+  const activeSession = useViewStore(
+    useShallow((s) => s.sessions.find((cs) => cs.id === s.currentSessionId)),
+  );
+  const setSessionWorkingDirectory = useViewStore(
+    useShallow((s) => s.setSessionWorkingDirectory),
+  );
+  const activeArtifact = useViewStore(
+    useShallow((s) => s.activeArtifact),
+  ) as Artifact | null;
+  const setActiveArtifact = useViewStore(
+    useShallow((s) => s.setActiveArtifact),
+  );
 
   // Settings (for welcome message)
   const { data: settings } = useSettingsQuery();
@@ -98,13 +111,21 @@ export function ClaudeChatView() {
   const chatInputRef = useRef<ChatInputHandle>(null);
 
   // #20 — Auto-scroll indicator
-  const { containerRef: autoScrollRef, bottomRef, showNewMessages, scrollToBottom } = useAutoScroll(messages.length);
+  const {
+    containerRef: autoScrollRef,
+    bottomRef,
+    showNewMessages,
+    scrollToBottom,
+  } = useAutoScroll(messages.length);
 
   // Merge container refs
   const setChatRef = useCallback(
     (el: HTMLDivElement | null) => {
-      (chatContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-      (autoScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      (
+        chatContainerRef as React.MutableRefObject<HTMLDivElement | null>
+      ).current = el;
+      (autoScrollRef as React.MutableRefObject<HTMLDivElement | null>).current =
+        el;
     },
     [autoScrollRef],
   );
@@ -184,8 +205,10 @@ export function ClaudeChatView() {
 
   // ----- WebSocket streaming (primary) + NDJSON (fallback) -----------------
 
-  const [agentActivity, setAgentActivity] = useState<AgentActivity>(EMPTY_ACTIVITY);
-  const [fallbackBanner, setFallbackBanner] = useState<FallbackBannerData | null>(null);
+  const [agentActivity, setAgentActivity] =
+    useState<AgentActivity>(EMPTY_ACTIVITY);
+  const [fallbackBanner, setFallbackBanner] =
+    useState<FallbackBannerData | null>(null);
   const tokenBatchRef = useRef('');
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -206,7 +229,10 @@ export function ClaudeChatView() {
     messageState.updateSessionMessages(sid, (prev) => {
       const last = prev[prev.length - 1];
       if (last?.streaming) {
-        return [...prev.slice(0, -1), { ...last, content: last.content + batch }];
+        return [
+          ...prev.slice(0, -1),
+          { ...last, content: last.content + batch },
+        ];
       }
       return prev;
     });
@@ -214,12 +240,21 @@ export function ClaudeChatView() {
 
   const ws = useWebSocketChat({
     onStart: (msg) => {
-      setAgentActivity({ agent: null, model: msg.model, confidence: null, planSteps: [], tools: [], isActive: true });
+      setAgentActivity({
+        agent: null,
+        model: msg.model,
+        confidence: null,
+        planSteps: [],
+        tools: [],
+        isActive: true,
+      });
       // Confirm any pending user messages now that the stream has started
       const sid = useViewStore.getState().currentSessionId;
       if (sid) {
         messageState.updateSessionMessages(sid, (prev) =>
-          prev.map((m) => (m.status === 'pending' ? { ...m, status: 'confirmed' as const } : m)),
+          prev.map((m) =>
+            m.status === 'pending' ? { ...m, status: 'confirmed' as const } : m,
+          ),
         );
       }
     },
@@ -277,13 +312,22 @@ export function ClaudeChatView() {
         const text = msg.summary.trim();
         const isJson = text.startsWith('[') || text.startsWith('{');
         const isTable = text.includes('|---') || text.includes('| ---');
-        const isSql = /^(SELECT|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP|WITH)\s+/i.test(text);
+        const isSql =
+          /^(SELECT|UPDATE|INSERT|DELETE|CREATE|ALTER|DROP|WITH)\s+/i.test(
+            text,
+          );
 
         if (isJson || isTable || isSql || text.length > 800) {
           useViewStore.getState().setActiveArtifact({
             id: 'tool-res-$($msg.iteration)-$($msg.name)',
             code: text,
-            language: isJson ? 'json' : isTable ? 'markdown' : isSql ? 'sql' : 'text',
+            language: isJson
+              ? 'json'
+              : isTable
+                ? 'markdown'
+                : isSql
+                  ? 'sql'
+                  : 'text',
             title: 'Result: $($msg.name)',
           });
         }
@@ -313,11 +357,16 @@ export function ClaudeChatView() {
                     ...ti,
                     result: msg.summary,
                     isError: !msg.success,
-                    status: msg.success ? ('completed' as const) : ('error' as const),
+                    status: msg.success
+                      ? ('completed' as const)
+                      : ('error' as const),
                   }
                 : ti,
             );
-            return [...prev.slice(0, -1), { ...last, toolInteractions: updated }];
+            return [
+              ...prev.slice(0, -1),
+              { ...last, toolInteractions: updated },
+            ];
           }
           return prev;
         });
@@ -336,7 +385,8 @@ export function ClaudeChatView() {
       if (sid) {
         messageState.updateSessionMessages(sid, (prev) => {
           const last = prev[prev.length - 1];
-          if (last?.streaming) return [...prev.slice(0, -1), { ...last, streaming: false }];
+          if (last?.streaming)
+            return [...prev.slice(0, -1), { ...last, streaming: false }];
           return prev;
         });
         messageState.setSessionLoading(sid, false);
@@ -359,8 +409,12 @@ export function ClaudeChatView() {
       if (sid) {
         messageState.updateSessionMessages(sid, (prev) => {
           // Remove the empty streaming assistant message and mark the user message as error
-          const withoutStreaming = prev.filter((m) => !(m.streaming && m.role === 'assistant' && !m.content));
-          return withoutStreaming.map((m) => (m.status === 'pending' ? { ...m, status: 'error' as const } : m));
+          const withoutStreaming = prev.filter(
+            (m) => !(m.streaming && m.role === 'assistant' && !m.content),
+          );
+          return withoutStreaming.map((m) =>
+            m.status === 'pending' ? { ...m, status: 'error' as const } : m,
+          );
         });
         messageState.setSessionLoading(sid, false);
       }
@@ -383,12 +437,16 @@ export function ClaudeChatView() {
 
       let content = text;
       for (const att of attachments) {
-        if (att.type === 'file') content += `\n\n--- File: ${att.name} ---\n${att.content}`;
+        if (att.type === 'file')
+          content += `\n\n--- File: ${att.name} ---\n${att.content}`;
       }
 
-      const previousMessages = [...(messageState.sessionMessagesRef.current[sessionId] ?? [])];
+      const previousMessages = [
+        ...(messageState.sessionMessagesRef.current[sessionId] ?? []),
+      ];
       if (previousMessages.length === 0) {
-        const autoTitle = text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
+        const autoTitle =
+          text.trim().substring(0, 30) + (text.trim().length > 30 ? '...' : '');
         renameSessionWithSync(sessionId, autoTitle || 'New Chat');
       }
 
@@ -407,7 +465,10 @@ export function ClaudeChatView() {
         })),
         timestamp: Date.now(),
       };
-      messageState.updateSessionMessages(sessionId, (prev) => [...prev, userMessage]);
+      messageState.updateSessionMessages(sessionId, (prev) => [
+        ...prev,
+        userMessage,
+      ]);
       addPrompt(text);
       messageState.setSessionLoading(sessionId, true);
       addMessageWithSync(sessionId, 'user', content, selectedModel);
@@ -424,7 +485,9 @@ export function ClaudeChatView() {
       messageState.updateSessionMessages(sessionId, (prev) => {
         // Confirm the pending user message now that assistant streaming starts
         return prev
-          .map((m) => (m.id === userMessageId ? { ...m, status: 'confirmed' as const } : m))
+          .map((m) =>
+            m.id === userMessageId ? { ...m, status: 'confirmed' as const } : m,
+          )
           .concat(assistantMessage);
       });
 
@@ -464,7 +527,8 @@ export function ClaudeChatView() {
   });
 
   // Route: WS when connected, NDJSON fallback
-  const handleSend = ws.status === 'connected' ? wsHandleSend : ndjsonHandleSend;
+  const handleSend =
+    ws.status === 'connected' ? wsHandleSend : ndjsonHandleSend;
   const effectiveLoading = isLoading || ws.isStreaming;
 
   // ----- Retry handler for error messages -----------------------------------
@@ -474,7 +538,9 @@ export function ClaudeChatView() {
       const sessionId = useViewStore.getState().currentSessionId;
       if (!sessionId || !msg.content) return;
       // Remove the errored message from the session
-      messageState.updateSessionMessages(sessionId, (prev) => prev.filter((m) => m.id !== msg.id));
+      messageState.updateSessionMessages(sessionId, (prev) =>
+        prev.filter((m) => m.id !== msg.id),
+      );
       // Re-send the same content
       handleSend(msg.content, []);
     },
@@ -484,7 +550,10 @@ export function ClaudeChatView() {
   // ----- Render -------------------------------------------------------------
 
   return (
-    <CompletionFeedback flashActive={flashActive} className="h-full flex flex-col p-4">
+    <CompletionFeedback
+      flashActive={flashActive}
+      className="h-full flex flex-col p-4"
+    >
       {/* Header */}
       <ChatHeader
         claudeConnected={claudeConnected}
@@ -528,7 +597,10 @@ export function ClaudeChatView() {
           onRetry={handleRetry}
         />
 
-        <ArtifactPanel activeArtifact={activeArtifact} onClose={handleCloseArtifact} />
+        <ArtifactPanel
+          activeArtifact={activeArtifact}
+          onClose={handleCloseArtifact}
+        />
       </div>
 
       {/* Streaming indicator bar */}

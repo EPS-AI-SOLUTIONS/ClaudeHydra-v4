@@ -25,10 +25,12 @@ const viewImportMap: Record<string, () => Promise<unknown>> = {
   agents: () => import('@/features/agents/components/AgentsView'),
   settings: () => import('@/features/settings/components/SettingsView'),
   logs: () => import('@/features/logs/components/LogsView'),
-  delegations: () => import('@/features/delegations/components/DelegationsView'),
+  delegations: () =>
+    import('@/features/delegations/components/DelegationsView'),
   analytics: () => import('@/features/analytics/components/AnalyticsView'),
   swarm: () => import('@/features/swarm/components/SwarmView'),
-  'semantic-cache': () => import('@/features/semantic-cache/components/SemanticCacheView'),
+  'semantic-cache': () =>
+    import('@/features/semantic-cache/components/SemanticCacheView'),
   collab: () => import('@/features/collab/components/CollabView'),
 };
 
@@ -40,17 +42,24 @@ function getApiBase(): string {
   return env.VITE_BACKEND_URL || '';
 }
 
-const viewQueryMap: Record<string, Array<{ queryKey: readonly unknown[]; queryFn: () => Promise<unknown> }>> = {
+const viewQueryMap: Record<
+  string,
+  Array<{ queryKey: readonly unknown[]; queryFn: () => Promise<unknown> }>
+> = {
   analytics: [
     {
       queryKey: ['analytics', 'summary'] as const,
-      queryFn: () => fetch(`${getApiBase()}/api/analytics/summary`).then((r) => r.json()),
+      queryFn: () =>
+        fetch(`${getApiBase()}/api/analytics/summary`).then((r) => r.json()),
     },
   ],
   logs: [
     {
       queryKey: ['logs', 'backend'] as const,
-      queryFn: () => fetch(`${getApiBase()}/api/logs/backend?limit=50`).then((r) => r.json()),
+      queryFn: () =>
+        fetch(`${getApiBase()}/api/logs/backend?limit=50`).then((r) =>
+          r.json(),
+        ),
     },
   ],
   agents: [
@@ -62,19 +71,22 @@ const viewQueryMap: Record<string, Array<{ queryKey: readonly unknown[]; queryFn
   settings: [
     {
       queryKey: ['settings'] as const,
-      queryFn: () => fetch(`${getApiBase()}/api/settings`).then((r) => r.json()),
+      queryFn: () =>
+        fetch(`${getApiBase()}/api/settings`).then((r) => r.json()),
     },
   ],
   swarm: [
     {
       queryKey: ['swarm', 'peers'] as const,
-      queryFn: () => fetch(`${getApiBase()}/api/swarm/peers`).then((r) => r.json()),
+      queryFn: () =>
+        fetch(`${getApiBase()}/api/swarm/peers`).then((r) => r.json()),
     },
   ],
   'semantic-cache': [
     {
       queryKey: ['semantic-cache', 'stats'] as const,
-      queryFn: () => fetch(`${getApiBase()}/api/semantic-cache/stats`).then((r) => r.json()),
+      queryFn: () =>
+        fetch(`${getApiBase()}/api/semantic-cache/stats`).then((r) => r.json()),
     },
   ],
 };

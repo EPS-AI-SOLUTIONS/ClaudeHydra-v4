@@ -66,14 +66,18 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
             <div
               className={cn(
                 'flex items-center justify-between px-5 py-3 border-b',
-                isLight ? 'border-slate-200 bg-slate-50/80' : 'border-white/10 bg-white/5',
+                isLight
+                  ? 'border-slate-200 bg-slate-50/80'
+                  : 'border-white/10 bg-white/5',
               )}
             >
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
                     'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold',
-                    isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400',
+                    isLight
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-blue-500/20 text-blue-400',
                   )}
                 >
                   GH
@@ -81,40 +85,66 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
                 <div>
                   <h2
                     id="partner-chat-modal-title"
-                    className={cn('text-sm font-semibold', isLight ? 'text-slate-900' : 'text-white')}
+                    className={cn(
+                      'text-sm font-semibold',
+                      isLight ? 'text-slate-900' : 'text-white',
+                    )}
                   >
                     {session?.title ?? 'Loading...'}
                   </h2>
-                  <p className={cn('text-xs', isLight ? 'text-slate-500' : 'text-white/50')}>
-                    GeminiHydra Session {session ? `(${session.messages.length} messages)` : ''}
+                  <p
+                    className={cn(
+                      'text-xs',
+                      isLight ? 'text-slate-500' : 'text-white/50',
+                    )}
+                  >
+                    GeminiHydra Session{' '}
+                    {session ? `(${session.messages.length} messages)` : ''}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className={cn('p-2 rounded-lg transition-colors', isLight ? 'hover:bg-slate-200' : 'hover:bg-white/10')}
+                className={cn(
+                  'p-2 rounded-lg transition-colors',
+                  isLight ? 'hover:bg-slate-200' : 'hover:bg-white/10',
+                )}
               >
-                <X size={18} className={isLight ? 'text-slate-600' : 'text-white/60'} />
+                <X
+                  size={18}
+                  className={isLight ? 'text-slate-600' : 'text-white/60'}
+                />
               </button>
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4"
+            >
               {isLoading && (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 size={24} className="animate-spin text-blue-500" />
                 </div>
               )}
               {error && (
-                <div className={cn('text-center py-8 text-sm', isLight ? 'text-red-600' : 'text-red-400')}>
+                <div
+                  className={cn(
+                    'text-center py-8 text-sm',
+                    isLight ? 'text-red-600' : 'text-red-400',
+                  )}
+                >
                   Failed to load session
                 </div>
               )}
               {session?.messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={cn('flex gap-3 max-w-3xl', msg.role === 'user' ? 'ml-auto flex-row-reverse' : '')}
+                  className={cn(
+                    'flex gap-3 max-w-3xl',
+                    msg.role === 'user' ? 'ml-auto flex-row-reverse' : '',
+                  )}
                 >
                   <div
                     className={cn(
@@ -128,7 +158,11 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
                           : 'bg-blue-500/20 text-blue-400',
                     )}
                   >
-                    {msg.role === 'user' ? <User size={14} /> : <Bot size={14} />}
+                    {msg.role === 'user' ? (
+                      <User size={14} />
+                    ) : (
+                      <Bot size={14} />
+                    )}
                   </div>
                   <div
                     className={cn(
@@ -142,10 +176,23 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
                           : 'bg-white/5 text-white/90',
                     )}
                   >
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                    <div className={cn('flex items-center gap-2 mt-1.5', isLight ? 'text-slate-400' : 'text-white/30')}>
-                      {msg.model && <span className="text-[10px] font-mono">{msg.model}</span>}
-                      <span className="text-[10px]">{formatTime(msg.timestamp)}</span>
+                    <p className="text-sm whitespace-pre-wrap break-words">
+                      {msg.content}
+                    </p>
+                    <div
+                      className={cn(
+                        'flex items-center gap-2 mt-1.5',
+                        isLight ? 'text-slate-400' : 'text-white/30',
+                      )}
+                    >
+                      {msg.model && (
+                        <span className="text-[10px] font-mono">
+                          {msg.model}
+                        </span>
+                      )}
+                      <span className="text-[10px]">
+                        {formatTime(msg.timestamp)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -156,10 +203,17 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
             <div
               className={cn(
                 'px-5 py-2.5 border-t text-center',
-                isLight ? 'border-slate-200 bg-slate-50/80' : 'border-white/10 bg-white/5',
+                isLight
+                  ? 'border-slate-200 bg-slate-50/80'
+                  : 'border-white/10 bg-white/5',
               )}
             >
-              <span className={cn('text-xs', isLight ? 'text-slate-400' : 'text-white/30')}>
+              <span
+                className={cn(
+                  'text-xs',
+                  isLight ? 'text-slate-400' : 'text-white/30',
+                )}
+              >
                 Read-only view from GeminiHydra
               </span>
             </div>

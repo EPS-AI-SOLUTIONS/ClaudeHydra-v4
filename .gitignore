@@ -36,6 +36,9 @@ dist-ssr
 # TypeScript build info
 *.tsbuildinfo
 
+# Stale JS shadow files (source is .tsx/.ts)
+src/**/*.js
+
 # Playwright artifacts
 playwright-report/
 test-results/

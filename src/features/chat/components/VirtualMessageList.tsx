@@ -15,7 +15,10 @@ interface VirtualMessageListProps {
   highlightId?: string | null;
 }
 
-export function VirtualMessageList({ messages, highlightId }: VirtualMessageListProps) {
+export function VirtualMessageList({
+  messages,
+  highlightId,
+}: VirtualMessageListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -26,7 +29,12 @@ export function VirtualMessageList({ messages, highlightId }: VirtualMessageList
   });
 
   return (
-    <div ref={parentRef} className="flex-1 overflow-y-auto scrollbar-thin" role="log" aria-live="polite">
+    <div
+      ref={parentRef}
+      className="flex-1 overflow-y-auto scrollbar-thin"
+      role="log"
+      aria-live="polite"
+    >
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,

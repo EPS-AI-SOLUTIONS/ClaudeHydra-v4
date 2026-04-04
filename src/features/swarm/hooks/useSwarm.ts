@@ -80,7 +80,11 @@ export interface SwarmEvent {
   timestamp: string;
 }
 
-export type OrchestrationPattern = 'parallel' | 'sequential' | 'review' | 'fan_out';
+export type OrchestrationPattern =
+  | 'parallel'
+  | 'sequential'
+  | 'review'
+  | 'fan_out';
 
 // ── API Base ─────────────────────────────────────────────────────────────────
 
@@ -199,7 +203,10 @@ export function useSwarm() {
         setEvents((prev) => [event, ...prev].slice(0, 100));
 
         // Auto-refresh tasks on completion events
-        if (event.eventType === 'task_completed' || event.eventType === 'task_failed') {
+        if (
+          event.eventType === 'task_completed' ||
+          event.eventType === 'task_failed'
+        ) {
           loadTasks();
         }
       } catch {

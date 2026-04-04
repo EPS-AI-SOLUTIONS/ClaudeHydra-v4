@@ -10,7 +10,14 @@
  * Executor tier = Claude Haiku 4.5 (fast, efficient)
  */
 
-import { Badge, Button, Card, cn, EmptyState, ErrorBoundary } from '@jaskier/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  cn,
+  EmptyState,
+  ErrorBoundary,
+} from '@jaskier/ui';
 import {
   Bot,
   Brain,
@@ -27,8 +34,14 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StatusIndicator, type StatusState } from '@/components/molecules/StatusIndicator';
-import { type BackendLogEntry, useBackendLogs } from '@/features/logs/hooks/useLogs';
+import {
+  StatusIndicator,
+  type StatusState,
+} from '@/components/molecules/StatusIndicator';
+import {
+  type BackendLogEntry,
+  useBackendLogs,
+} from '@/features/logs/hooks/useLogs';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,7 +51,12 @@ function formatTimestamp(ts: string): string {
   try {
     const d = new Date(ts);
     return (
-      d.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+      d.toLocaleTimeString('en-GB', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }) +
       '.' +
       String(d.getMilliseconds()).padStart(3, '0')
     );
@@ -87,7 +105,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Security & Protection',
     tier: 'Commander',
     status: 'online',
-    description: 'Deep reasoning for security audits, threat modeling, vulnerability analysis, and code safety.',
+    description:
+      'Deep reasoning for security audits, threat modeling, vulnerability analysis, and code safety.',
     icon: Shield,
     color: 'text-amber-400',
   },
@@ -98,7 +117,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Architecture & Design',
     tier: 'Commander',
     status: 'online',
-    description: 'System architecture, design patterns, complex refactoring, and structural integrity analysis.',
+    description:
+      'System architecture, design patterns, complex refactoring, and structural integrity analysis.',
     icon: Wand2,
     color: 'text-purple-400',
   },
@@ -109,7 +129,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Code Review & Mentoring',
     tier: 'Commander',
     status: 'online',
-    description: 'In-depth code review, best practices enforcement, mentoring, and quality gates.',
+    description:
+      'In-depth code review, best practices enforcement, mentoring, and quality gates.',
     icon: Brain,
     color: 'text-blue-400',
   },
@@ -120,7 +141,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Frontend & UX',
     tier: 'Coordinator',
     status: 'online',
-    description: 'UI components, accessibility, responsive design, and user experience optimization.',
+    description:
+      'UI components, accessibility, responsive design, and user experience optimization.',
     icon: Zap,
     color: 'text-pink-400',
   },
@@ -131,7 +153,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Documentation & Comms',
     tier: 'Coordinator',
     status: 'online',
-    description: 'Documentation, README, changelog, technical writing, and knowledge base maintenance.',
+    description:
+      'Documentation, README, changelog, technical writing, and knowledge base maintenance.',
     icon: Bot,
     color: 'text-yellow-400',
   },
@@ -142,7 +165,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Intelligence & Research',
     tier: 'Coordinator',
     status: 'online',
-    description: 'Data analysis, competitive research, trend analysis, and technological intelligence.',
+    description:
+      'Data analysis, competitive research, trend analysis, and technological intelligence.',
     icon: Bot,
     color: 'text-indigo-400',
   },
@@ -153,7 +177,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Innovation & Experiments',
     tier: 'Coordinator',
     status: 'online',
-    description: 'Emerging technologies, rapid prototyping, PoC development, and experimental features.',
+    description:
+      'Emerging technologies, rapid prototyping, PoC development, and experimental features.',
     icon: Wand2,
     color: 'text-emerald-400',
   },
@@ -164,7 +189,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Analysis & Strategy',
     tier: 'Coordinator',
     status: 'online',
-    description: 'Deep analysis, strategic planning, risk assessment, and long-term decision support.',
+    description:
+      'Deep analysis, strategic planning, risk assessment, and long-term decision support.',
     icon: Brain,
     color: 'text-cyan-400',
   },
@@ -175,7 +201,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Testing & QA',
     tier: 'Executor',
     status: 'online',
-    description: 'Fast unit tests, integration tests, E2E testing, and automated quality assurance.',
+    description:
+      'Fast unit tests, integration tests, E2E testing, and automated quality assurance.',
     icon: Swords,
     color: 'text-red-400',
   },
@@ -186,7 +213,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'DevOps & Infrastructure',
     tier: 'Executor',
     status: 'online',
-    description: 'CI/CD pipelines, Docker orchestration, deployment automation, and health monitoring.',
+    description:
+      'CI/CD pipelines, Docker orchestration, deployment automation, and health monitoring.',
     icon: GitBranch,
     color: 'text-green-400',
   },
@@ -197,7 +225,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'Performance & Optimization',
     tier: 'Executor',
     status: 'online',
-    description: 'Bundle profiling, caching strategies, lazy loading, and runtime performance tuning.',
+    description:
+      'Bundle profiling, caching strategies, lazy loading, and runtime performance tuning.',
     icon: Swords,
     color: 'text-orange-400',
   },
@@ -208,7 +237,8 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
     role: 'API & Integration',
     tier: 'Executor',
     status: 'online',
-    description: 'API design, protocol handling, middleware pipelines, and third-party integrations.',
+    description:
+      'API design, protocol handling, middleware pipelines, and third-party integrations.',
     icon: Zap,
     color: 'text-violet-400',
   },
@@ -218,7 +248,12 @@ const CLAUDE_AGENTS: readonly ClaudeAgent[] = [
 // Tier Metadata
 // ---------------------------------------------------------------------------
 
-const TIER_FILTERS: readonly TierFilter[] = ['All', 'Commander', 'Coordinator', 'Executor'] as const;
+const TIER_FILTERS: readonly TierFilter[] = [
+  'All',
+  'Commander',
+  'Coordinator',
+  'Executor',
+] as const;
 
 const tierBadgeVariant: Record<AgentTier, 'accent' | 'warning' | 'default'> = {
   Commander: 'accent',
@@ -275,7 +310,12 @@ function AgentCard({ agent }: AgentCardProps) {
   const TierIcon = tierIcon[agent.tier];
 
   return (
-    <motion.div data-testid={`agent-card-${agent.id}`} variants={cardVariants} layout layoutId={agent.id}>
+    <motion.div
+      data-testid={`agent-card-${agent.id}`}
+      variants={cardVariants}
+      layout
+      layoutId={agent.id}
+    >
       <Card variant="hover" padding="none" interactive className="h-full">
         <div className="p-4 space-y-3">
           {/* Header: Icon + Name + Status */}
@@ -292,11 +332,17 @@ function AgentCard({ agent }: AgentCardProps) {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-[var(--matrix-text-primary)] truncate">{agent.name}</h3>
+                <h3 className="text-sm font-semibold text-[var(--matrix-text-primary)] truncate">
+                  {agent.name}
+                </h3>
                 <StatusIndicator status={agent.status} size="sm" />
               </div>
-              <p className="text-[11px] text-[var(--matrix-text-secondary)] truncate">{agent.role}</p>
-              <p className="text-[10px] text-[var(--matrix-accent)]/60 font-mono truncate">{agent.model}</p>
+              <p className="text-[11px] text-[var(--matrix-text-secondary)] truncate">
+                {agent.role}
+              </p>
+              <p className="text-[10px] text-[var(--matrix-accent)]/60 font-mono truncate">
+                {agent.model}
+              </p>
             </div>
           </div>
 
@@ -307,11 +353,19 @@ function AgentCard({ agent }: AgentCardProps) {
 
           {/* Footer: Tier Badge + Status Label */}
           <div className="flex items-center justify-between pt-1">
-            <Badge variant={tierBadgeVariant[agent.tier]} size="sm" icon={<TierIcon size={10} />}>
+            <Badge
+              variant={tierBadgeVariant[agent.tier]}
+              size="sm"
+              icon={<TierIcon size={10} />}
+            >
               {agent.tier}
             </Badge>
 
-            <StatusIndicator status={agent.status} size="sm" label={agent.status} />
+            <StatusIndicator
+              status={agent.status}
+              size="sm"
+              label={agent.status}
+            />
           </div>
         </div>
       </Card>
@@ -349,11 +403,17 @@ export function AgentsView() {
     return counts;
   }, []);
 
-  const onlineCount = useMemo(() => CLAUDE_AGENTS.filter((a) => a.status === 'online').length, []);
+  const onlineCount = useMemo(
+    () => CLAUDE_AGENTS.filter((a) => a.status === 'online').length,
+    [],
+  );
 
   return (
     <ErrorBoundary>
-      <div data-testid="agents-view" className="h-full flex flex-col xl:flex-row gap-4 overflow-hidden p-4 sm:p-6">
+      <div
+        data-testid="agents-view"
+        className="h-full flex flex-col xl:flex-row gap-4 overflow-hidden p-4 sm:p-6"
+      >
         {/* Main Agents Area */}
         <div className="flex-1 flex flex-col overflow-auto pr-2">
           {/* Header */}
@@ -374,19 +434,29 @@ export function AgentsView() {
                 >
                   Claude AI Agent Swarm
                 </h2>
-                <p data-testid="agents-online-count" className="text-xs text-[var(--matrix-text-secondary)]">
+                <p
+                  data-testid="agents-online-count"
+                  className="text-xs text-[var(--matrix-text-secondary)]"
+                >
                   {onlineCount} of {CLAUDE_AGENTS.length} agents online
                 </p>
               </div>
             </div>
 
             <p className="text-sm text-[var(--matrix-text-secondary)] mb-4">
-              12 specialized Claude AI agents — Opus, Sonnet & Haiku — organized in a hierarchical swarm structure.
+              12 specialized Claude AI agents — Opus, Sonnet & Haiku — organized
+              in a hierarchical swarm structure.
             </p>
 
             {/* Tier Filter Buttons */}
-            <div data-testid="agents-filter-bar" className="flex items-center gap-2 flex-wrap">
-              <Filter size={14} className="text-[var(--matrix-text-secondary)]" />
+            <div
+              data-testid="agents-filter-bar"
+              className="flex items-center gap-2 flex-wrap"
+            >
+              <Filter
+                size={14}
+                className="text-[var(--matrix-text-secondary)]"
+              />
               {TIER_FILTERS.map((tier) => (
                 <Button
                   key={tier}
@@ -423,8 +493,14 @@ export function AgentsView() {
             {filteredAgents.length === 0 && (
               <EmptyState
                 icon={<Users />}
-                title={t('agents.noMatch', 'No agents match the selected filter')}
-                description={t('agents.noMatchDesc', 'Try selecting a different tier filter to see agents.')}
+                title={t(
+                  'agents.noMatch',
+                  'No agents match the selected filter',
+                )}
+                description={t(
+                  'agents.noMatchDesc',
+                  'Try selecting a different tier filter to see agents.',
+                )}
                 className="flex-1"
               />
             )}
@@ -435,23 +511,41 @@ export function AgentsView() {
         <div className="w-full xl:w-96 h-64 xl:h-full shrink-0 flex flex-col border border-[var(--matrix-border)] rounded-xl bg-[var(--matrix-bg-secondary)] overflow-hidden shadow-lg">
           <div className="flex items-center gap-2 p-3 border-b border-[var(--matrix-border)] bg-black/20">
             <TerminalIcon size={16} className="text-[var(--matrix-accent)]" />
-            <h3 className="text-sm font-mono font-semibold text-[var(--matrix-text-primary)]">Agents Terminal</h3>
+            <h3 className="text-sm font-mono font-semibold text-[var(--matrix-text-primary)]">
+              Agents Terminal
+            </h3>
             {isLoading && (
-              <span className="ml-auto text-xs text-[var(--matrix-text-secondary)] animate-pulse">Loading...</span>
+              <span className="ml-auto text-xs text-[var(--matrix-text-secondary)] animate-pulse">
+                Loading...
+              </span>
             )}
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-1.5 font-mono text-[10px] sm:text-xs bg-black/40">
             {logs.length === 0 && !isLoading && (
-              <div className="text-[var(--matrix-text-secondary)] italic">Awaiting logs...</div>
+              <div className="text-[var(--matrix-text-secondary)] italic">
+                Awaiting logs...
+              </div>
             )}
             {logs.map((entry: BackendLogEntry, i: number) => (
-              <div key={`${entry.timestamp}-${i}`} className="flex items-start gap-2 break-all">
+              <div
+                key={`${entry.timestamp}-${i}`}
+                className="flex items-start gap-2 break-all"
+              >
                 <span className="text-[var(--matrix-text-secondary)] opacity-50 shrink-0">
                   {formatTimestamp(entry.timestamp)}
                 </span>
-                <span className={cn('shrink-0 font-semibold', levelBadgeClasses(entry.level))}>[{entry.level}]</span>
+                <span
+                  className={cn(
+                    'shrink-0 font-semibold',
+                    levelBadgeClasses(entry.level),
+                  )}
+                >
+                  [{entry.level}]
+                </span>
                 <span className="text-[var(--matrix-text-primary)]">
-                  <span className="text-[var(--matrix-accent)] opacity-70 mr-1">{entry.target}:</span>
+                  <span className="text-[var(--matrix-accent)] opacity-70 mr-1">
+                    {entry.target}:
+                  </span>
                   {entry.message}
                 </span>
               </div>

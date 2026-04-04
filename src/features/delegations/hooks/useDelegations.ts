@@ -65,12 +65,17 @@ const useDelegationStore = create<DelegationStore>((set) => ({
         tasks.unshift(newTask);
         toast.info(`New Delegation: ${newTask.agent_name}`, {
           description:
-            newTask.task_prompt.length > 60 ? `${newTask.task_prompt.substring(0, 60)}...` : newTask.task_prompt,
+            newTask.task_prompt.length > 60
+              ? `${newTask.task_prompt.substring(0, 60)}...`
+              : newTask.task_prompt,
         });
       }
 
       // Re-sort tasks by created_at DESC to maintain order
-      tasks.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      tasks.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
 
       // Recalculate stats
       let completed = 0;
@@ -94,7 +99,10 @@ const useDelegationStore = create<DelegationStore>((set) => ({
             total: tasks.length,
             completed,
             errors,
-            avg_duration_ms: completedWithDuration > 0 ? totalDuration / completedWithDuration : null,
+            avg_duration_ms:
+              completedWithDuration > 0
+                ? totalDuration / completedWithDuration
+                : null,
           },
         },
       };
@@ -125,7 +133,9 @@ export function useDelegations(autoRefresh: boolean) {
   useEffect(() => {
     if (!autoRefresh) return;
 
-    const eventSource = new EventSource(`${BASE_URL}/api/agents/delegations/stream`);
+    const eventSource = new EventSource(
+      `${BASE_URL}/api/agents/delegations/stream`,
+    );
 
     eventSource.onopen = () => {
       resetHeartbeat(eventSource);

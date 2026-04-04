@@ -28,12 +28,17 @@ interface CompletionFeedbackProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export const CompletionFeedback = memo<CompletionFeedbackProps>(({ flashActive, className, children }) => {
-  return (
-    <div data-testid="chat-view" className={cn(className, flashActive && 'completion-flash rounded-xl')}>
-      {children}
-    </div>
-  );
-});
+export const CompletionFeedback = memo<CompletionFeedbackProps>(
+  ({ flashActive, className, children }) => {
+    return (
+      <div
+        data-testid="chat-view"
+        className={cn(className, flashActive && 'completion-flash rounded-xl')}
+      >
+        {children}
+      </div>
+    );
+  },
+);
 
 CompletionFeedback.displayName = 'CompletionFeedback';

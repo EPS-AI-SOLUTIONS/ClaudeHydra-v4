@@ -2,7 +2,17 @@
 
 import { Badge, Button, Card, cn } from '@jaskier/ui';
 import DOMPurify from 'dompurify';
-import { Check, ChevronLeft, ChevronRight, Code2, Copy, Download, Eye, FileDown, Loader2 } from 'lucide-react';
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Code2,
+  Copy,
+  Download,
+  Eye,
+  FileDown,
+  Loader2,
+} from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -71,7 +81,9 @@ function markdownToHtml(md: string): string {
       }
 
       if (!inTable) {
-        out.push('<table style="border-collapse:collapse;border:1px solid #555;">');
+        out.push(
+          '<table style="border-collapse:collapse;border:1px solid #555;">',
+        );
         inTable = true;
         headerDone = false;
       }
@@ -92,7 +104,9 @@ function markdownToHtml(md: string): string {
       } else {
         out.push('<tr>');
         for (const c of cellValues) {
-          out.push(`<td style="border:1px solid #555;padding:4px 8px;">${processInline(escapeHtml(c))}</td>`);
+          out.push(
+            `<td style="border:1px solid #555;padding:4px 8px;">${processInline(escapeHtml(c))}</td>`,
+          );
         }
         out.push('</tr>');
       }
@@ -113,7 +127,9 @@ function markdownToHtml(md: string): string {
       } else if (line.startsWith('- ') || line.startsWith('* ')) {
         out.push(`<li>${processInline(escapeHtml(line.slice(2)))}</li>`);
       } else if (/^\d+\.\s/.test(line)) {
-        out.push(`<li>${processInline(escapeHtml(line.replace(/^\d+\.\s/, '')))}</li>`);
+        out.push(
+          `<li>${processInline(escapeHtml(line.replace(/^\d+\.\s/, '')))}</li>`,
+        );
       } else if (line === '') {
         out.push('<br/>');
       } else {
@@ -132,7 +148,9 @@ function escapeHtml(s: string): string {
 
 /** Process inline markdown: **bold** → <strong>, *italic* → <em>. Call AFTER escapeHtml. */
 function processInline(s: string): string {
-  return s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
+  return s
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
 }
 
 const OcrResultPanel = memo(function OcrResultPanel({
@@ -154,19 +172,26 @@ const OcrResultPanel = memo(function OcrResultPanel({
   const page = pages[currentPage];
   const hasMultiplePages = pages.length > 1;
 
-  const fullText = useMemo(() => pages.map((p) => p.text).join('\n\n---\n\n'), [pages]);
+  const fullText = useMemo(
+    () => pages.map((p) => p.text).join('\n\n---\n\n'),
+    [pages],
+  );
 
   const currentText = showFullText ? fullText : (page?.text ?? '');
 
   const sanitizedHtml = useMemo(
-    () => (outputFormat === 'html' ? DOMPurify.sanitize(currentText, PURIFY_CONFIG) : ''),
+    () =>
+      outputFormat === 'html'
+        ? DOMPurify.sanitize(currentText, PURIFY_CONFIG)
+        : '',
     [currentText, outputFormat],
   );
 
   /** Rich copy: text/html (for Word/Excel/Docs) + text/plain (for editors). */
   const handleCopy = useCallback(async () => {
     try {
-      const html = outputFormat === 'html' ? currentText : markdownToHtml(currentText);
+      const html =
+        outputFormat === 'html' ? currentText : markdownToHtml(currentText);
       const htmlBlob = new Blob([html], { type: 'text/html' });
       const textBlob = new Blob([currentText], { type: 'text/plain' });
       await navigator.clipboard.write([
@@ -218,23 +243,34 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
       {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium" style={{ color: 'var(--matrix-text-primary)' }}>
+          <span
+            className="text-sm font-medium"
+            style={{ color: 'var(--matrix-text-primary)' }}
+          >
             OCR
           </span>
           <Badge variant="accent" size="sm">
             {provider}
           </Badge>
           <Badge variant="default" size="sm">
-            {totalPages} {totalPages === 1 ? 'strona' : totalPages < 5 ? 'strony' : 'stron'}
+            {totalPages}{' '}
+            {totalPages === 1 ? 'strona' : totalPages < 5 ? 'strony' : 'stron'}
           </Badge>
-          <span className="text-xs" style={{ color: 'var(--matrix-text-secondary)' }}>
+          <span
+            className="text-xs"
+            style={{ color: 'var(--matrix-text-secondary)' }}
+          >
             {(processingTimeMs / 1000).toFixed(1)}s
           </span>
         </div>
 
         <div className="flex items-center gap-1">
           {hasMultiplePages && (
-            <Button variant="ghost" size="sm" onClick={() => setShowFullText((v) => !v)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFullText((v) => !v)}
+            >
               {showFullText ? 'Strony' : 'Pełny tekst'}
             </Button>
           )}
@@ -268,7 +304,11 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
                     : 'text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-text-primary)]',
                 )}
               >
-                {isFormatLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'HTML'}
+                {isFormatLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  'HTML'
+                )}
               </button>
             </div>
           )}
@@ -278,15 +318,38 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
             onClick={() => setShowRendered((v) => !v)}
             title={showRendered ? 'Pokaż źródło' : 'Pokaż sformatowany'}
           >
-            {showRendered ? <Code2 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {showRendered ? (
+              <Code2 className="w-3.5 h-3.5" />
+            ) : (
+              <Eye className="w-3.5 h-3.5" />
+            )}
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleCopy} title="Kopiuj (z formatowaniem)">
-            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCopy}
+            title="Kopiuj (z formatowaniem)"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleExportMd} title="Pobierz .md">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportMd}
+            title="Pobierz .md"
+          >
             <Download className="w-3.5 h-3.5" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleExportHtml} title="Pobierz .html (Word)">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportHtml}
+            title="Pobierz .html (Word)"
+          >
             <FileDown className="w-3.5 h-3.5" />
           </Button>
         </div>
@@ -295,10 +358,18 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
       {/* Page navigation */}
       {hasMultiplePages && !showFullText && (
         <div className="flex items-center justify-center gap-2">
-          <Button variant="ghost" size="sm" disabled={currentPage === 0} onClick={() => setCurrentPage((p) => p - 1)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={currentPage === 0}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-xs tabular-nums" style={{ color: 'var(--matrix-text-secondary)' }}>
+          <span
+            className="text-xs tabular-nums"
+            style={{ color: 'var(--matrix-text-secondary)' }}
+          >
             {page?.page_number ?? currentPage + 1} / {totalPages}
           </span>
           <Button
@@ -329,7 +400,8 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
           <pre
             className="whitespace-pre-wrap break-words text-xs leading-relaxed max-h-96 overflow-y-auto rounded-md p-3"
             style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontFamily:
+                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               color: 'var(--matrix-text-primary)',
               backgroundColor: 'var(--matrix-bg-secondary)',
               border: '1px solid var(--matrix-border)',
@@ -348,13 +420,16 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
             border: '1px solid var(--matrix-border)',
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{currentText}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {currentText}
+          </ReactMarkdown>
         </div>
       ) : (
         <pre
           className="whitespace-pre-wrap break-words text-xs leading-relaxed max-h-96 overflow-y-auto rounded-md p-3"
           style={{
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontFamily:
+              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
             color: 'var(--matrix-text-primary)',
             backgroundColor: 'var(--matrix-bg-secondary)',
             border: '1px solid var(--matrix-border)',

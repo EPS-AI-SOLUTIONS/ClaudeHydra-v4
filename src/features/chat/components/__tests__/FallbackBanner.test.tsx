@@ -18,7 +18,9 @@ describe('FallbackBanner', () => {
   });
 
   it('renders nothing when data is null', () => {
-    const { container } = render(<FallbackBanner data={null} onDismiss={vi.fn()} />);
+    const { container } = render(
+      <FallbackBanner data={null} onDismiss={vi.fn()} />,
+    );
     expect(container.textContent).toBe('');
   });
 

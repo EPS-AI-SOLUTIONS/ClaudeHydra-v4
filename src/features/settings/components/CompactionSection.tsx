@@ -29,7 +29,10 @@ export const CompactionSection = memo(() => {
 
   const save = useCallback(
     async (newThreshold: number, newKeep: number) => {
-      const clampedThreshold = Math.max(THRESHOLD_MIN, Math.min(THRESHOLD_MAX, newThreshold));
+      const clampedThreshold = Math.max(
+        THRESHOLD_MIN,
+        Math.min(THRESHOLD_MAX, newThreshold),
+      );
       // Ensure keep < threshold
       const maxKeep = Math.min(KEEP_MAX, clampedThreshold - 1);
       const clampedKeep = Math.max(KEEP_MIN, Math.min(maxKeep, newKeep));
@@ -42,7 +45,9 @@ export const CompactionSection = memo(() => {
           compaction_keep: clampedKeep,
         });
         await refetch();
-        toast.success(t('settings.compaction.saved', 'Compaction settings updated'));
+        toast.success(
+          t('settings.compaction.saved', 'Compaction settings updated'),
+        );
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Failed to save');
       } finally {
@@ -56,7 +61,12 @@ export const CompactionSection = memo(() => {
     <div className="space-y-5">
       <div className="flex items-center gap-2">
         <PackageOpen size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.compaction.title', 'Message Compaction')}
         </h3>
       </div>
@@ -93,7 +103,10 @@ export const CompactionSection = memo(() => {
             onChange={(e) => save(Number(e.target.value), keep)}
             disabled={saving}
             className="flex-1 h-2 rounded-lg appearance-none cursor-pointer accent-[var(--matrix-accent)] bg-[var(--matrix-glass)]"
-            aria-label={t('settings.compaction.threshold', 'Compress after N messages')}
+            aria-label={t(
+              'settings.compaction.threshold',
+              'Compress after N messages',
+            )}
             aria-valuemin={THRESHOLD_MIN}
             aria-valuemax={THRESHOLD_MAX}
             aria-valuenow={threshold}
@@ -109,9 +122,21 @@ export const CompactionSection = memo(() => {
             <Plus size={14} />
           </Button>
 
-          <span className={cn('text-lg font-mono font-bold min-w-[3ch] text-center', theme.text)}>{threshold}</span>
+          <span
+            className={cn(
+              'text-lg font-mono font-bold min-w-[3ch] text-center',
+              theme.text,
+            )}
+          >
+            {threshold}
+          </span>
         </div>
-        <div className={cn('flex justify-between text-[10px] font-mono px-1', theme.textMuted)}>
+        <div
+          className={cn(
+            'flex justify-between text-[10px] font-mono px-1',
+            theme.textMuted,
+          )}
+        >
           <span>{THRESHOLD_MIN} (aggressive)</span>
           <span>{THRESHOLD_MAX} (relaxed)</span>
         </div>
@@ -158,9 +183,21 @@ export const CompactionSection = memo(() => {
             <Plus size={14} />
           </Button>
 
-          <span className={cn('text-lg font-mono font-bold min-w-[3ch] text-center', theme.text)}>{keep}</span>
+          <span
+            className={cn(
+              'text-lg font-mono font-bold min-w-[3ch] text-center',
+              theme.text,
+            )}
+          >
+            {keep}
+          </span>
         </div>
-        <div className={cn('flex justify-between text-[10px] font-mono px-1', theme.textMuted)}>
+        <div
+          className={cn(
+            'flex justify-between text-[10px] font-mono px-1',
+            theme.textMuted,
+          )}
+        >
           <span>{KEEP_MIN} (minimal)</span>
           <span>{Math.min(KEEP_MAX, threshold - 1)} (max)</span>
         </div>

@@ -8,7 +8,11 @@ import { motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { type BackendLogEntry, clearBackendLogs, useBackendLogs } from '../hooks/useLogs';
+import {
+  type BackendLogEntry,
+  clearBackendLogs,
+  useBackendLogs,
+} from '../hooks/useLogs';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,9 +20,16 @@ import { type BackendLogEntry, clearBackendLogs, useBackendLogs } from '../hooks
 
 function levelBadgeClasses(level: string, isLight: boolean): string {
   const l = level.toUpperCase();
-  if (l === 'ERROR') return isLight ? 'bg-red-100 text-red-700' : 'bg-red-500/15 text-red-400';
-  if (l === 'WARN') return isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/15 text-amber-400';
-  if (l === 'INFO') return isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/15 text-blue-400';
+  if (l === 'ERROR')
+    return isLight ? 'bg-red-100 text-red-700' : 'bg-red-500/15 text-red-400';
+  if (l === 'WARN')
+    return isLight
+      ? 'bg-amber-100 text-amber-700'
+      : 'bg-amber-500/15 text-amber-400';
+  if (l === 'INFO')
+    return isLight
+      ? 'bg-blue-100 text-blue-700'
+      : 'bg-blue-500/15 text-blue-400';
   return isLight ? 'bg-gray-100 text-gray-600' : 'bg-white/5 text-white/40';
 }
 
@@ -26,7 +37,12 @@ function formatTimestamp(ts: string): string {
   try {
     const d = new Date(ts);
     return (
-      d.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }) +
+      d.toLocaleTimeString('en-GB', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }) +
       '.' +
       String(d.getMilliseconds()).padStart(3, '0')
     );
@@ -59,7 +75,9 @@ export const LogsView = memo(() => {
       toast.error(t('logs.nothingToCopy', 'Nothing to copy'));
       return;
     }
-    const text = logs.map((l) => `[${l.timestamp}] [${l.level}] ${l.target}: ${l.message}`).join('\n');
+    const text = logs
+      .map((l) => `[${l.timestamp}] [${l.level}] ${l.target}: ${l.message}`)
+      .join('\n');
     await navigator.clipboard.writeText(text);
     toast.success(t('logs.copied', 'Copied to clipboard'));
   }, [logs, t]);
@@ -85,12 +103,29 @@ export const LogsView = memo(() => {
         {/* Header */}
         <div className="flex items-center gap-3">
           <ScrollText size={22} className="text-[var(--matrix-accent)]" />
-          <h1 className={cn('text-2xl font-bold font-mono tracking-tight', theme.title)}>{t('logs.title', 'Logs')}</h1>
+          <h1
+            className={cn(
+              'text-2xl font-bold font-mono tracking-tight',
+              theme.title,
+            )}
+          >
+            {t('logs.title', 'Logs')}
+          </h1>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleCopy} leftIcon={<Copy size={14} />}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              leftIcon={<Copy size={14} />}
+            >
               {t('logs.copy', 'Copy')}
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => void handleClear()} leftIcon={<Trash2 size={14} />}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void handleClear()}
+              leftIcon={<Trash2 size={14} />}
+            >
               {t('logs.clear', 'Clear')}
             </Button>
           </div>
@@ -129,11 +164,23 @@ export const LogsView = memo(() => {
                 variant={autoRefresh ? 'secondary' : 'ghost'}
                 size="sm"
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                leftIcon={<RefreshCw size={14} className={autoRefresh ? 'animate-spin' : ''} />}
+                leftIcon={
+                  <RefreshCw
+                    size={14}
+                    className={autoRefresh ? 'animate-spin' : ''}
+                  />
+                }
               >
-                {autoRefresh ? t('logs.autoRefreshOn', 'Live') : t('logs.autoRefreshOff', 'Paused')}
+                {autoRefresh
+                  ? t('logs.autoRefreshOn', 'Live')
+                  : t('logs.autoRefreshOff', 'Paused')}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => void refetch()} leftIcon={<RefreshCw size={14} />}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void refetch()}
+                leftIcon={<RefreshCw size={14} />}
+              >
                 {t('logs.refresh', 'Refresh')}
               </Button>
             </div>
@@ -144,7 +191,9 @@ export const LogsView = memo(() => {
               </p>
             )}
             {isError && (
-              <p className="text-sm text-red-400 text-center py-8">{t('common.loadError', 'Failed to load data')}</p>
+              <p className="text-sm text-red-400 text-center py-8">
+                {t('common.loadError', 'Failed to load data')}
+              </p>
             )}
 
             {!isLoading && !isError && logs.length === 0 && (
@@ -160,7 +209,9 @@ export const LogsView = memo(() => {
                     key={`${entry.timestamp}-${i}`}
                     className={cn(
                       'flex items-start gap-3 px-3 py-2 rounded-lg transition-colors',
-                      theme.isLight ? 'hover:bg-black/[0.03]' : 'hover:bg-white/[0.03]',
+                      theme.isLight
+                        ? 'hover:bg-black/[0.03]'
+                        : 'hover:bg-white/[0.03]',
                     )}
                   >
                     <span className="font-mono text-xs text-[var(--matrix-text-secondary)] shrink-0 pt-0.5 w-20">

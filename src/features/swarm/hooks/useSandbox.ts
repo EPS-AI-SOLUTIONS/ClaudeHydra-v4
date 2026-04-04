@@ -65,7 +65,8 @@ export function useSandbox() {
   const [health, setHealth] = useState<SandboxHealth | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [latestExecution, setLatestExecution] = useState<SandboxExecution | null>(null);
+  const [latestExecution, setLatestExecution] =
+    useState<SandboxExecution | null>(null);
 
   // ── Health check ─────────────────────────────────────────────────────────
 
@@ -83,31 +84,39 @@ export function useSandbox() {
 
   // ── Create session ───────────────────────────────────────────────────────
 
-  const createSession = useCallback(async (language: SandboxLanguage, limits?: Partial<ResourceLimits>) => {
-    setIsCreating(true);
-    try {
-      const resp = await fetch(`${API_BASE}/api/sandbox/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language, limits }),
-      });
-      const data: SandboxSession = await resp.json();
-      if (resp.ok) {
-        setSessions((prev) => [data, ...prev]);
+  const createSession = useCallback(
+    async (language: SandboxLanguage, limits?: Partial<ResourceLimits>) => {
+      setIsCreating(true);
+      try {
+        const resp = await fetch(`${API_BASE}/api/sandbox/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ language, limits }),
+        });
+        const data: SandboxSession = await resp.json();
+        if (resp.ok) {
+          setSessions((prev) => [data, ...prev]);
+        }
+        return data;
+      } catch (err) {
+        console.error('Sandbox create failed:', err);
+        return null;
+      } finally {
+        setIsCreating(false);
       }
-      return data;
-    } catch (err) {
-      console.error('Sandbox create failed:', err);
-      return null;
-    } finally {
-      setIsCreating(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   // ── Execute code ─────────────────────────────────────────────────────────
 
   const executeCode = useCallback(
-    async (code: string, language: SandboxLanguage, sessionId?: string, timeoutSecs?: number) => {
+    async (
+      code: string,
+      language: SandboxLanguage,
+      sessionId?: string,
+      timeoutSecs?: number,
+    ) => {
       setIsExecuting(true);
       setLatestExecution(null);
       try {
@@ -188,7 +197,11 @@ export function useSandbox() {
     totalExecutions: executions.length,
     successRate:
       executions.length > 0
-        ? Math.round((executions.filter((e) => e.status === 'success').length / executions.length) * 100)
+        ? Math.round(
+            (executions.filter((e) => e.status === 'success').length /
+              executions.length) *
+              100,
+          )
         : 0,
   };
 

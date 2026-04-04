@@ -69,7 +69,12 @@ describe('Input', () => {
   // -------------------------------------------------------------------------
 
   it('renders icon when provided', () => {
-    render(<Input placeholder="Search" icon={<span data-testid="search-icon">S</span>} />);
+    render(
+      <Input
+        placeholder="Search"
+        icon={<span data-testid="search-icon">S</span>}
+      />,
+    );
     expect(screen.getByTestId('search-icon')).toBeInTheDocument();
   });
 

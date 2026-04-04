@@ -22,13 +22,20 @@ interface BackendLogsResponse {
 // HOOKS
 // ============================================
 
-function buildParams(params: Record<string, string | number | undefined>): string {
-  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
+function buildParams(
+  params: Record<string, string | number | undefined>,
+): string {
+  const entries = Object.entries(params).filter(
+    ([, v]) => v !== undefined && v !== '',
+  );
   if (entries.length === 0) return '';
   return `?${entries.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&')}`;
 }
 
-export function useBackendLogs(filters: { limit?: number; level?: string; search?: string }, autoRefresh: boolean) {
+export function useBackendLogs(
+  filters: { limit?: number; level?: string; search?: string },
+  autoRefresh: boolean,
+) {
   const params = buildParams({
     limit: filters.limit,
     level: filters.level,

@@ -48,7 +48,9 @@ export async function claudeHealthCheck(): Promise<boolean> {
     const res = await fetch('/api/health');
     if (!res.ok) return false;
     const data = await res.json();
-    const anthropic = data.providers?.find((p: { name: string; available: boolean }) => p.name === 'anthropic');
+    const anthropic = data.providers?.find(
+      (p: { name: string; available: boolean }) => p.name === 'anthropic',
+    );
     return anthropic?.available ?? false;
   } catch {
     return false;

@@ -10,9 +10,13 @@ import { useViewStore } from '../viewStore';
 const getState = () => useViewStore.getState();
 
 /** Shorthand to call an action */
-const act = <K extends keyof ReturnType<typeof useViewStore.getState>>(key: K, ...args: any[]) => {
+const act = <K extends keyof ReturnType<typeof useViewStore.getState>>(
+  key: K,
+  ...args: unknown[]
+) => {
   const fn = getState()[key];
-  if (typeof fn === 'function') return (fn as (...a: unknown[]) => unknown)(...args);
+  if (typeof fn === 'function')
+    return (fn as (...a: unknown[]) => unknown)(...args);
   throw new Error(`${String(key)} is not a function`);
 };
 
@@ -172,7 +176,9 @@ describe('viewStore — deleteSession', () => {
   it('removes the associated tab', () => {
     const id = act('createSession') as string;
     act('deleteSession', id);
-    expect(getState().tabs.find((t: ChatTab) => t.sessionId === id)).toBeUndefined();
+    expect(
+      getState().tabs.find((t: ChatTab) => t.sessionId === id),
+    ).toBeUndefined();
   });
 
   it('updates currentSessionId when the deleted session was active', () => {
@@ -233,7 +239,9 @@ describe('viewStore — updateSessionTitle', () => {
     act('updateSessionTitle', id2, 'Changed');
 
     expect(getState().sessions.find((s) => s.id === id1)?.title).toBe('Keep');
-    expect(getState().sessions.find((s) => s.id === id2)?.title).toBe('Changed');
+    expect(getState().sessions.find((s) => s.id === id2)?.title).toBe(
+      'Changed',
+    );
   });
 });
 
@@ -247,10 +255,14 @@ describe('viewStore — openTab', () => {
     // Close the auto-created tab first
     const tabId = getState().tabs.find((t: ChatTab) => t.sessionId === id)?.id;
     act('closeTab', tabId);
-    expect(getState().tabs.find((t: ChatTab) => t.sessionId === id)).toBeUndefined();
+    expect(
+      getState().tabs.find((t: ChatTab) => t.sessionId === id),
+    ).toBeUndefined();
 
     act('openTab', id);
-    expect(getState().tabs.find((t: ChatTab) => t.sessionId === id)).toBeDefined();
+    expect(
+      getState().tabs.find((t: ChatTab) => t.sessionId === id),
+    ).toBeDefined();
   });
 
   it('sets the opened tab as currentSessionId', () => {
@@ -277,9 +289,13 @@ describe('viewStore — openTab', () => {
 describe('viewStore — closeTab', () => {
   it('removes a tab by tabId', () => {
     const sessionId = act('createSession') as string;
-    const tabId = getState().tabs.find((t: ChatTab) => t.sessionId === sessionId)?.id as string;
+    const tabId = getState().tabs.find(
+      (t: ChatTab) => t.sessionId === sessionId,
+    )?.id as string;
     act('closeTab', tabId);
-    expect(getState().tabs.find((t: ChatTab) => t.id === tabId)).toBeUndefined();
+    expect(
+      getState().tabs.find((t: ChatTab) => t.id === tabId),
+    ).toBeUndefined();
   });
 
   it('switches currentSessionId to a neighbour when closing the active tab', () => {
@@ -288,7 +304,8 @@ describe('viewStore — closeTab', () => {
     const id3 = act('createSession', 'C') as string;
 
     // id3 is active (last created)
-    const tabId3 = getState().tabs.find((t: ChatTab) => t.sessionId === id3)?.id as string;
+    const tabId3 = getState().tabs.find((t: ChatTab) => t.sessionId === id3)
+      ?.id as string;
     act('closeTab', tabId3);
     // Should fall to a remaining session
     expect([id1, id2]).toContain(getState().currentSessionId);
@@ -296,7 +313,9 @@ describe('viewStore — closeTab', () => {
 
   it('sets currentSessionId to null when the last tab is closed', () => {
     const sessionId = act('createSession') as string;
-    const tabId = getState().tabs.find((t: ChatTab) => t.sessionId === sessionId)?.id as string;
+    const tabId = getState().tabs.find(
+      (t: ChatTab) => t.sessionId === sessionId,
+    )?.id as string;
     act('closeTab', tabId);
     expect(getState().currentSessionId).toBeNull();
   });
@@ -306,14 +325,17 @@ describe('viewStore — closeTab', () => {
     const id2 = act('createSession', 'B') as string;
 
     // id2 is active
-    const tabId1 = getState().tabs.find((t: ChatTab) => t.sessionId === id1)?.id as string;
+    const tabId1 = getState().tabs.find((t: ChatTab) => t.sessionId === id1)
+      ?.id as string;
     act('closeTab', tabId1);
     expect(getState().currentSessionId).toBe(id2);
   });
 
   it('does not close pinned tabs', () => {
     const sessionId = act('createSession') as string;
-    const tabId = getState().tabs.find((t: ChatTab) => t.sessionId === sessionId)?.id as string;
+    const tabId = getState().tabs.find(
+      (t: ChatTab) => t.sessionId === sessionId,
+    )?.id as string;
     act('togglePinTab', tabId);
     act('closeTab', tabId);
     // Tab should still exist because it's pinned

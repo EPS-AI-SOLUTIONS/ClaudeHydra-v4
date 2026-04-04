@@ -6,7 +6,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/api/client';
-import type { Session, SessionSummary, SessionsList } from '@/shared/api/schemas';
+import type {
+  Session,
+  SessionSummary,
+  SessionsList,
+} from '@/shared/api/schemas';
 
 /** Shape returned by GET /api/sessions/:id */
 export interface SessionDetail {
@@ -46,8 +50,12 @@ export function useSessionsQuery() {
   return useQuery<SessionsList>({
     queryKey: ['sessions'],
     queryFn: async () => {
-      const data = await apiGet<SessionsList | { sessions: SessionsList }>('/api/sessions');
-      return Array.isArray(data) ? data : ((data as { sessions: SessionsList }).sessions ?? []);
+      const data = await apiGet<SessionsList | { sessions: SessionsList }>(
+        '/api/sessions',
+      );
+      return Array.isArray(data)
+        ? data
+        : ((data as { sessions: SessionsList }).sessions ?? []);
     },
   });
 }
@@ -72,7 +80,8 @@ export function useUpdateSessionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<SessionSummary, Error, { id: string; title: string }>({
-    mutationFn: ({ id, title }) => apiPatch<SessionSummary>(`/api/sessions/${id}`, { title }),
+    mutationFn: ({ id, title }) =>
+      apiPatch<SessionSummary>(`/api/sessions/${id}`, { title }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
@@ -101,7 +110,8 @@ export function useDeleteSessionMutation() {
 export function useGenerateTitleMutation() {
   const queryClient = useQueryClient();
   return useMutation<{ title: string }, Error, string>({
-    mutationFn: (sessionId) => apiPost<{ title: string }>(`/api/sessions/${sessionId}/generate-title`),
+    mutationFn: (sessionId) =>
+      apiPost<{ title: string }>(`/api/sessions/${sessionId}/generate-title`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
@@ -112,19 +122,24 @@ export function useGenerateTitleMutation() {
 export function useAddMessageMutation() {
   const queryClient = useQueryClient();
 
-  return useMutation<{ success: boolean }, Error, { sessionId: string; role: string; content: string; model?: string }>(
-    {
-      mutationFn: ({ sessionId, ...body }) =>
-        apiPost<{ success: boolean }>(`/api/sessions/${sessionId}/messages`, body),
-      onSuccess: (_data, variables) => {
-        void queryClient.invalidateQueries({
-          queryKey: ['session', variables.sessionId],
-        });
-        void queryClient.invalidateQueries({ queryKey: ['sessions'] });
-      },
-      onError: (error) => {
-        toast.error(error instanceof Error ? error.message : 'Operation failed');
-      },
+  return useMutation<
+    { success: boolean },
+    Error,
+    { sessionId: string; role: string; content: string; model?: string }
+  >({
+    mutationFn: ({ sessionId, ...body }) =>
+      apiPost<{ success: boolean }>(
+        `/api/sessions/${sessionId}/messages`,
+        body,
+      ),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['session', variables.sessionId],
+      });
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
-  );
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Operation failed');
+    },
+  });
 }

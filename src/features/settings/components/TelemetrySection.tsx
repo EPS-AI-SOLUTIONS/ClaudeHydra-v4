@@ -21,7 +21,10 @@ export const TelemetrySection = memo(() => {
   const toggle = useCallback(async () => {
     setSaving(true);
     try {
-      await apiPost<Settings>('/api/settings', { ...settings, telemetry: !enabled });
+      await apiPost<Settings>('/api/settings', {
+        ...settings,
+        telemetry: !enabled,
+      });
       await refetch();
       toast.success(t('settings.telemetry.saved', 'Telemetry setting saved'));
     } catch (err) {
@@ -35,7 +38,12 @@ export const TelemetrySection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <BarChart3 size={18} className="text-[var(--matrix-accent)]" />
-        <h3 className={cn('text-sm font-semibold font-mono uppercase tracking-wider', theme.text)}>
+        <h3
+          className={cn(
+            'text-sm font-semibold font-mono uppercase tracking-wider',
+            theme.text,
+          )}
+        >
           {t('settings.telemetry.title', 'Telemetry')}
         </h3>
       </div>
@@ -68,7 +76,9 @@ export const TelemetrySection = memo(() => {
           />
         </button>
         <span className={cn('text-sm font-mono', theme.textMuted)}>
-          {enabled ? t('settings.telemetry.enabled', 'Enabled') : t('settings.telemetry.disabled', 'Disabled')}
+          {enabled
+            ? t('settings.telemetry.enabled', 'Enabled')
+            : t('settings.telemetry.disabled', 'Disabled')}
         </span>
       </div>
     </div>

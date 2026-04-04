@@ -18,7 +18,11 @@ interface SearchOverlayProps {
   onClose: () => void;
 }
 
-export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverlayProps) {
+export function SearchOverlay({
+  messages,
+  onMatchChange,
+  onClose,
+}: SearchOverlayProps) {
   const [query, setQuery] = useState('');
   const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,7 +60,10 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
   // Notify parent of current match
   useEffect(() => {
     if (matches.length > 0 && currentMatchIdx < matches.length) {
-      onMatchChange?.(matches[currentMatchIdx]?.messageId ?? null, currentMatchIdx);
+      onMatchChange?.(
+        matches[currentMatchIdx]?.messageId ?? null,
+        currentMatchIdx,
+      );
     } else {
       onMatchChange?.(null, 0);
     }
@@ -100,7 +107,10 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
       transition={{ duration: 0.15 }}
       className="absolute top-2 right-2 z-30 flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--matrix-bg-secondary)]/95 border border-[var(--matrix-border)] backdrop-blur-md shadow-lg"
     >
-      <Search size={14} className="text-[var(--matrix-text-secondary)] shrink-0" />
+      <Search
+        size={14}
+        className="text-[var(--matrix-text-secondary)] shrink-0"
+      />
       <input
         ref={inputRef}
         type="text"
@@ -113,7 +123,9 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
       />
       {query && (
         <span className="text-xs text-[var(--matrix-text-secondary)] font-mono whitespace-nowrap">
-          {matches.length > 0 ? `${currentMatchIdx + 1}/${matches.length}` : '0/0'}
+          {matches.length > 0
+            ? `${currentMatchIdx + 1}/${matches.length}`
+            : '0/0'}
         </span>
       )}
       <div className="flex items-center gap-0.5">
@@ -164,11 +176,16 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
  */
 export function highlightText(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
-  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+  const parts = text.split(
+    new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+  );
   return parts.map((part, i) => {
     if (part.toLowerCase() === query.toLowerCase()) {
       return (
-        <mark key={`match-${i.toString()}-${part}`} className="bg-yellow-400/40 text-inherit rounded px-0.5">
+        <mark
+          key={`match-${i.toString()}-${part}`}
+          className="bg-yellow-400/40 text-inherit rounded px-0.5"
+        >
           {part}
         </mark>
       );

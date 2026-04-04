@@ -27,7 +27,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[ErrorBoundary] Caught error in ${this.props.name || 'Component'}:`, error, errorInfo);
+    console.error(
+      `[ErrorBoundary] Caught error in ${this.props.name || 'Component'}:`,
+      error,
+      errorInfo,
+    );
 
     // Telemetry - Graceful degradation logger (respects telemetry setting)
     if (isTelemetryEnabled()) {
@@ -41,7 +45,10 @@ export class ErrorBoundary extends Component<Props, State> {
         });
         // Wyślij bez blokowania wątku
         if (navigator.sendBeacon) {
-          navigator.sendBeacon('/api/telemetry/error', new Blob([payload], { type: 'application/json' }));
+          navigator.sendBeacon(
+            '/api/telemetry/error',
+            new Blob([payload], { type: 'application/json' }),
+          );
         }
       } catch (_e) {
         // Ignore telemetry errors to avoid infinite loops
@@ -78,7 +85,11 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.state.error?.message || 'Nieznany błąd'}
             </p>
           </div>
-          <Button variant="ghost" onClick={this.handleReset} className="mt-4 text-red-400 hover:text-red-300">
+          <Button
+            variant="ghost"
+            onClick={this.handleReset}
+            className="mt-4 text-red-400 hover:text-red-300"
+          >
             <RefreshCcw className="w-4 h-4 mr-2" />
             Spróbuj ponownie
           </Button>
