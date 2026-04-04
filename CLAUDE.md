@@ -1,8 +1,8 @@
 # ClaudeHydra v4 -- AI Swarm Control Center
 
 ## Quick Start
-- `npm run dev` -- port 5199
-- `npx tsc --noEmit` -- type check
+- `bun run dev` -- port 5199
+- `bunx tsc --noEmit` -- type check
 
 ## Architecture
 - Pure Vite SPA -- React 19 + Zustand 5
@@ -31,7 +31,7 @@
 ## Conventions
 - motion/react for animations
 - Biome for linting
-- npm as package manager
+- bun as package manager
 
 ## Backend (Rust/Axum)
 - Port: 8082 | Prod: claudehydra-v4-backend.fly.dev
@@ -129,6 +129,16 @@
 - **DB**: `025_ai_provider_gateway.sql` (ch_ai_providers), `026_drop_old_auth_tables.sql` (cleaned legacy OAuth tables)
 - **Frontend**: `AiProvidersSection.tsx`, `VaultStatusSection.tsx`, `useAiProviders.ts`, `useVaultStatus.ts`
 - **Tests**: 122 tests across ai_gateway modules
+
+## Authentication (B13 Unified Auth)
+- **System**: jaskier-auth (shared across all Jaskier apps)
+- **Backend**: `handlers/extractor.rs` → `RequireAuth` extractor (JWT from Bearer header / cookie / query param)
+- **State**: `AppState.auth: Arc<jaskier_auth::AuthState>` + `HasAuthState` trait impl
+- **Routes**: `/api/auth/*` mounted via `jaskier_auth::auth_router()`
+- **JWT**: HMAC-SHA256, 15min access token, 30d refresh token, HTTP-only cookies
+- **Methods**: Email/password, Google OAuth, WebAuthn/Passkeys, TOTP 2FA
+- **Frontend**: `@jaskier/auth` package (AuthProvider, useAuth hook)
+- **Provider credentials**: Via environment variables (Vault)
 
 ## Workspace CLAUDE.md (canonical reference)
 - Full Jaskier ecosystem docs: `C:\Users\BIURODOM\Desktop\JaskierWorkspace\CLAUDE.md`
@@ -238,7 +248,7 @@
 ## Observability (R13, 2026-03-15)
 - **Prometheus**: 8 alert rules (high error rate, slow responses, DB connection pool, cache hit rate, memory usage, disk space, swarm peer loss, sandbox container leak)
 - **Grafana**: 28 panels across 4 dashboards (Overview, API Performance, Swarm Health, Infrastructure)
-- **visual-regression.yml**: CI workflow for Chromatic + Playwright visual regression tests on PR
+- **visual-regression.yml**: CI workflow for Chromatic + Nodriver visual regression tests on PR
 - **Metrics endpoint**: `/api/metrics` (Prometheus format) -- request count, latency histogram, cache stats, swarm peer count, active sessions
 
 ## Process Compose (R13, 2026-03-15)
