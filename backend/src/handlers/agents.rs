@@ -111,13 +111,12 @@ pub async fn create_agent(
 
     // Generate next sequential ID
     let next_id = {
-        let max_row: Option<(String,)> = sqlx::query_as(
-            "SELECT id FROM ch_agents_config ORDER BY id DESC LIMIT 1",
-        )
-        .fetch_optional(&state.db)
-        .await
-        .ok()
-        .flatten();
+        let max_row: Option<(String,)> =
+            sqlx::query_as("SELECT id FROM ch_agents_config ORDER BY id DESC LIMIT 1")
+                .fetch_optional(&state.db)
+                .await
+                .ok()
+                .flatten();
 
         if let Some((max_id,)) = max_row {
             // Parse numeric suffix, e.g. "agent-012" → 12
@@ -211,21 +210,23 @@ pub async fn update_agent(
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     // Validate tier if provided
     if let Some(ref tier) = req.tier
-        && !["Commander", "Coordinator", "Executor"].contains(&tier.as_str()) {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "tier must be one of: Commander, Coordinator, Executor" })),
-            ));
-        }
+        && !["Commander", "Coordinator", "Executor"].contains(&tier.as_str())
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "tier must be one of: Commander, Coordinator, Executor" })),
+        ));
+    }
 
     // Validate name if provided
     if let Some(ref name) = req.name
-        && name.trim().is_empty() {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "name must not be empty" })),
-            ));
-        }
+        && name.trim().is_empty()
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "name must not be empty" })),
+        ));
+    }
 
     // Use COALESCE pattern: only update fields that are provided (non-null)
     let row: Option<AgentConfigRow> = sqlx::query_as(

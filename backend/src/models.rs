@@ -449,9 +449,7 @@ pub enum WsServerMessage {
     },
     /// Predictive UI hint — suggests views the user might navigate to next.
     /// Frontend uses these to prefetch lazy-loaded chunks and query data.
-    ViewHint {
-        views: Vec<String>,
-    },
+    ViewHint { views: Vec<String> },
 }
 
 // ── Agent Config (DB-driven) ────────────────────────────────────────────

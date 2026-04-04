@@ -1,12 +1,11 @@
 /** Jaskier Shared Pattern — OAuth startup suggestion banner */
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Button, cn } from '@jaskier/ui';
 import { ArrowRight, Crown, Key, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/atoms';
 import { useOAuthStatus } from '@/shared/hooks/useOAuthStatus';
 import { useViewStore } from '@/stores/viewStore';
 
@@ -52,7 +51,7 @@ export const OAuthBanner = memo(() => {
 
             <div className="flex items-start gap-4">
               {/* Icon */}
-              <div className="flex-shrink-0 p-2.5 rounded-xl bg-[var(--matrix-accent)]/10">
+              <div className="shrink-0 p-2.5 rounded-xl bg-[var(--matrix-accent)]/10">
                 <Crown size={20} className="text-[var(--matrix-accent)]" />
               </div>
 

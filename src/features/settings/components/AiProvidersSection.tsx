@@ -1,7 +1,7 @@
 /** Jaskier Shared Pattern — Unified AI Providers Management Section */
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Badge, Button, cn } from '@jaskier/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -20,7 +20,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Badge, Button } from '@/components/atoms';
 import { apiGet, apiPost } from '@/shared/api/client';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -149,7 +148,7 @@ const ProviderCard = memo<ProviderCardProps>(
         {/* Header: Icon + Name + Status */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-xl leading-none flex-shrink-0" role="img" aria-label={p.provider}>
+            <span className="text-xl leading-none shrink-0" role="img" aria-label={p.provider}>
               {meta.icon}
             </span>
             <div className="min-w-0">
@@ -206,7 +205,7 @@ const ProviderCard = memo<ProviderCardProps>(
         {/* Error message */}
         {p.last_error && (
           <div className="flex items-start gap-1.5 text-red-400">
-            <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+            <AlertTriangle size={12} className="shrink-0 mt-0.5" />
             <span className="text-[10px] font-mono leading-tight line-clamp-2">{p.last_error}</span>
           </div>
         )}

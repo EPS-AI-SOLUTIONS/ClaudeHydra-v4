@@ -9,9 +9,7 @@ use axum::response::IntoResponse;
 use serde_json::json;
 
 use crate::ai_gateway::{
-    AiProvider, AuthType, HasAiGateway,
-    oauth_flows::OAuthProvider,
-    vault_bridge::HasVaultBridge,
+    AiProvider, AuthType, HasAiGateway, oauth_flows::OAuthProvider, vault_bridge::HasVaultBridge,
 };
 
 use super::helpers::{build_test_payload, extract_response_preview, resolve_upstream_url};
@@ -26,9 +24,7 @@ use super::types::*;
 ///
 /// For each provider, queries Jaskier Vault to check if credentials exist
 /// and whether they're still valid. Returns an array of `GatewayProviderInfo`.
-pub(crate) async fn list_providers<S>(
-    State(state): State<S>,
-) -> impl IntoResponse
+pub(crate) async fn list_providers<S>(State(state): State<S>) -> impl IntoResponse
 where
     S: HasAiGateway + HasVaultBridge + Clone + Send + Sync + 'static,
 {
@@ -450,7 +446,9 @@ where
         .await
     {
         Ok(()) => {
-            vault.invalidate_cache(&config.vault_namespace, &config.vault_service).await;
+            vault
+                .invalidate_cache(&config.vault_namespace, &config.vault_service)
+                .await;
             tracing::info!(provider = %provider_enum, "provider disconnected — credentials overwritten in Vault");
             Json(json!({
                 "provider": provider_enum.to_string(),

@@ -46,7 +46,7 @@ const StatCard = memo<StatCardProps>(({ icon, label, value, statusColor }) => {
 
   return (
     <Card variant="default" padding="sm" className="flex items-center gap-3 min-w-0">
-      <div className={cn('flex-shrink-0', theme.iconMuted)}>{icon}</div>
+      <div className={cn('shrink-0', theme.iconMuted)}>{icon}</div>
       <div className="flex-1 min-w-0">
         <p className={cn('text-[10px] uppercase tracking-wider font-mono', theme.textMuted)}>{label}</p>
         <p className={cn('text-sm font-mono font-semibold truncate', statusColor ?? theme.text)}>{value}</p>

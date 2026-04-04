@@ -147,11 +147,21 @@ pub async fn claude_chat(
         .to_string();
 
     let usage = resp_body.get("usage").map(|u| UsageInfo {
-        prompt_tokens: u.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-        completion_tokens: u.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-        total_tokens: (u.get("input_tokens").and_then(|v| v.as_u64()).unwrap_or(0)
-            + u.get("output_tokens").and_then(|v| v.as_u64()).unwrap_or(0))
-            as u32,
+        prompt_tokens: u
+            .get("input_tokens")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0) as u32,
+        completion_tokens: u
+            .get("output_tokens")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0) as u32,
+        total_tokens: (u
+            .get("input_tokens")
+            .and_then(serde_json::Value::as_u64)
+            .unwrap_or(0)
+            + u.get("output_tokens")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)) as u32,
     });
 
     let chat_resp = ChatResponse {

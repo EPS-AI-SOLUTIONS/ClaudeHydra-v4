@@ -50,7 +50,7 @@ pub(crate) async fn load_session_history(db: &sqlx::PgPool, sid: &uuid::Uuid) ->
     for i in 0..messages.len() {
         if i < messages.len().saturating_sub(6)
             && let Some(content) = messages[i].get_mut("content")
-            && let Some(s) = content.as_str().map(|s| s.to_string())
+            && let Some(s) = content.as_str().map(std::string::ToString::to_string)
             && s.len() > 500
         {
             let boundary = s
@@ -99,14 +99,45 @@ pub(crate) fn detect_view_hints(prompt: &str) -> Vec<String> {
     let mut hints = Vec::new();
 
     let rules: &[(&[&str], &str)] = &[
-        (&["statystyk", "analytics", "zużyci", "token", "koszt", "cost", "usage", "billing"], "analytics"),
-        (&["ustawieni", "settings", "konfiguracj", "model", "api key", "provider"], "settings"),
+        (
+            &[
+                "statystyk",
+                "analytics",
+                "zużyci",
+                "token",
+                "koszt",
+                "cost",
+                "usage",
+                "billing",
+            ],
+            "analytics",
+        ),
+        (
+            &[
+                "ustawieni",
+                "settings",
+                "konfiguracj",
+                "model",
+                "api key",
+                "provider",
+            ],
+            "settings",
+        ),
         (&["log", "błęd", "error", "debug", "tracing"], "logs"),
         (&["agent", "narzędzi", "tool", "executor"], "agents"),
         (&["delegacj", "delegation", "przekaz", "a2a"], "delegations"),
-        (&["rój", "swarm", "orkiestracj", "multi-agent", "peer"], "swarm"),
-        (&["cache", "semantyczn", "semantic", "embedding", "qdrant"], "semantic-cache"),
-        (&["kolaboracj", "collab", "współprac", "edytor", "crdt", "yjs"], "collab"),
+        (
+            &["rój", "swarm", "orkiestracj", "multi-agent", "peer"],
+            "swarm",
+        ),
+        (
+            &["cache", "semantyczn", "semantic", "embedding", "qdrant"],
+            "semantic-cache",
+        ),
+        (
+            &["kolaboracj", "collab", "współprac", "edytor", "crdt", "yjs"],
+            "collab",
+        ),
     ];
 
     for (keywords, view) in rules {

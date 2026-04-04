@@ -77,7 +77,7 @@ impl HasOcrProvider for AppState {
 
         // Fallback: Gemini Vision API via Google OAuth
         if let Some((credential, is_oauth)) =
-            jaskier_oauth::google::get_google_credential(self).await
+            jaskier_net_sec::oauth::google::get_google_credential(self).await
         {
             let (text, confidence) = ocr_with_gemini(
                 &self.http_client,
@@ -112,7 +112,9 @@ pub async fn ocr_stream(
     state: axum::extract::State<AppState>,
     body: axum::Json<OcrRequest>,
 ) -> Result<
-    axum::response::sse::Sse<impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>,
+    axum::response::sse::Sse<
+        impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+    >,
     impl axum::response::IntoResponse,
 > {
     jaskier_tools::ocr::ocr_stream_generic(state, body).await
@@ -122,7 +124,9 @@ pub async fn ocr_batch_stream(
     state: axum::extract::State<AppState>,
     body: axum::Json<OcrBatchRequest>,
 ) -> Result<
-    axum::response::sse::Sse<impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>,
+    axum::response::sse::Sse<
+        impl futures_util::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+    >,
     impl axum::response::IntoResponse,
 > {
     jaskier_tools::ocr::ocr_batch_stream_generic(state, body).await
@@ -247,7 +251,7 @@ async fn ocr_with_claude(
                 .iter()
                 .filter_map(|b| {
                     if b["type"].as_str() == Some("text") {
-                        b["text"].as_str().map(|s| s.to_string())
+                        b["text"].as_str().map(std::string::ToString::to_string)
                     } else {
                         None
                     }
@@ -297,7 +301,7 @@ async fn ocr_with_gemini(
     });
 
     let builder = client.post(&url).json(&request_body);
-    let builder = jaskier_oauth::google::apply_google_auth(builder, credential, is_oauth);
+    let builder = jaskier_net_sec::oauth::google::apply_google_auth(builder, credential, is_oauth);
 
     let response = builder
         .timeout(std::time::Duration::from_secs(120))
@@ -325,7 +329,7 @@ async fn ocr_with_gemini(
                 .iter()
                 .filter_map(|p| p["text"].as_str())
                 .next()
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
         })
         .unwrap_or_default();
 
@@ -346,7 +350,7 @@ async fn ocr_with_gemini(
 /// Extract structured data from OCR text. Uses Gemini (text-only, simpler) since
 /// this is a second-pass analysis that doesn't need vision capabilities.
 async fn extract_structured_data(state: &AppState, ocr_text: &str) -> Result<Value, String> {
-    let (credential, is_oauth) = jaskier_oauth::google::get_google_credential(state)
+    let (credential, is_oauth) = jaskier_net_sec::oauth::google::get_google_credential(state)
         .await
         .ok_or_else(|| {
             "No Google API credential configured for structured extraction".to_string()
@@ -367,7 +371,7 @@ async fn extract_structured_data(state: &AppState, ocr_text: &str) -> Result<Val
     });
 
     let builder = state.http_client.post(&url).json(&request_body);
-    let builder = jaskier_oauth::google::apply_google_auth(builder, &credential, is_oauth);
+    let builder = jaskier_net_sec::oauth::google::apply_google_auth(builder, &credential, is_oauth);
 
     let response = builder
         .send()

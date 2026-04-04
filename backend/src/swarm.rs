@@ -9,8 +9,7 @@ use std::time::Duration;
 use tokio::sync::{RwLock, broadcast};
 
 use jaskier_swarm::{
-    SwarmEvent, SwarmOrchestrator, SwarmRegistry, SwarmTask,
-    handlers::HasSwarmHub,
+    SwarmEvent, SwarmOrchestrator, SwarmRegistry, SwarmTask, handlers::HasSwarmHub,
 };
 
 /// Swarm state embedded in AppState.
@@ -60,7 +59,8 @@ impl SwarmState {
 
                 // Emit discovery events for newly found peers
                 for peer in &peers {
-                    if peer.status == jaskier_swarm::PeerStatus::Online && peer.id != "claudehydra" {
+                    if peer.status == jaskier_swarm::PeerStatus::Online && peer.id != "claudehydra"
+                    {
                         let _ = event_tx.send(
                             SwarmEvent::new(
                                 jaskier_swarm::SwarmEventType::PeerDiscovered,

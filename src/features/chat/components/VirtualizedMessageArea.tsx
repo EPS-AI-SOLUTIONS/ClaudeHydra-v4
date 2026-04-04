@@ -137,7 +137,7 @@ export const VirtualizedMessageArea = memo<VirtualizedMessageAreaProps>(function
     if (isLastStreaming && messages.length > 0) {
       virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
     }
-  }, [isLastStreaming, lastMessage?.content.length, messages.length, virtualizer]);
+  }, [isLastStreaming, messages.length, virtualizer]);
 
   // Shared container props
   const containerClasses = cn('flex-1 p-4 overflow-y-auto relative transition-all rounded-lg', 'scrollbar-thin');

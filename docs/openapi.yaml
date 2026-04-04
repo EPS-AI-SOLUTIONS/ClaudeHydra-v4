@@ -1985,7 +1985,7 @@ paths:
       summary: Add knowledge graph node
       responses:
         "201":
-          description: Node added
+          description: bun added
 
   /api/memory/graph/edges:
     post:

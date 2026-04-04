@@ -96,10 +96,7 @@ impl OAuthFlowManager {
 
     /// Generate a PKCE challenge, store ephemeral state, and return the
     /// authorization URL the frontend should redirect/open.
-    pub async fn initiate_login(
-        &self,
-        provider: OAuthProvider,
-    ) -> anyhow::Result<LoginResponse> {
+    pub async fn initiate_login(&self, provider: OAuthProvider) -> anyhow::Result<LoginResponse> {
         let config = self
             .provider_configs
             .get(&provider)
@@ -237,12 +234,8 @@ impl OAuthFlowManager {
             .ok_or_else(|| anyhow::anyhow!("Provider {provider} is not configured for refresh"))?;
 
         let tokens = match provider {
-            OAuthProvider::Anthropic => {
-                self.refresh_anthropic(config, refresh_token).await?
-            }
-            _ => {
-                self.refresh_standard(config, refresh_token).await?
-            }
+            OAuthProvider::Anthropic => self.refresh_anthropic(config, refresh_token).await?,
+            _ => self.refresh_standard(config, refresh_token).await?,
         };
 
         tracing::info!(
@@ -322,10 +315,7 @@ impl OAuthFlowManager {
             redirect_uri,
             client_id,
             client_secret: Some(client_secret),
-            scopes: GOOGLE_SCOPE
-                .split_whitespace()
-                .map(String::from)
-                .collect(),
+            scopes: GOOGLE_SCOPE.split_whitespace().map(String::from).collect(),
             pkce_method: PkceMethod::S256,
             extra_params,
         })
@@ -368,7 +358,9 @@ impl OAuthFlowManager {
             anyhow::bail!("Anthropic token exchange rejected ({status}): {err}");
         }
 
-        let raw: Value = resp.json().await
+        let raw: Value = resp
+            .json()
+            .await
             .map_err(|e| anyhow::anyhow!("Invalid JSON from Anthropic token endpoint: {e}"))?;
 
         parse_token_response(raw, &config.scopes)
@@ -411,7 +403,10 @@ impl OAuthFlowManager {
         if !resp.status().is_success() {
             let status = resp.status();
             let err = resp.text().await.unwrap_or_default();
-            anyhow::bail!("{} token exchange rejected ({status}): {err}", config.provider);
+            anyhow::bail!(
+                "{} token exchange rejected ({status}): {err}",
+                config.provider
+            );
         }
 
         let raw: Value = resp.json().await.map_err(|e| {
@@ -449,7 +444,9 @@ impl OAuthFlowManager {
             anyhow::bail!("Anthropic token refresh rejected ({status}): {err}");
         }
 
-        let raw: Value = resp.json().await
+        let raw: Value = resp
+            .json()
+            .await
             .map_err(|e| anyhow::anyhow!("Invalid JSON from Anthropic refresh endpoint: {e}"))?;
 
         parse_token_response(raw, &config.scopes)
@@ -487,11 +484,17 @@ impl OAuthFlowManager {
         if !resp.status().is_success() {
             let status = resp.status();
             let err = resp.text().await.unwrap_or_default();
-            anyhow::bail!("{} token refresh rejected ({status}): {err}", config.provider);
+            anyhow::bail!(
+                "{} token refresh rejected ({status}): {err}",
+                config.provider
+            );
         }
 
         let raw: Value = resp.json().await.map_err(|e| {
-            anyhow::anyhow!("Invalid JSON from {} refresh endpoint: {e}", config.provider)
+            anyhow::anyhow!(
+                "Invalid JSON from {} refresh endpoint: {e}",
+                config.provider
+            )
         })?;
 
         parse_token_response(raw, &config.scopes)

@@ -3,8 +3,9 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use super::{
-    is_binary, is_blocked_for_write, BLOCKED_BACKUP_EXTENSIONS, DEFAULT_BLOCKED_WRITE_PREFIXES,
-    DEFAULT_MAX_DEPTH, DEFAULT_MAX_LINES, DEFAULT_MAX_RESULTS, MAX_READ_BYTES, MAX_WRITE_BYTES,
+    BLOCKED_BACKUP_EXTENSIONS, DEFAULT_BLOCKED_WRITE_PREFIXES, DEFAULT_MAX_DEPTH,
+    DEFAULT_MAX_LINES, DEFAULT_MAX_RESULTS, MAX_READ_BYTES, MAX_WRITE_BYTES, is_binary,
+    is_blocked_for_write,
 };
 
 // ── Path validation ─────────────────────────────────────────────────────
@@ -165,7 +166,7 @@ pub async fn exec_read_file(input: &Value, allowed_dirs: &[PathBuf]) -> (String,
     let content = String::from_utf8_lossy(&bytes);
     let max_lines = input
         .get("max_lines")
-        .and_then(|v| v.as_u64())
+        .and_then(serde_json::Value::as_u64)
         .unwrap_or(DEFAULT_MAX_LINES as u64) as usize;
 
     let lines: Vec<&str> = content.lines().collect();
@@ -204,11 +205,11 @@ pub async fn exec_list_directory(input: &Value, allowed_dirs: &[PathBuf]) -> (St
 
     let recursive = input
         .get("recursive")
-        .and_then(|v| v.as_bool())
+        .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
     let max_depth = input
         .get("max_depth")
-        .and_then(|v| v.as_u64())
+        .and_then(serde_json::Value::as_u64)
         .unwrap_or(DEFAULT_MAX_DEPTH as u64) as usize;
 
     let mut entries = Vec::new();
@@ -230,14 +231,14 @@ fn list_dir_recursive(
     out: &mut Vec<String>,
 ) {
     let mut items: Vec<_> = match std::fs::read_dir(dir) {
-        Ok(rd) => rd.filter_map(|e| e.ok()).collect(),
+        Ok(rd) => rd.filter_map(std::result::Result::ok).collect(),
         Err(e) => {
             out.push(format!("[error reading {}: {}]", dir.display(), e));
             return;
         }
     };
 
-    items.sort_by_key(|e| e.file_name());
+    items.sort_by_key(std::fs::DirEntry::file_name);
 
     for entry in items {
         let ft = match entry.file_type() {
@@ -284,7 +285,7 @@ pub async fn exec_write_file(input: &Value, allowed_dirs: &[PathBuf]) -> (String
     };
     let create_dirs = input
         .get("create_dirs")
-        .and_then(|v| v.as_bool())
+        .and_then(serde_json::Value::as_bool)
         .unwrap_or(false);
 
     if content.len() > MAX_WRITE_BYTES {
@@ -385,7 +386,7 @@ pub async fn exec_search_in_files(input: &Value, allowed_dirs: &[PathBuf]) -> (S
         .unwrap_or("**/*");
     let max_results = input
         .get("max_results")
-        .and_then(|v| v.as_u64())
+        .and_then(serde_json::Value::as_u64)
         .unwrap_or(DEFAULT_MAX_RESULTS as u64) as usize;
 
     let glob_pattern = format!("{}/{}", path.display(), file_glob);

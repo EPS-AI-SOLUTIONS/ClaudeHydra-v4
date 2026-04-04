@@ -11,9 +11,9 @@
  */
 
 import i18n from '@jaskier/i18n';
+import { Button, Card } from '@jaskier/ui';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Button, Card } from '@/components/atoms';
 
 // ============================================================================
 // TYPES

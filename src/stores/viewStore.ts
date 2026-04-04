@@ -8,10 +8,10 @@
 
 import { createAppStore } from '@jaskier/state';
 
-const {
+export const {
   useViewStore: useBaseStore,
-  useCurrentSession,
   useCurrentChatHistory,
+  useCurrentSession,
   useCurrentSessionId,
 } = createAppStore({
   storageKey: 'claude-hydra-v4-view',
@@ -20,9 +20,6 @@ const {
 });
 
 export const useViewStore = useBaseStore;
-{
-  useCurrentChatHistory, useCurrentSession, useCurrentSessionId;
-}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

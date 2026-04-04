@@ -19,9 +19,13 @@ use super::MAX_MESSAGE_LENGTH;
 // These are used by lib.rs OpenAPI derive and route registration.
 pub use jaskier_core::sessions::{
     PaginationParams,
+    create_session,
+    delete_session,
+    generate_session_title,
     // Shared handlers — wired via turbofish in lib.rs routes.
-    list_sessions, create_session, update_session, delete_session,
-    update_session_working_directory, generate_session_title,
+    list_sessions,
+    update_session,
+    update_session_working_directory,
 };
 
 // ═══════════════════════════════════════════════════════════════════════

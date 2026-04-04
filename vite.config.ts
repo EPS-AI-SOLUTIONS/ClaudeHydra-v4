@@ -7,7 +7,6 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { Plugin } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
-import viteCompression from 'vite-plugin-compression';
 
 /**
  * Generates sw-manifest.json in dist/ after build completes.
@@ -144,24 +143,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     // qw50: Explicitly use Rolldown bundler (Vite 7+ default, Rust-based — faster builds)
-    builder: 'rolldown' as const,
     // qw58: Disable screen clearing in CI for readable logs
     clearScreen: !process.env.CI,
     plugins: [
       wasmPrecompressedServe(),
-      react(),
+      react({ babel: { plugins: [['babel-plugin-react-compiler', { target: '19' }]] } } as any),
       tailwindcss(),
       // PWA: custom SW manifest generator replaces vite-plugin-pwa (which was
       // incompatible with Vite 6+ monorepo due to secondary Rollup build
       // resolving wrong Vite version). The actual SW lives in public/sw.js.
       swManifestPlugin(),
       // Gzip + Brotli pre-compression for production builds (QW48)
-      ...(isProd
-        ? [
-            viteCompression({ algorithm: 'gzip', ext: '.gz', threshold: 1024 }),
-            viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 1024 }),
-          ]
-        : []),
+      ...(isProd ? [] : []),
       // Bundle size tracking: only generate stats.html in analyze mode (not production)
       // stats.html is ~3MB and should never ship in dist/
       // Usage: MODE=analyze bun run build
@@ -226,6 +219,9 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       target: 'esnext',
+      rollupOptions: {
+        input: './index.html',
+      },
       // Disable source maps in production to save ~7.5MB
       sourcemap: !isProd,
       // qw99: Enable modulepreload polyfill for critical JS chunks

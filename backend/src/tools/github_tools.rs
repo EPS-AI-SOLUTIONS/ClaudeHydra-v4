@@ -164,13 +164,8 @@ pub fn tool_definitions() -> Vec<ToolDefinition> {
 // ═══════════════════════════════════════════════════════════════════════
 
 pub async fn execute(tool_name: &str, input: &Value, state: &AppState) -> (String, bool) {
-    match jaskier_tools::tools::github_tools::execute(
-        tool_name,
-        input,
-        state,
-        &state.http_client,
-    )
-    .await
+    match jaskier_tools::tools::github_tools::execute(tool_name, input, state, &state.http_client)
+        .await
     {
         Ok(result) => (result, false),
         Err(e) => (e, true),

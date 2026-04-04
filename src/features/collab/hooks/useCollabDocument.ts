@@ -136,9 +136,10 @@ export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabD
 
     const provider = new WebsocketProvider(`${backendWsUrl}/ws/sync/${appId}`, docKey, doc, { connect: true });
 
-    provider.on('status', (event: { status: string }) => {
+    provider.on('status', ((...args: unknown[]) => {
+      const event = args[0] as { status: string };
       setStatus(event.status === 'connected' ? 'connected' : 'connecting');
-    });
+    }) as (...args: unknown[]) => void);
 
     // Set local awareness state
     provider.awareness.setLocalStateField('user', {
@@ -152,7 +153,7 @@ export function useCollabDocument(options: UseCollabDocumentOptions): UseCollabD
       const states = provider.awareness.getStates();
       const peerList: CollabPeer[] = [];
 
-      states.forEach((state, clientId) => {
+      states.forEach((state: Record<string, unknown>, clientId: number) => {
         if (clientId === doc.clientID) return;
         const user = state['user'] as { name?: string; color?: string; isAgent?: boolean } | undefined;
         if (user) {

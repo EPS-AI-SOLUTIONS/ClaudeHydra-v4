@@ -14,10 +14,9 @@
  */
 
 import { ChatViewThemeProvider } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { cn, RuneRain, ThemedBackground } from '@jaskier/ui';
 import { type ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RuneRain, ThemedBackground } from '@/components/atoms';
 import { CommandPalette } from '@/components/molecules/CommandPalette';
 import { Sidebar } from '@/components/organisms/Sidebar';
 import type { StatusFooterProps } from '@/components/organisms/StatusFooter';

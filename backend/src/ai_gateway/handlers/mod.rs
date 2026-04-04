@@ -7,15 +7,15 @@
 // - `proxy` — Chat proxy handlers (non-streaming + SSE streaming)
 // - `helpers` — Private utility functions (payload builders, content extractors)
 
-mod types;
-pub mod router;
+pub(crate) mod helpers;
 pub mod providers;
 pub mod proxy;
-pub(crate) mod helpers;
+pub mod router;
+mod types;
 
 // ── Public re-exports ────────────────────────────────────────────────────
-pub use types::*;
 pub use router::ai_gateway_router;
+pub use types::*;
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Tests
@@ -26,10 +26,10 @@ mod tests {
     use axum::http::StatusCode;
     use serde_json::json;
 
-    use crate::ai_gateway::AiProvider;
     use super::helpers::*;
     use super::router::parse_provider;
     use super::types::*;
+    use crate::ai_gateway::AiProvider;
 
     #[test]
     fn parse_provider_valid() {
@@ -83,12 +83,10 @@ mod tests {
     fn build_chat_payload_openai_format() {
         let request = GatewayChatRequest {
             model: Some("gpt-4o".to_string()),
-            messages: vec![
-                GatewayChatMessage {
-                    role: "user".to_string(),
-                    content: "Hello".to_string(),
-                },
-            ],
+            messages: vec![GatewayChatMessage {
+                role: "user".to_string(),
+                content: "Hello".to_string(),
+            }],
             temperature: Some(0.5),
             max_tokens: Some(1024),
             stream: None,

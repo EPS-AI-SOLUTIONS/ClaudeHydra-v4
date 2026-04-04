@@ -12,11 +12,9 @@ use jaskier_core::handlers::anthropic_streaming::{
 
 use crate::state::AppState;
 
-use super::{
-    TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings, send_to_anthropic,
-};
 use super::agent_call::execute_agent_call;
 use super::helpers::{load_session_history, send_task_complete_notification};
+use super::{TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings, send_to_anthropic};
 
 impl HasAnthropicStreamingState for AppState {
     fn db(&self) -> &sqlx::PgPool {
@@ -122,9 +120,7 @@ impl HasAnthropicStreamingState for AppState {
                         .await
                         {
                             Ok(res) => res,
-                            Err(_) => {
-                                ("Agent delegation timed out after 120s".to_string(), true)
-                            }
+                            Err(_) => ("Agent delegation timed out after 120s".to_string(), true),
                         }
                     }
                 }
@@ -182,7 +178,8 @@ impl HasAnthropicStreamingState for AppState {
         messages: &[Value],
         temperature: f64,
         max_tokens: u32,
-    ) -> impl std::future::Future<Output = Result<reqwest::Response, (StatusCode, String)>> + Send {
+    ) -> impl std::future::Future<Output = Result<reqwest::Response, (StatusCode, String)>> + Send
+    {
         let state = self.clone();
         let system_prompt = system.to_string();
         let msgs = messages.to_vec();
@@ -191,15 +188,30 @@ impl HasAnthropicStreamingState for AppState {
             let api_keys = state.base.api_keys.read().await;
 
             let (target_model, base_url, api_key) = if let Some(key) = api_keys.get("deepseek") {
-                ("deepseek-chat", "https://api.deepseek.com/chat/completions", key.to_string())
+                (
+                    "deepseek-chat",
+                    "https://api.deepseek.com/chat/completions",
+                    key.to_string(),
+                )
             } else if let Some(key) = api_keys.get("grok") {
-                ("grok-2-1212", "https://api.x.ai/v1/chat/completions", key.to_string())
+                (
+                    "grok-2-1212",
+                    "https://api.x.ai/v1/chat/completions",
+                    key.to_string(),
+                )
             } else if let Ok(key) = std::env::var("DEEPSEEK_API_KEY") {
-                ("deepseek-chat", "https://api.deepseek.com/chat/completions", key)
+                (
+                    "deepseek-chat",
+                    "https://api.deepseek.com/chat/completions",
+                    key,
+                )
             } else if let Ok(key) = std::env::var("XAI_API_KEY") {
                 ("grok-2-1212", "https://api.x.ai/v1/chat/completions", key)
             } else {
-                return Err((StatusCode::NOT_IMPLEMENTED, "No fallback API keys found (deepseek/grok)".to_string()));
+                return Err((
+                    StatusCode::NOT_IMPLEMENTED,
+                    "No fallback API keys found (deepseek/grok)".to_string(),
+                ));
             };
 
             let mut openai_messages = Vec::new();
@@ -236,7 +248,9 @@ impl HasAnthropicStreamingState for AppState {
                 "max_tokens": max_tokens
             });
 
-            state.http_client.post(base_url)
+            state
+                .http_client
+                .post(base_url)
                 .header("Authorization", format!("Bearer {}", api_key))
                 .json(&body)
                 .send()
@@ -300,10 +314,7 @@ impl HasAnthropicStreamingState for AppState {
         }
     }
 
-    fn on_tool_loop_complete(
-        &self,
-        model: &str,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    fn on_tool_loop_complete(&self, model: &str) -> impl std::future::Future<Output = ()> + Send {
         let state = self.clone();
         let model = model.to_string();
         async move {

@@ -131,7 +131,10 @@ async fn set_api_key_returns_200() {
         "key": "test-key-12345"
     });
 
-    let response = app().oneshot(post_json("/api/settings/api-key", body)).await.unwrap();
+    let response = app()
+        .oneshot(post_json("/api/settings/api-key", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;

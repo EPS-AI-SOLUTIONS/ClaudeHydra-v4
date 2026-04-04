@@ -52,7 +52,10 @@ async fn auth_login_returns_auth_url_and_state() {
     let json = body_json(response).await;
 
     // Should contain auth_url and state
-    assert!(json["auth_url"].is_string(), "Response should have auth_url");
+    assert!(
+        json["auth_url"].is_string(),
+        "Response should have auth_url"
+    );
     assert!(json["state"].is_string(), "Response should have state");
 
     let auth_url = json["auth_url"].as_str().unwrap();
@@ -62,12 +65,18 @@ async fn auth_login_returns_auth_url_and_state() {
         "auth_url should point to Claude OAuth: {auth_url}"
     );
     // Verify PKCE params are present
-    assert!(auth_url.contains("code_challenge="), "Should have code_challenge");
+    assert!(
+        auth_url.contains("code_challenge="),
+        "Should have code_challenge"
+    );
     assert!(
         auth_url.contains("code_challenge_method=S256"),
         "Should use S256 challenge method"
     );
-    assert!(auth_url.contains("response_type=code"), "Should request code response");
+    assert!(
+        auth_url.contains("response_type=code"),
+        "Should request code response"
+    );
 }
 
 #[tokio::test]
@@ -208,10 +217,7 @@ async fn auth_logout_returns_success() {
 
 #[tokio::test]
 async fn google_auth_status_returns_unauthenticated() {
-    let response = app()
-        .oneshot(get("/api/auth/google/status"))
-        .await
-        .unwrap();
+    let response = app().oneshot(get("/api/auth/google/status")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -225,10 +231,7 @@ async fn google_auth_status_returns_unauthenticated() {
 
 #[tokio::test]
 async fn github_auth_status_returns_unauthenticated() {
-    let response = app()
-        .oneshot(get("/api/auth/github/status"))
-        .await
-        .unwrap();
+    let response = app().oneshot(get("/api/auth/github/status")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -241,10 +244,7 @@ async fn github_auth_status_returns_unauthenticated() {
 
 #[tokio::test]
 async fn vercel_auth_status_returns_unauthenticated() {
-    let response = app()
-        .oneshot(get("/api/auth/vercel/status"))
-        .await
-        .unwrap();
+    let response = app().oneshot(get("/api/auth/vercel/status")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
@@ -285,6 +285,12 @@ async fn auth_mode_open_when_no_secret() {
     assert_eq!(response.status(), StatusCode::OK);
 
     let json = body_json(response).await;
-    assert!(json["auth_required"].is_boolean(), "Response should have auth_required field");
-    assert_eq!(json["auth_required"], false, "No AUTH_SECRET -> auth_required = false");
+    assert!(
+        json["auth_required"].is_boolean(),
+        "Response should have auth_required field"
+    );
+    assert_eq!(
+        json["auth_required"], false,
+        "No AUTH_SECRET -> auth_required = false"
+    );
 }

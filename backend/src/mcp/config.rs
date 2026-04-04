@@ -17,8 +17,7 @@ use crate::state::AppState;
 
 // ── Re-export shared types so callers (client.rs, server.rs) can use them ──
 pub use jaskier_core::mcp::config::{
-    McpServerConfig, McpDiscoveredTool,
-    validate_mcp_url, validate_stdio_config,
+    McpDiscoveredTool, McpServerConfig, validate_mcp_url, validate_stdio_config,
 };
 
 // Re-export shared create/update request types under local names for compatibility.

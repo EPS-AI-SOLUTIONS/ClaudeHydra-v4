@@ -29,7 +29,7 @@ export const StreamingIndicator = memo<StreamingIndicatorProps>(({ isStreaming }
       data-testid="chat-streaming-bar"
       initial={{ scaleX: 0 }}
       animate={{ scaleX: 1 }}
-      className="h-0.5 bg-gradient-to-r from-transparent via-[var(--matrix-accent)] to-transparent origin-left mt-1 rounded-full"
+      className="h-0.5 bg-linear-to-r from-transparent via-[var(--matrix-accent)] to-transparent origin-left mt-1 rounded-full"
     />
   );
 });

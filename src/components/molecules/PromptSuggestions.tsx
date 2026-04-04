@@ -55,7 +55,7 @@ export const PromptSuggestions = memo<PromptSuggestionsProps>(({ suggestions, on
           >
             <Icon
               size={18}
-              className="text-[var(--matrix-text-secondary)] group-hover:text-[var(--matrix-accent)] transition-colors mt-0.5 flex-shrink-0"
+              className="text-[var(--matrix-text-secondary)] group-hover:text-[var(--matrix-accent)] transition-colors mt-0.5 shrink-0"
             />
             <span className="text-sm font-mono text-[var(--matrix-text-secondary)] group-hover:text-[var(--matrix-text-primary)] transition-colors leading-snug">
               {text}

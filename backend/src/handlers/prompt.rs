@@ -46,7 +46,11 @@ pub(crate) struct ChatContext {
 // ═══════════════════════════════════════════════════════════════════════
 
 /// Build system prompt server-side (single source of truth).
-fn build_system_prompt(working_directory: &str, language: &str, custom_instructions: &str) -> String {
+fn build_system_prompt(
+    working_directory: &str,
+    language: &str,
+    custom_instructions: &str,
+) -> String {
     let lang_name = if language == "pl" {
         "Polish"
     } else {
@@ -175,10 +179,16 @@ pub(crate) async fn resolve_chat_context(
         .and_then(|s| uuid::Uuid::parse_str(s).ok());
 
     // Single query: fetch session WD, global WD, language, generation params, and custom instructions
-    let (working_directory, language, db_temperature, db_max_tokens, db_max_iterations, custom_instructions) =
-        if let Some(ref sid) = session_uuid {
-            let row: Option<(String, String, String, f64, i32, i32, String)> = sqlx::query_as(
-                "SELECT COALESCE(s.working_directory, '') AS session_wd, \
+    let (
+        working_directory,
+        language,
+        db_temperature,
+        db_max_tokens,
+        db_max_iterations,
+        custom_instructions,
+    ) = if let Some(ref sid) = session_uuid {
+        let row: Option<(String, String, String, f64, i32, i32, String)> = sqlx::query_as(
+            "SELECT COALESCE(s.working_directory, '') AS session_wd, \
              COALESCE(g.working_directory, '') AS global_wd, \
              COALESCE(g.language, 'en') AS language, \
              COALESCE(g.temperature, 0.7) AS temperature, \
@@ -188,36 +198,50 @@ pub(crate) async fn resolve_chat_context(
              FROM ch_sessions s \
              CROSS JOIN ch_settings g \
              WHERE s.id = $1 AND g.id = 1",
-            )
-            .bind(sid)
-            .fetch_optional(&state.db)
-            .await
-            .ok()
-            .flatten();
-            match row {
-                Some((session_wd, global_wd, lang, temp, mtok, miter, ci)) => {
-                    let wd = if !session_wd.is_empty() {
-                        session_wd
-                    } else {
-                        global_wd
-                    };
-                    (wd, lang, temp, mtok, miter, ci)
-                }
-                None => (String::new(), "en".to_string(), 0.7, 4096, 10, String::new()),
+        )
+        .bind(sid)
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten();
+        match row {
+            Some((session_wd, global_wd, lang, temp, mtok, miter, ci)) => {
+                let wd = if !session_wd.is_empty() {
+                    session_wd
+                } else {
+                    global_wd
+                };
+                (wd, lang, temp, mtok, miter, ci)
             }
-        } else {
-            let row: Option<(String, String, f64, i32, i32, String)> = sqlx::query_as(
-                "SELECT COALESCE(working_directory, ''), COALESCE(language, 'en'), \
+            None => (
+                String::new(),
+                "en".to_string(),
+                0.7,
+                4096,
+                10,
+                String::new(),
+            ),
+        }
+    } else {
+        let row: Option<(String, String, f64, i32, i32, String)> = sqlx::query_as(
+            "SELECT COALESCE(working_directory, ''), COALESCE(language, 'en'), \
              COALESCE(temperature, 0.7), COALESCE(max_tokens, 4096), COALESCE(max_iterations, 10), \
              COALESCE(custom_instructions, '') \
              FROM ch_settings WHERE id = 1",
-            )
-            .fetch_optional(&state.db)
-            .await
-            .ok()
-            .flatten();
-            row.unwrap_or(("".to_string(), "en".to_string(), 0.7, 4096, 10, String::new()))
-        };
+        )
+        .fetch_optional(&state.db)
+        .await
+        .ok()
+        .flatten();
+        row.unwrap_or((
+            "".to_string(),
+            "en".to_string(),
+            0.7,
+            4096,
+            10,
+            String::new(),
+        ))
+    };
 
     let budget = tier_token_budget(&model);
     let max_tokens = req.max_tokens.unwrap_or(db_max_tokens as u32).min(budget);

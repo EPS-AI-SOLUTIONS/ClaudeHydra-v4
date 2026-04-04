@@ -178,7 +178,7 @@ export default function CollabViewContent() {
         </div>
 
         {/* Sidebar: Room stats */}
-        <div className="w-64 flex-shrink-0 rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
+        <div className="w-64 shrink-0 rounded-lg border border-zinc-700/50 bg-zinc-900/50 p-4">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="h-4 w-4 text-zinc-400" />
             <h2 className="text-sm font-medium text-zinc-300">{t('collab.roomStats')}</h2>

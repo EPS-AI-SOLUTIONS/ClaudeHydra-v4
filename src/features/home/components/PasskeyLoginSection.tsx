@@ -21,7 +21,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const API_BASE = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '';
 
 /**
  * Performs the full WebAuthn authentication ceremony:
@@ -129,7 +129,7 @@ export const PasskeyLoginSection = memo(() => {
           >
             <div className="flex items-center gap-4">
               {/* Icon */}
-              <div className={cn('flex-shrink-0 p-2.5 rounded-xl', isLight ? 'bg-indigo-50' : 'bg-indigo-500/10')}>
+              <div className={cn('shrink-0 p-2.5 rounded-xl', isLight ? 'bg-indigo-50' : 'bg-indigo-500/10')}>
                 <Fingerprint size={20} className={cn(isLight ? 'text-indigo-600' : 'text-indigo-400')} />
               </div>
 
@@ -150,7 +150,7 @@ export const PasskeyLoginSection = memo(() => {
                 disabled={isLoading}
                 className={cn(
                   'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium',
-                  'transition-all duration-200 flex-shrink-0',
+                  'transition-all duration-200 shrink-0',
                   isLoading && 'cursor-not-allowed opacity-60',
                   isLight
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-sm'

@@ -7,16 +7,11 @@ use axum::extract::{Json, Path, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::response::sse::{Event, KeepAlive, Sse};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::ai_gateway::{
-    AuthType, HasAiGateway,
-    vault_bridge::HasVaultBridge,
-};
+use crate::ai_gateway::{AuthType, HasAiGateway, vault_bridge::HasVaultBridge};
 
-use super::helpers::{
-    build_chat_payload, chunk_text, extract_content_text, resolve_upstream_url,
-};
+use super::helpers::{build_chat_payload, chunk_text, extract_content_text, resolve_upstream_url};
 use super::router::{parse_provider, vault_error_response};
 use super::types::GatewayChatRequest;
 
@@ -62,16 +57,25 @@ where
 
         // If fallback, we need to map to the new provider's model for the same tier
         let model = if attempt == 0 {
-            original_model.clone().unwrap_or_else(|| config.model_tiers.coordinator.clone())
+            original_model
+                .clone()
+                .unwrap_or_else(|| config.model_tiers.coordinator.clone())
         } else {
-            let tier = original_model.as_ref()
+            let tier = original_model
+                .as_ref()
                 .map(|m| crate::ai_gateway::model_router::ModelRouter::detect_tier(m))
                 .unwrap_or(crate::ai_gateway::model_router::ModelTier::Coordinator);
 
             match tier {
-                crate::ai_gateway::model_router::ModelTier::Commander => config.model_tiers.commander.clone(),
-                crate::ai_gateway::model_router::ModelTier::Coordinator => config.model_tiers.coordinator.clone(),
-                crate::ai_gateway::model_router::ModelTier::Executor => config.model_tiers.executor.clone(),
+                crate::ai_gateway::model_router::ModelTier::Commander => {
+                    config.model_tiers.commander.clone()
+                }
+                crate::ai_gateway::model_router::ModelTier::Coordinator => {
+                    config.model_tiers.coordinator.clone()
+                }
+                crate::ai_gateway::model_router::ModelTier::Executor => {
+                    config.model_tiers.executor.clone()
+                }
             }
         };
 
@@ -89,7 +93,13 @@ where
         if config.auth_type == AuthType::None {
             // Direct call for Ollama
             let client = reqwest::Client::new();
-            match client.post(&upstream_url).json(&upstream_body).timeout(std::time::Duration::from_secs(120)).send().await {
+            match client
+                .post(&upstream_url)
+                .json(&upstream_body)
+                .timeout(std::time::Duration::from_secs(120))
+                .send()
+                .await
+            {
                 Ok(resp) => {
                     let status = resp.status().as_u16();
                     last_latency = started.elapsed().as_millis() as u64;
@@ -101,32 +111,39 @@ where
                                 "latency_ms": last_latency,
                                 "response": json_body,
                                 "fallback_attempts": attempt,
-                            })).into_response();
+                            }))
+                            .into_response();
                         } else {
-                            last_error_response = Some((
-                                StatusCode::BAD_GATEWAY,
-                                Json(json!({
-                                    "error": "upstream_error",
-                                    "provider": provider_enum.to_string(),
-                                    "upstream_status": status,
-                                    "upstream_body": json_body,
-                                    "latency_ms": last_latency,
-                                })),
-                            ).into_response());
+                            last_error_response = Some(
+                                (
+                                    StatusCode::BAD_GATEWAY,
+                                    Json(json!({
+                                        "error": "upstream_error",
+                                        "provider": provider_enum.to_string(),
+                                        "upstream_status": status,
+                                        "upstream_body": json_body,
+                                        "latency_ms": last_latency,
+                                    })),
+                                )
+                                    .into_response(),
+                            );
                         }
                     }
                 }
                 Err(e) => {
                     last_latency = started.elapsed().as_millis() as u64;
-                    last_error_response = Some((
-                        StatusCode::BAD_GATEWAY,
-                        Json(json!({
-                            "error": "upstream_connection_failed",
-                            "provider": provider_enum.to_string(),
-                            "message": e.to_string(),
-                            "latency_ms": last_latency,
-                        })),
-                    ).into_response());
+                    last_error_response = Some(
+                        (
+                            StatusCode::BAD_GATEWAY,
+                            Json(json!({
+                                "error": "upstream_connection_failed",
+                                "provider": provider_enum.to_string(),
+                                "message": e.to_string(),
+                                "latency_ms": last_latency,
+                            })),
+                        )
+                            .into_response(),
+                    );
                 }
             }
             continue;
@@ -158,7 +175,8 @@ where
                         "latency_ms": last_latency,
                         "response": resp.body,
                         "fallback_attempts": attempt,
-                    })).into_response();
+                    }))
+                    .into_response();
                 } else {
                     tracing::warn!(
                         provider = %provider_enum,
@@ -169,16 +187,19 @@ where
                     );
 
                     // If it's auth error from vault or limit error, fallback makes sense
-                    last_error_response = Some((
-                        StatusCode::BAD_GATEWAY,
-                        Json(json!({
-                            "error": "upstream_error",
-                            "provider": provider_enum.to_string(),
-                            "upstream_status": resp.status,
-                            "upstream_body": resp.body,
-                            "latency_ms": last_latency,
-                        })),
-                    ).into_response());
+                    last_error_response = Some(
+                        (
+                            StatusCode::BAD_GATEWAY,
+                            Json(json!({
+                                "error": "upstream_error",
+                                "provider": provider_enum.to_string(),
+                                "upstream_status": resp.status,
+                                "upstream_body": resp.body,
+                                "latency_ms": last_latency,
+                            })),
+                        )
+                            .into_response(),
+                    );
                 }
             }
             Err(err) => {
@@ -193,7 +214,8 @@ where
                     return vault_error_response(provider_enum, err).into_response();
                 }
 
-                last_error_response = Some(vault_error_response(provider_enum, err).into_response());
+                last_error_response =
+                    Some(vault_error_response(provider_enum, err).into_response());
             }
         }
     }
@@ -206,7 +228,8 @@ where
                 "error": "all_providers_failed",
                 "message": "All AI providers in the fallback chain failed.",
             })),
-        ).into_response()
+        )
+            .into_response()
     })
 }
 

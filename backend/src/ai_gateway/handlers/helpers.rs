@@ -1,9 +1,9 @@
 // helpers.rs — Private utility functions for AI Gateway handlers.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::ai_gateway::AiProvider;
 use super::types::GatewayChatRequest;
+use crate::ai_gateway::AiProvider;
 
 /// Resolve the upstream URL, replacing `{model}` placeholder if present.
 pub(crate) fn resolve_upstream_url(url_template: &str, model: &str) -> String {

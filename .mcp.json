@@ -1,93 +1,65 @@
 {
   "mcpServers": {
     "skryba": {
-      "command": "uvx",
+      "command": "serena",
       "args": [
-        "--from", "serena-agent",
-        "serena",
         "start-mcp-server",
         "--context", "codex",
         "--project", "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\ClaudeHydra"
       ]
     },
     "kukielkarz": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "@playwright/mcp@latest"
-      ]
+      "command": "python",
+      "args": ["C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\services\\kukielkarz-nodriver\\python\\cli.py", "--mcp-server"]
     },
     "tropiciel": {
-      "command": "cmd",
+      "command": "node",
       "args": [
-        "/c", "npx",
-        "@modelcontextprotocol/server-brave-search@latest"
-      ],
-      "env": {
-        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
-      }
+        "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\services\\claude-code\\scripts\\vault-mcp-launcher.mjs",
+        "--map", "brave:API_KEY=BRAVE_API_KEY",
+        "--", "bunx", "@modelcontextprotocol/server-brave-search@latest"
+      ]
     },
     "zgniatacz": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "repomix@latest",
-        "--mcp"
-      ]
+      "command": "bunx",
+      "args": ["repomix@latest", "--mcp"]
     },
     "osmiorniczka": {
       "type": "http",
       "url": "https://jaskier-mcp.fly.dev/mcp"
     },
     "kartotekarz": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "@modelcontextprotocol/server-filesystem@latest",
-        "C:\\Users\\BIURODOM\\Desktop"
-      ]
+      "command": "bunx",
+      "args": ["@modelcontextprotocol/server-filesystem@latest", "C:\\Users\\BIURODOM\\Desktop"]
     },
     "hipokamp": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "@modelcontextprotocol/server-memory@latest"
-      ],
+      "command": "bunx",
+      "args": ["@modelcontextprotocol/server-memory@latest"],
       "env": {
         "MEMORY_FILE_PATH": "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\data\\SharedMemory\\memory.json"
       }
     },
     "rozkminiak": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "@modelcontextprotocol/server-sequential-thinking@latest"
-      ]
+      "command": "bunx",
+      "args": ["@modelcontextprotocol/server-sequential-thinking@latest"]
     },
     "bibliotekarz": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "@upstash/context7-mcp@latest"
-      ]
+      "command": "bunx",
+      "args": ["@upstash/context7-mcp@latest"]
     },
     "komendant-pulpitu": {
-      "command": "cmd",
-      "args": [
-        "/c", "npx",
-        "@wonderwhy-er/desktop-commander@latest"
-      ]
-    },
-    "skarbiec": {
-      "command": "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\target\\release\\jaskier-vault-mcp.exe",
-      "args": []
+      "command": "bunx",
+      "args": ["@wonderwhy-er/desktop-commander@latest"]
     },
     "grafomanka": {
-      "command": "uvx",
-      "args": ["mcp-grafana"],
+      "command": "node",
+      "args": [
+        "C:\\Users\\BIURODOM\\Desktop\\JaskierWorkspace\\services\\claude-code\\scripts\\vault-mcp-launcher.mjs",
+        "--map", "grafana:TOKEN=GRAFANA_SERVICE_ACCOUNT_TOKEN",
+        "--", "uvx", "mcp-grafana"
+      ],
       "env": {
-        "GRAFANA_URL": "https://pawelserkowskilang.grafana.net",
-        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+        "GRAFANA_URL": "https://pawelserkowskilang.grafana.net"
       }
     },
     "dozorca": {

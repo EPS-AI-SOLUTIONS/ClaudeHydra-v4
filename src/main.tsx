@@ -2,14 +2,26 @@ import { FeatureErrorFallback } from '@jaskier/hydra-app/components/molecules';
 import { ErrorBoundary } from '@jaskier/ui';
 import { QueryClientProvider, QueryErrorResetBoundary } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'motion/react';
-import { lazy, StrictMode, Suspense } from 'react';
+import { lazy, type ReactNode, StrictMode, Suspense } from 'react';
+import { preconnect, prefetchDNS, preload } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
+
+// Native asset preloading (React 19)
+prefetchDNS('https://claudehydra-v4-backend.fly.dev');
+preconnect('https://fonts.googleapis.com');
+preconnect('https://fonts.gstatic.com', { crossOrigin: 'anonymous' });
+preload(
+  'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap',
+  { as: 'style' },
+);
+preload('/logo.png', { as: 'image' });
 
 const ReactQueryDevtools = lazy(() =>
   import('@tanstack/react-query-devtools').then((m) => ({ default: m.ReactQueryDevtools })),
 );
 
+import { type AuthConfig, AuthProvider, LoginButton, useAuth } from '@jaskier/auth';
 import { OfflineBanner } from '@/components/molecules/OfflineBanner';
 import { ViewSkeleton } from '@/components/molecules/ViewSkeleton';
 import { AppShell } from '@/components/organisms/AppShell';
@@ -199,24 +211,57 @@ function ViewRouter() {
   );
 }
 
+const authConfig: AuthConfig = {
+  apiUrl: (import.meta.env['VITE_AUTH_API_URL'] as string | undefined) || 'http://localhost:8086',
+  googleClientId: (import.meta.env['VITE_GOOGLE_CLIENT_ID'] as string | undefined) || '',
+  appId: 'claudehydra',
+};
+
+function JaskierAuthGate({ children }: { children: ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-pulse text-zinc-500">Loading...</div>
+      </div>
+    );
+  }
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-6 font-mono">
+        <h1 className="text-2xl font-bold">ClaudeHydra</h1>
+        <p className="text-zinc-500">Sign in to continue</p>
+        <LoginButton />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <QueryErrorResetBoundary>
-        {() => (
-          <ErrorBoundary>
-            <AppShell>
-              <ViewRouter />
-            </AppShell>
-          </ErrorBoundary>
-        )}
-      </QueryErrorResetBoundary>
-      <OfflineBanner />
-      <Toaster position="bottom-right" theme="dark" richColors />
-      <Suspense fallback={null}>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </Suspense>
-    </QueryClientProvider>
+    <AuthProvider config={authConfig}>
+      <QueryClientProvider client={queryClient}>
+        <JaskierAuthGate>
+          <QueryErrorResetBoundary>
+            {() => (
+              <ErrorBoundary>
+                <AppShell>
+                  <ViewRouter />
+                </AppShell>
+              </ErrorBoundary>
+            )}
+          </QueryErrorResetBoundary>
+        </JaskierAuthGate>
+        <OfflineBanner />
+        <Toaster position="bottom-right" theme="dark" richColors />
+        <Suspense fallback={null}>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </Suspense>
+      </QueryClientProvider>
+    </AuthProvider>
   );
 }
 

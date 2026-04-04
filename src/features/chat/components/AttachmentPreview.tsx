@@ -41,11 +41,11 @@ const AttachmentChip = memo(function AttachmentChip({
       className="flex items-center gap-2 px-3 py-2 bg-[var(--matrix-bg-secondary)] border border-[var(--matrix-accent)]/30 rounded-lg"
     >
       {attachment.type === 'image' ? (
-        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+        <div className="w-8 h-8 rounded overflow-hidden shrink-0">
           <img src={attachment.content} alt={attachment.name} className="w-full h-full object-cover" />
         </div>
       ) : (
-        <FileText size={16} className="text-blue-400 flex-shrink-0" />
+        <FileText size={16} className="text-blue-400 shrink-0" />
       )}
       <span className="text-sm truncate max-w-[150px] text-[var(--matrix-text-primary)]">{attachment.name}</span>
       <button

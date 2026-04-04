@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used)]
 use http::header;
 use tower_http::compression::CompressionLayer;
 use tower_http::compression::predicate::{DefaultPredicate, NotForContentType, Predicate};

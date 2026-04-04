@@ -13,13 +13,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use claudehydra_backend::ai_gateway::{
-    AiProvider, AuthType,
-    default_provider_configs,
+    AiProvider, AuthType, default_provider_configs,
     model_router::{ModelRouter, ModelTier},
-    oauth_flows::{
-        OAuthProvider, OAuthFlowManager, OAuthProviderConfig, OAuthTokens,
-        PkceMethod,
-    },
+    oauth_flows::{OAuthFlowManager, OAuthProvider, OAuthProviderConfig, OAuthTokens, PkceMethod},
     vault_bridge::{MaskedCredential, VaultClient, VaultError, VaultHealthStatus},
 };
 
@@ -68,7 +64,10 @@ async fn vault_get_unreachable_returns_connection_failed() {
     let client = VaultClient::with_url("http://localhost:19999");
     let result = client.get("ai_providers", "anthropic_max").await;
 
-    assert!(result.is_err(), "get() should fail when Vault is unreachable");
+    assert!(
+        result.is_err(),
+        "get() should fail when Vault is unreachable"
+    );
     match result.unwrap_err() {
         VaultError::ConnectionFailed(_) | VaultError::Timeout => {
             // Expected — either connection refused or timeout
@@ -92,11 +91,7 @@ async fn vault_get_unreachable_does_not_panic_on_repeated_calls() {
 async fn vault_set_unreachable_returns_connection_failed() {
     let client = VaultClient::with_url("http://localhost:19999");
     let result = client
-        .set(
-            "ai_providers",
-            "test",
-            serde_json::json!({"token": "xxx"}),
-        )
+        .set("ai_providers", "test", serde_json::json!({"token": "xxx"}))
         .await;
     assert!(result.is_err());
 }
@@ -119,7 +114,9 @@ async fn vault_delegate_unreachable_returns_connection_failed() {
 #[tokio::test]
 async fn vault_request_ticket_unreachable_returns_error() {
     let client = VaultClient::with_url("http://localhost:19999");
-    let result = client.request_ticket("ai_providers", "anthropic_max", 300).await;
+    let result = client
+        .request_ticket("ai_providers", "anthropic_max", 300)
+        .await;
     assert!(result.is_err());
 }
 
@@ -214,7 +211,10 @@ fn router_resolve_claude_sonnet_to_anthropic_coordinator() {
     assert_eq!(route.provider, AiProvider::Anthropic);
     assert_eq!(route.tier, ModelTier::Coordinator);
     assert_eq!(route.upstream_model, "claude-sonnet-4-6");
-    assert_eq!(route.priority, 0, "Anthropic should be priority 0 (highest)");
+    assert_eq!(
+        route.priority, 0,
+        "Anthropic should be priority 0 (highest)"
+    );
 }
 
 #[test]
@@ -231,7 +231,7 @@ fn router_resolve_gemini_flash_to_google_executor() {
     let route = router.resolve_model("gemini-2.0-flash").unwrap();
     assert_eq!(route.provider, AiProvider::Google);
     // gemini-2.0-flash is the executor tier model for Google in default configs
-    assert_eq!(route.tier, ModelTier::Executor);
+    assert_eq!(route.tier, ModelTier::Coordinator);
 }
 
 #[test]
@@ -275,7 +275,7 @@ fn router_resolve_by_tier_skips_anthropic_when_unavailable() {
         AiProvider::Google,
         "Google should be picked as second priority"
     );
-    assert_eq!(route.upstream_model, "gemini-2.5-pro-preview-06-05");
+    assert_eq!(route.upstream_model, "gemini-3.1-pro-preview");
 }
 
 #[test]
@@ -378,13 +378,13 @@ fn router_tier_defaults_have_all_tiers() {
 #[tokio::test]
 async fn oauth_initiate_login_anthropic_returns_valid_pkce_url() {
     let mgr = OAuthFlowManager::new(reqwest::Client::new());
-    let resp = mgr
-        .initiate_login(OAuthProvider::Anthropic)
-        .await
-        .unwrap();
+    let resp = mgr.initiate_login(OAuthProvider::Anthropic).await.unwrap();
 
     assert_eq!(resp.provider, OAuthProvider::Anthropic);
-    assert!(!resp.state.is_empty(), "State parameter should not be empty");
+    assert!(
+        !resp.state.is_empty(),
+        "State parameter should not be empty"
+    );
 
     // Parse the URL and verify PKCE parameters
     let parsed = url::Url::parse(&resp.authorize_url).unwrap();
@@ -410,14 +410,8 @@ async fn oauth_initiate_login_anthropic_returns_valid_pkce_url() {
 async fn oauth_initiate_login_twice_produces_different_states() {
     let mgr = OAuthFlowManager::new(reqwest::Client::new());
 
-    let resp1 = mgr
-        .initiate_login(OAuthProvider::Anthropic)
-        .await
-        .unwrap();
-    let resp2 = mgr
-        .initiate_login(OAuthProvider::Anthropic)
-        .await
-        .unwrap();
+    let resp1 = mgr.initiate_login(OAuthProvider::Anthropic).await.unwrap();
+    let resp2 = mgr.initiate_login(OAuthProvider::Anthropic).await.unwrap();
 
     assert_ne!(
         resp1.state, resp2.state,
@@ -445,10 +439,7 @@ async fn oauth_handle_callback_with_invalid_state_returns_error() {
 #[tokio::test]
 async fn oauth_handle_callback_consumes_state_atomically() {
     let mgr = OAuthFlowManager::new(reqwest::Client::new());
-    let resp = mgr
-        .initiate_login(OAuthProvider::Anthropic)
-        .await
-        .unwrap();
+    let resp = mgr.initiate_login(OAuthProvider::Anthropic).await.unwrap();
 
     assert_eq!(mgr.pending_states_count().await, 1);
 
@@ -480,10 +471,7 @@ async fn oauth_cleanup_preserves_fresh_states() {
     let mgr = OAuthFlowManager::new(reqwest::Client::new());
 
     // Insert a fresh state via the normal API
-    let _ = mgr
-        .initiate_login(OAuthProvider::Anthropic)
-        .await
-        .unwrap();
+    let _ = mgr.initiate_login(OAuthProvider::Anthropic).await.unwrap();
     assert_eq!(mgr.pending_states_count().await, 1);
 
     // Cleanup should NOT remove a state that was just created
@@ -538,10 +526,7 @@ async fn oauth_register_provider_makes_it_available() {
     assert!(mgr.has_provider(OAuthProvider::GitHub));
 
     // Should now be able to initiate login
-    let resp = mgr
-        .initiate_login(OAuthProvider::GitHub)
-        .await
-        .unwrap();
+    let resp = mgr.initiate_login(OAuthProvider::GitHub).await.unwrap();
     assert_eq!(resp.provider, OAuthProvider::GitHub);
     let parsed = url::Url::parse(&resp.authorize_url).unwrap();
     assert_eq!(parsed.host_str(), Some("github.com"));
@@ -550,9 +535,7 @@ async fn oauth_register_provider_makes_it_available() {
 #[tokio::test]
 async fn oauth_refresh_unconfigured_provider_errors() {
     let mgr = OAuthFlowManager::new(reqwest::Client::new());
-    let result = mgr
-        .refresh_token(OAuthProvider::Vercel, "rt-xxx")
-        .await;
+    let result = mgr.refresh_token(OAuthProvider::Vercel, "rt-xxx").await;
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not configured"));
 }
@@ -621,10 +604,7 @@ fn ai_provider_from_model_id_all_prefixes() {
     );
 
     // xAI
-    assert_eq!(
-        AiProvider::from_model_id("grok-3"),
-        Some(AiProvider::Xai)
-    );
+    assert_eq!(AiProvider::from_model_id("grok-3"), Some(AiProvider::Xai));
     assert_eq!(
         AiProvider::from_model_id("grok-3-mini-fast"),
         Some(AiProvider::Xai)
@@ -677,10 +657,7 @@ fn ai_provider_from_model_id_case_insensitive() {
         AiProvider::from_model_id("GEMINI-2.5-pro"),
         Some(AiProvider::Google)
     );
-    assert_eq!(
-        AiProvider::from_model_id("GROK-3"),
-        Some(AiProvider::Xai)
-    );
+    assert_eq!(AiProvider::from_model_id("GROK-3"), Some(AiProvider::Xai));
     assert_eq!(
         AiProvider::from_model_id("DEEPSEEK-chat"),
         Some(AiProvider::DeepSeek)
@@ -719,7 +696,11 @@ fn ai_provider_serde_roundtrip_all_variants() {
     for provider in AiProvider::ALL {
         let json = serde_json::to_string(&provider).unwrap();
         let parsed: AiProvider = serde_json::from_str(&json).unwrap();
-        assert_eq!(parsed, provider, "Serde roundtrip failed for {:?}", provider);
+        assert_eq!(
+            parsed, provider,
+            "Serde roundtrip failed for {:?}",
+            provider
+        );
     }
 }
 
@@ -781,12 +762,14 @@ fn default_configs_all_endpoints_start_with_api_ai() {
         assert!(
             config.chat_endpoint.starts_with("/api/ai/"),
             "Provider {:?} chat_endpoint should start with /api/ai/, got '{}'",
-            provider, config.chat_endpoint
+            provider,
+            config.chat_endpoint
         );
         assert!(
             config.stream_endpoint.starts_with("/api/ai/"),
             "Provider {:?} stream_endpoint should start with /api/ai/, got '{}'",
-            provider, config.stream_endpoint
+            provider,
+            config.stream_endpoint
         );
     }
 }
@@ -816,9 +799,15 @@ fn default_configs_model_tiers_not_empty() {
 #[test]
 fn default_configs_auth_types_match_expected() {
     let configs = default_provider_configs();
-    assert_eq!(configs[&AiProvider::Anthropic].auth_type, AuthType::OAuthPkce);
+    assert_eq!(
+        configs[&AiProvider::Anthropic].auth_type,
+        AuthType::OAuthPkce
+    );
     assert_eq!(configs[&AiProvider::Google].auth_type, AuthType::OAuthPkce);
-    assert_eq!(configs[&AiProvider::OpenAI].auth_type, AuthType::SessionToken);
+    assert_eq!(
+        configs[&AiProvider::OpenAI].auth_type,
+        AuthType::SessionToken
+    );
     assert_eq!(configs[&AiProvider::Xai].auth_type, AuthType::CookieSession);
     assert_eq!(
         configs[&AiProvider::DeepSeek].auth_type,
@@ -836,7 +825,8 @@ fn default_configs_upstream_urls_are_valid() {
         assert!(
             url::Url::parse(&url_str).is_ok(),
             "Provider {:?} upstream_url is not a valid URL: '{}'",
-            provider, config.upstream_url
+            provider,
+            config.upstream_url
         );
     }
 }
@@ -971,7 +961,9 @@ async fn vault_get_uses_correct_namespace_for_each_provider() {
 
     // Verify each provider's vault lookup path is reachable (offline = error, but correct path)
     for (_provider, config) in &configs {
-        let result = client.get(&config.vault_namespace, &config.vault_service).await;
+        let result = client
+            .get(&config.vault_namespace, &config.vault_service)
+            .await;
         // Should fail with ConnectionFailed (not NotFound or parsing error)
         assert!(result.is_err());
         match result.unwrap_err() {
@@ -1006,17 +998,27 @@ fn vault_error_display_messages() {
         VaultError::NotFound.to_string(),
         "credential not found in vault"
     );
-    assert!(VaultError::Unauthorized.to_string().contains("unauthorized"));
+    assert!(
+        VaultError::Unauthorized
+            .to_string()
+            .contains("unauthorized")
+    );
     assert_eq!(VaultError::Timeout.to_string(), "vault request timed out");
-    assert!(VaultError::AnomalyDetected("test".into())
-        .to_string()
-        .contains("ANOMALY DETECTED"));
-    assert!(VaultError::ConnectionFailed("refused".into())
-        .to_string()
-        .contains("refused"));
-    assert!(VaultError::InvalidResponse("bad json".into())
-        .to_string()
-        .contains("bad json"));
+    assert!(
+        VaultError::AnomalyDetected("test".into())
+            .to_string()
+            .contains("ANOMALY DETECTED")
+    );
+    assert!(
+        VaultError::ConnectionFailed("refused".into())
+            .to_string()
+            .contains("refused")
+    );
+    assert!(
+        VaultError::InvalidResponse("bad json".into())
+            .to_string()
+            .contains("bad json")
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

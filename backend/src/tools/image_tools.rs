@@ -43,7 +43,7 @@ pub async fn tool_analyze_image(
     let ext = file_path
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase())
+        .map(str::to_lowercase)
         .unwrap_or_default();
     if !IMAGE_EXTENSIONS.contains(&ext.as_str()) {
         return Err(format!(

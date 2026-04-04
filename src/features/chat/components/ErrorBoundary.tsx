@@ -1,7 +1,6 @@
-import { cn } from '@jaskier/ui';
+import { Button, cn } from '@jaskier/ui';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Button } from '@/components/atoms';
 import { isTelemetryEnabled } from '@/shared/hooks/useSettings';
 
 interface Props {

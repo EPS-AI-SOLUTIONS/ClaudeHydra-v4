@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { WsClientMessage, WsServerMessage } from '../schemas';
+import type { WsClientMessage } from '../schemas';
 import { wsServerMessageSchema } from '../schemas';
 
 describe('wsServerMessageSchema — WebSocket protocol validation', () => {

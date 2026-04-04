@@ -65,7 +65,7 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
   // Reset index when debounced query changes
   useEffect(() => {
     setCurrentMatchIdx(0);
-  }, [debouncedQuery]);
+  }, []);
 
   const goNext = useCallback(() => {
     if (matches.length === 0) return;
@@ -100,7 +100,7 @@ export function SearchOverlay({ messages, onMatchChange, onClose }: SearchOverla
       transition={{ duration: 0.15 }}
       className="absolute top-2 right-2 z-30 flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--matrix-bg-secondary)]/95 border border-[var(--matrix-border)] backdrop-blur-md shadow-lg"
     >
-      <Search size={14} className="text-[var(--matrix-text-secondary)] flex-shrink-0" />
+      <Search size={14} className="text-[var(--matrix-text-secondary)] shrink-0" />
       <input
         ref={inputRef}
         type="text"

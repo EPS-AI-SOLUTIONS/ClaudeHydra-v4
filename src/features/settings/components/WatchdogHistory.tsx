@@ -100,13 +100,13 @@ export const WatchdogHistory = memo(() => {
                   theme.isLight ? 'hover:bg-black/5' : 'hover:bg-white/5',
                 )}
               >
-                <Icon size={13} className={cn('flex-shrink-0', cfg.color)} />
-                <span className={cn('w-16 flex-shrink-0', theme.textMuted)}>{formatTime(evt.timestamp)}</span>
-                <span className={cn('w-12 flex-shrink-0 text-[10px]', theme.textMuted)}>
+                <Icon size={13} className={cn('shrink-0', cfg.color)} />
+                <span className={cn('w-16 shrink-0', theme.textMuted)}>{formatTime(evt.timestamp)}</span>
+                <span className={cn('w-12 shrink-0 text-[10px]', theme.textMuted)}>
                   {formatDate(evt.timestamp)}
                 </span>
                 <span className={cn('font-medium', cfg.color)}>{cfg.label}</span>
-                <span className={cn('flex-shrink-0', theme.textMuted)}>{workerInfo}</span>
+                <span className={cn('shrink-0', theme.textMuted)}>{workerInfo}</span>
                 {evt.error && (
                   <span className={cn('truncate', theme.textMuted)} title={evt.error}>
                     {evt.error}

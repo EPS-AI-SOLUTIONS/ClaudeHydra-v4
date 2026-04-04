@@ -215,7 +215,7 @@ pub async fn startup_sync(state: &AppState) {
     tracing::info!("model_registry: fetching models at startup\u{2026}");
 
     let (models, startup_errors) = refresh_cache(state).await;
-    let total: usize = models.values().map(|v| v.len()).sum();
+    let total: usize = models.values().map(std::vec::Vec::len).sum();
     tracing::info!(
         "model_registry: {} models cached from {} providers",
         total,
@@ -284,7 +284,7 @@ pub async fn list_models(State(state): State<AppState>) -> impl IntoResponse {
     let pins = get_pins_map(&state).await;
     let cache = state.model_cache().read().await;
 
-    let total: usize = cache.models.values().map(|v| v.len()).sum();
+    let total: usize = cache.models.values().map(std::vec::Vec::len).sum();
     let stale = cache.is_stale();
     let fetched_ago = cache.fetched_at.map(|t| t.elapsed().as_secs());
 
@@ -318,7 +318,7 @@ pub async fn refresh_models(State(state): State<AppState>) -> Json<Value> {
     let resolved = resolve_models(&state).await;
     let pins = get_pins_map(&state).await;
 
-    let total: usize = models.values().map(|v| v.len()).sum();
+    let total: usize = models.values().map(std::vec::Vec::len).sum();
 
     let mut resp = json!({
         "refreshed": true,

@@ -19,8 +19,7 @@ pub(crate) fn random_base64url(byte_len: usize) -> String {
 
 /// SHA-256 hash encoded as base64url (no padding) — PKCE S256 challenge.
 pub(crate) fn sha256_base64url(input: &str) -> String {
-    base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .encode(sha2::Sha256::digest(input.as_bytes()))
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(sha2::Sha256::digest(input.as_bytes()))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -58,7 +57,7 @@ pub(crate) fn parse_token_response(
         .and_then(|v| v.as_str())
         .map(String::from);
 
-    let expires_in = obj.get("expires_in").and_then(|v| v.as_i64());
+    let expires_in = obj.get("expires_in").and_then(serde_json::Value::as_i64);
 
     let scope = obj
         .get("scope")

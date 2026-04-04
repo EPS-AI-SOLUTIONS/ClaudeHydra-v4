@@ -27,7 +27,7 @@ call "%LIB%" :cargo_check "%~dp0backend" "claudehydra-backend.exe"
 netstat -ano 2>nul | findstr ":3001 " | findstr "LISTENING" >nul 2>&1
 if errorlevel 1 (
     echo !CYAN![START]!RESET! OAuth router on port 3001...
-    start /B "" npx anthropic-max-router --port 3001 --quiet
+    start /B "" bunx anthropic-max-router --port 3001 --quiet
     %SYSTEMROOT%\System32\timeout.exe /t 3 /nobreak >nul
 ) else (
     echo !GREEN![OK]!RESET! OAuth router already running on port 3001

@@ -192,9 +192,9 @@ export function SessionItem({
       <div className="flex items-center gap-2">
         {/* #16 - Show spinner for pending sessions */}
         {session._pending ? (
-          <Loader2 size={14} className="flex-shrink-0 animate-spin text-[var(--matrix-accent)]/60" />
+          <Loader2 size={14} className="shrink-0 animate-spin text-[var(--matrix-accent)]/60" />
         ) : (
-          <MessageSquare size={14} className="flex-shrink-0" />
+          <MessageSquare size={14} className="shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <p className={cn('text-sm truncate', session._pending && 'opacity-60 italic')}>{session.title}</p>

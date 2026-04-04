@@ -1,12 +1,11 @@
 /** Jaskier Shared Pattern — Custom Instructions Settings Section */
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Button, cn } from '@jaskier/ui';
 import { FileText } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Button } from '@/components/atoms';
 import { apiPost } from '@/shared/api/client';
 import type { Settings } from '@/shared/api/schemas';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';

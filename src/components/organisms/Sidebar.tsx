@@ -202,7 +202,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
       <LogoButton collapsed={collapsed} onClick={() => navigateTo('home')} />
 
       {/* ---- Grouped Navigation (Tissaia style) ---- */}
-      <nav className="flex flex-col gap-2 flex-shrink-0 px-2">
+      <nav className="flex flex-col gap-2 shrink-0 px-2">
         {navGroups.map((group) => {
           const isExpanded = expandedGroups[group.id];
           const hasActiveItem = group.items.some((item) => item.id === currentView);
@@ -277,7 +277,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                       <Icon
                         size={16}
                         className={cn(
-                          'transition-colors flex-shrink-0',
+                          'transition-colors shrink-0',
                           isActive
                             ? isLight
                               ? 'text-emerald-600'
@@ -450,7 +450,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
           >
             <div
               className={cn(
-                'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold flex-shrink-0',
+                'w-5 h-5 rounded flex items-center justify-center text-[9px] font-bold shrink-0',
                 isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400',
               )}
             >
@@ -509,7 +509,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                 >
                   <MessageSquare
                     size={14}
-                    className={cn('flex-shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')}
+                    className={cn('shrink-0', isLight ? 'text-blue-500' : 'text-blue-400/60')}
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{ps.title}</p>
@@ -519,7 +519,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
                   </div>
                   <ExternalLink
                     size={10}
-                    className="opacity-0 group-hover:opacity-60 transition-opacity flex-shrink-0 text-[var(--matrix-text-secondary)]"
+                    className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0 text-[var(--matrix-text-secondary)]"
                   />
                 </button>
               ))}
@@ -560,7 +560,7 @@ function SidebarContent({ collapsed, onClose, isMobile = false }: SidebarContent
 
 export function Sidebar() {
   const { t } = useTranslation();
-  const { sidebarCollapsed, setSidebarCollapsed, toggleSidebar, currentView } = useViewStore();
+  const { sidebarCollapsed, setSidebarCollapsed, toggleSidebar } = useViewStore();
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -577,7 +577,7 @@ export function Sidebar() {
   // Auto-close mobile drawer on view change (currentView is intentional trigger)
   useEffect(() => {
     if (isMobile) setMobileDrawerOpen(false);
-  }, [currentView, isMobile, setMobileDrawerOpen]);
+  }, [isMobile]);
 
   // #29 — Swipe gesture for mobile drawer
   const swipeStartRef = useRef<{ x: number; y: number; time: number } | null>(null);

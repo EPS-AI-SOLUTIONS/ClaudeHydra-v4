@@ -238,7 +238,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 onClick={() => fileInputRef.current?.click()}
                 disabled={disabled}
                 className={cn(
-                  'glass-button p-2.5 rounded-lg flex-shrink-0 transition-colors',
+                  'glass-button p-2.5 rounded-lg shrink-0 transition-colors',
                   'hover:text-[var(--matrix-accent)]',
                   disabled && 'opacity-50 cursor-not-allowed',
                 )}
@@ -256,7 +256,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               disabled={!canSend}
               {...(canSend && { whileHover: { scale: 1.05 }, whileTap: { scale: 0.95 } })}
               className={cn(
-                'glass-button glass-button-primary p-2.5 rounded-lg flex-shrink-0 transition-all',
+                'glass-button glass-button-primary p-2.5 rounded-lg shrink-0 transition-all',
                 canSend
                   ? 'text-[var(--matrix-accent)] hover:shadow-[0_0_15px_var(--matrix-accent)]'
                   : 'opacity-50 cursor-not-allowed',

@@ -87,7 +87,7 @@ export function StatusIndicator({
       {/* Dot wrapper */}
       <span className="relative flex items-center justify-center">
         {/* Solid dot with glow */}
-        <span className={cn('rounded-full flex-shrink-0', dotSize, dotColorMap[status], glowMap[status])} />
+        <span className={cn('rounded-full shrink-0', dotSize, dotColorMap[status], glowMap[status])} />
 
         {/* Pulse ring */}
         {shouldPulse && (

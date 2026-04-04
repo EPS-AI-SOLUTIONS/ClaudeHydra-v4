@@ -3,8 +3,8 @@
 //
 // Uses jaskier_core::testing shared helpers for request building and body parsing.
 
-use jaskier_core::testing::{body_json, get};
 use axum::http::StatusCode;
+use jaskier_core::testing::{body_json, get};
 use tower::ServiceExt;
 
 use claudehydra_backend::state::AppState;
@@ -47,10 +47,7 @@ async fn auth_mode_endpoint_returns_ok() {
 
 #[tokio::test]
 async fn readiness_endpoint_exists() {
-    let response = test_app()
-        .oneshot(get("/api/health/ready"))
-        .await
-        .unwrap();
+    let response = test_app().oneshot(get("/api/health/ready")).await.unwrap();
     // Readiness may return 503 if not marked ready yet, but should not 404
     assert_ne!(response.status(), StatusCode::NOT_FOUND);
 }

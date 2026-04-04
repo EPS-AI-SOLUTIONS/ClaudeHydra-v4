@@ -6,15 +6,12 @@
 use serde_json::{Value, json};
 
 use jaskier_core::handlers::anthropic_streaming::{
-    sanitize_api_error, trim_conversation,
-    truncate_for_context_with_limit as truncate_tool_output,
+    sanitize_api_error, trim_conversation, truncate_for_context_with_limit as truncate_tool_output,
 };
 
 use crate::state::AppState;
 
-use super::{
-    TOOL_TIMEOUT_SECS, send_to_anthropic, truncate_for_context_with_limit,
-};
+use super::{TOOL_TIMEOUT_SECS, send_to_anthropic, truncate_for_context_with_limit};
 
 /// Execute a `call_agent` tool call — runs a non-streaming Claude conversation
 /// with the target agent's identity and tier model. Supports nested delegation.

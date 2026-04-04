@@ -12,11 +12,11 @@
 //! shared handler with `HasAnthropicStreamingState` trait. WebSocket + A2A delegation
 //! remain CH-specific (different protocol / deeply coupled to CH state).
 
-mod trait_impl;
-pub mod helpers;
-mod gemini;
-pub mod websocket;
 pub mod agent_call;
+mod gemini;
+pub mod helpers;
+mod trait_impl;
+pub mod websocket;
 
 use axum::Json;
 use axum::http::StatusCode;
@@ -47,13 +47,8 @@ pub use websocket::ws_chat;
 
 /// POST /api/prefetch/hints — returns view hints for a given prompt.
 /// Used by NDJSON streaming clients that can't receive WS `view_hint` events.
-pub async fn prefetch_hints(
-    Json(body): Json<Value>,
-) -> Json<Value> {
-    let prompt = body
-        .get("prompt")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+pub async fn prefetch_hints(Json(body): Json<Value>) -> Json<Value> {
+    let prompt = body.get("prompt").and_then(|v| v.as_str()).unwrap_or("");
     let hints = detect_view_hints(prompt);
     Json(json!({ "views": hints }))
 }

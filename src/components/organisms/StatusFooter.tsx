@@ -84,7 +84,7 @@ function BrowserProxyBadge({ status }: { status: BrowserProxyStatus }) {
   return (
     <div className="inline-flex items-center gap-1.5 cursor-default" title={tooltipLines.join('\n')}>
       <span className="relative flex items-center justify-center">
-        <span className={cn('h-1.5 w-1.5 rounded-full flex-shrink-0', proxyDotColor[state])} />
+        <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', proxyDotColor[state])} />
         {shouldPulse && (
           <span className={cn('absolute h-1.5 w-1.5 rounded-full animate-ping opacity-75', proxyDotColor[state])} />
         )}

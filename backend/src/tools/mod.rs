@@ -26,7 +26,7 @@ const DEFAULT_MAX_RESULTS: usize = 50;
 
 // Re-export shared write-safety constants and functions from jaskier-tools
 pub(crate) use jaskier_tools::files::{
-    is_binary, is_blocked_for_write, BLOCKED_BACKUP_EXTENSIONS, DEFAULT_BLOCKED_WRITE_PREFIXES,
+    BLOCKED_BACKUP_EXTENSIONS, DEFAULT_BLOCKED_WRITE_PREFIXES, is_binary, is_blocked_for_write,
 };
 
 // ── ToolExecutor ────────────────────────────────────────────────────────
@@ -425,8 +425,14 @@ impl ToolExecutor {
         // Sandbox tool — isolated code execution for safe testing
         let sandbox_def = crate::sandbox::sandbox_execute_tool_def();
         defs.push(ToolDefinition {
-            name: sandbox_def["name"].as_str().unwrap_or("sandbox_execute_code").to_string(),
-            description: sandbox_def["description"].as_str().unwrap_or("").to_string(),
+            name: sandbox_def["name"]
+                .as_str()
+                .unwrap_or("sandbox_execute_code")
+                .to_string(),
+            description: sandbox_def["description"]
+                .as_str()
+                .unwrap_or("")
+                .to_string(),
             input_schema: sandbox_def["input_schema"].clone(),
         });
 
@@ -478,7 +484,9 @@ impl ToolExecutor {
         if tool_name == "analyze_image" {
             let path = input.get("path").and_then(|v| v.as_str()).unwrap_or("");
             let prompt = input.get("prompt").and_then(|v| v.as_str());
-            let extract_text = input.get("extract_text").and_then(|v| v.as_bool());
+            let extract_text = input
+                .get("extract_text")
+                .and_then(serde_json::Value::as_bool);
             return match image_tools::tool_analyze_image(
                 path,
                 prompt,
@@ -499,8 +507,15 @@ impl ToolExecutor {
         // Sandbox — isolated code execution
         if tool_name == "sandbox_execute_code" {
             let code = input.get("code").and_then(|v| v.as_str()).unwrap_or("");
-            let language_str = input.get("language").and_then(|v| v.as_str()).unwrap_or("node");
-            let timeout_secs = input.get("timeout_secs").and_then(|v| v.as_u64()).unwrap_or(30).min(120) as u32;
+            let language_str = input
+                .get("language")
+                .and_then(|v| v.as_str())
+                .unwrap_or("node");
+            let timeout_secs = input
+                .get("timeout_secs")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(30)
+                .min(120) as u32;
 
             let language = match language_str {
                 "python" => crate::sandbox::SandboxLanguage::Python,
@@ -511,9 +526,8 @@ impl ToolExecutor {
 
             // Use process-level isolation (always available).
             // For full Docker isolation, agents should use the /api/sandbox/execute HTTP endpoint.
-            let execution = crate::sandbox::execute_without_docker_for_tool(
-                language, code, timeout_secs,
-            ).await;
+            let execution =
+                crate::sandbox::execute_without_docker_for_tool(language, code, timeout_secs).await;
 
             let output = format!(
                 "## Sandbox Execution Result\n\n\
@@ -524,7 +538,9 @@ impl ToolExecutor {
                  ### stdout\n```\n{}\n```\n\n\
                  ### stderr\n```\n{}\n```",
                 execution.status,
-                execution.exit_code.map_or("N/A".to_string(), |c| c.to_string()),
+                execution
+                    .exit_code
+                    .map_or("N/A".to_string(), |c| c.to_string()),
                 execution.duration_ms,
                 execution.language,
                 execution.stdout,
@@ -566,14 +582,24 @@ impl ToolExecutor {
 
     /// Return tool definitions including MCP tools (for Anthropic API tool_use).
     /// This is async because it needs to read from the MCP client manager.
-    pub async fn tool_definitions_with_mcp(&self, state: &AppState, agent_id: Option<&str>) -> Vec<ToolDefinition> {
+    pub async fn tool_definitions_with_mcp(
+        &self,
+        state: &AppState,
+        agent_id: Option<&str>,
+    ) -> Vec<ToolDefinition> {
         let mut defs = self.tool_definitions();
 
         // Retrieve allowed MCP servers for the agent
         let mut allowed_servers: Option<std::collections::HashSet<String>> = None;
         if let Some(aid) = agent_id {
             use jaskier_core::mcp::config::HasMcpState;
-            if let Ok(perms) = jaskier_core::mcp::permissions::get_agent_permissions_t(state.db(), state.mcp_permissions_table(), aid).await {
+            if let Ok(perms) = jaskier_core::mcp::permissions::get_agent_permissions_t(
+                state.db(),
+                state.mcp_permissions_table(),
+                aid,
+            )
+            .await
+            {
                 // To nie musi być surowe "deny_all" póki nie przydzielimy ról,
                 // ale według zero-trust tak powinno być. Narazie filtrujemy jeśli cokolwiek pobierzemy,
                 // albo jeśli wolisz miękkie wdrażanie:
@@ -586,9 +612,10 @@ impl ToolExecutor {
         let mcp_tools = state.mcp_client.list_all_tools().await;
         for tool in mcp_tools {
             if let Some(ref allowed) = allowed_servers
-                && !allowed.contains(&tool.server_id) {
-                    continue; // Skip tools from non-permitted servers
-                }
+                && !allowed.contains(&tool.server_id)
+            {
+                continue; // Skip tools from non-permitted servers
+            }
             defs.push(ToolDefinition {
                 name: tool.prefixed_name,
                 description: tool.description.unwrap_or_default(),
@@ -670,7 +697,7 @@ impl ToolExecutor {
                     .unwrap_or(".");
                 let count = input
                     .get("count")
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|n| n as u32);
                 match git_tools::tool_git_log(repo, count).await {
                     Ok(text) => (text, false),
@@ -730,7 +757,7 @@ async fn ocr_document(path: &str, state: &AppState) -> Result<String, String> {
     let ext = file_path
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase())
+        .map(str::to_lowercase)
         .unwrap_or_default();
 
     if !OCR_DOCUMENT_EXTENSIONS.contains(&ext.as_str()) {
@@ -807,7 +834,7 @@ async fn tool_generate_image(
     let ext = file_path
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase())
+        .map(str::to_lowercase)
         .unwrap_or_default();
 
     if !GENERATE_IMAGE_EXTENSIONS.contains(&ext.as_str()) {

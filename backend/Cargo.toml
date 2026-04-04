@@ -10,7 +10,7 @@ workspace = true
 [dependencies]
 jaskier-core = { path = "../../../crates/jaskier-core", features = ["otel", "sentry"] }
 jaskier-hydra-state = { path = "../../../crates/jaskier-hydra-state" }
-jaskier-oauth = { path = "../../../crates/jaskier-oauth" }
+jaskier-net-sec = { path = "../../../crates/jaskier-net-sec" }
 jaskier-browser = { path = "../../../crates/jaskier-browser" }
 jaskier-tools = { path = "../../../crates/jaskier-tools", features = ["ocr-handlers"] }
 jaskier-db = { path = "../../../crates/jaskier-db" }

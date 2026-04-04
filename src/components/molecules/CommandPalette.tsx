@@ -219,7 +219,7 @@ export function CommandPalette() {
                     : 'text-white/70 hover:bg-white/5',
               )}
             >
-              <span className="flex-shrink-0">{action.icon}</span>
+              <span className="shrink-0">{action.icon}</span>
               <span className="font-mono">{action.label}</span>
             </button>
           ))}

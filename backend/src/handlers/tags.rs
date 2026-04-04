@@ -159,15 +159,16 @@ pub async fn add_session_tags(
     }
 
     // Return current tags
-    let all_tags: Vec<String> =
-        sqlx::query_scalar("SELECT tag FROM ch_session_tags WHERE session_id = $1 ORDER BY tag ASC")
-            .bind(session_id)
-            .fetch_all(&state.db)
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to fetch tags: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+    let all_tags: Vec<String> = sqlx::query_scalar(
+        "SELECT tag FROM ch_session_tags WHERE session_id = $1 ORDER BY tag ASC",
+    )
+    .bind(session_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch tags: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     Ok(Json(json!({
         "session_id": id,
@@ -190,17 +191,15 @@ pub async fn delete_session_tag(
     let session_id: uuid::Uuid = id.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
     let tag = tag.trim().to_lowercase();
 
-    let result = sqlx::query(
-        "DELETE FROM ch_session_tags WHERE session_id = $1 AND tag = $2",
-    )
-    .bind(session_id)
-    .bind(&tag)
-    .execute(&state.db)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to delete tag: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let result = sqlx::query("DELETE FROM ch_session_tags WHERE session_id = $1 AND tag = $2")
+        .bind(session_id)
+        .bind(&tag)
+        .execute(&state.db)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete tag: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if result.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
@@ -363,10 +362,7 @@ pub async fn search_sessions(
             message_preview: r.message_preview,
             message_role: r.message_role,
             message_timestamp: r.message_timestamp.map(|t| t.to_rfc3339()),
-            tags: tags_map
-                .get(&r.session_id)
-                .cloned()
-                .unwrap_or_default(),
+            tags: tags_map.get(&r.session_id).cloned().unwrap_or_default(),
             rank: r.rank,
         })
         .collect();
@@ -385,9 +381,7 @@ pub async fn search_sessions(
 
 #[utoipa::path(get, path = "/api/tags", tag = "tags",
     responses((status = 200, description = "All unique tags with counts")))]
-pub async fn list_all_tags(
-    State(state): State<AppState>,
-) -> Result<Json<Value>, StatusCode> {
+pub async fn list_all_tags(State(state): State<AppState>) -> Result<Json<Value>, StatusCode> {
     let tags: Vec<(String, i64)> = sqlx::query_as(
         "SELECT tag, COUNT(*) as count FROM ch_session_tags GROUP BY tag ORDER BY count DESC, tag ASC",
     )

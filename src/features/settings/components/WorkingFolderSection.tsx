@@ -1,12 +1,11 @@
 /** Jaskier Shared Pattern — Working Folder Settings Section */
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Button, cn, Input } from '@jaskier/ui';
 import { AlertCircle, Check, FolderOpen, Loader2, Pencil, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Button, Input } from '@/components/atoms';
 import { apiPost } from '@/shared/api/client';
 import type { Settings } from '@/shared/api/schemas';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';

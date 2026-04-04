@@ -10,7 +10,7 @@
  * Executor tier = Claude Haiku 4.5 (fast, efficient)
  */
 
-import { cn, EmptyState, ErrorBoundary } from '@jaskier/ui';
+import { Badge, Button, Card, cn, EmptyState, ErrorBoundary } from '@jaskier/ui';
 import {
   Bot,
   Brain,
@@ -27,7 +27,6 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card } from '@/components/atoms';
 import { StatusIndicator, type StatusState } from '@/components/molecules/StatusIndicator';
 import { type BackendLogEntry, useBackendLogs } from '@/features/logs/hooks/useLogs';
 
@@ -283,7 +282,7 @@ function AgentCard({ agent }: AgentCardProps) {
           <div className="flex items-start gap-3">
             <div
               className={cn(
-                'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+                'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
                 'bg-[var(--matrix-bg-secondary)] border border-[var(--matrix-border)]',
                 agent.color,
               )}
@@ -362,7 +361,7 @@ export function AgentsView() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="mb-6 flex-shrink-0"
+            className="mb-6 shrink-0"
           >
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-[var(--matrix-accent)]/10 border border-[var(--matrix-accent)]/20 flex items-center justify-center">
@@ -433,7 +432,7 @@ export function AgentsView() {
         </div>
 
         {/* Terminal Logs Sidebar */}
-        <div className="w-full xl:w-96 h-64 xl:h-full flex-shrink-0 flex flex-col border border-[var(--matrix-border)] rounded-xl bg-[var(--matrix-bg-secondary)] overflow-hidden shadow-lg">
+        <div className="w-full xl:w-96 h-64 xl:h-full shrink-0 flex flex-col border border-[var(--matrix-border)] rounded-xl bg-[var(--matrix-bg-secondary)] overflow-hidden shadow-lg">
           <div className="flex items-center gap-2 p-3 border-b border-[var(--matrix-border)] bg-black/20">
             <TerminalIcon size={16} className="text-[var(--matrix-accent)]" />
             <h3 className="text-sm font-mono font-semibold text-[var(--matrix-text-primary)]">Agents Terminal</h3>

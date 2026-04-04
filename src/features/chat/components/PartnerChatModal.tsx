@@ -118,7 +118,7 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
                 >
                   <div
                     className={cn(
-                      'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
+                      'w-7 h-7 rounded-full flex items-center justify-center shrink-0',
                       msg.role === 'user'
                         ? isLight
                           ? 'bg-emerald-100 text-emerald-700'

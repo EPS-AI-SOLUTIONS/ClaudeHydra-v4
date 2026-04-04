@@ -12,7 +12,7 @@ use crate::models::ToolDefinition;
 use crate::state::AppState;
 
 pub use jaskier_tools::web::types::*;
-use jaskier_tools::web::{fetch, crawl};
+use jaskier_tools::web::{crawl, fetch};
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Tool definitions

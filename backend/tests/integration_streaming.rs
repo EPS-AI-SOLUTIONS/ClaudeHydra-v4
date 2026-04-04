@@ -33,7 +33,10 @@ async fn chat_without_api_key_returns_401() {
         "messages": [{"role": "user", "content": "Hello"}]
     });
 
-    let response = app().oneshot(post_json("/api/claude/chat", body)).await.unwrap();
+    let response = app()
+        .oneshot(post_json("/api/claude/chat", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 
@@ -58,7 +61,10 @@ async fn chat_request_accepted_with_model_field() {
         "model": "claude-haiku-4-5-20251001"
     });
 
-    let response = app().oneshot(post_json("/api/claude/chat", body)).await.unwrap();
+    let response = app()
+        .oneshot(post_json("/api/claude/chat", body))
+        .await
+        .unwrap();
     // No key -> 401, but endpoint parsed the body successfully (not 422 Unprocessable)
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
@@ -71,7 +77,10 @@ async fn chat_request_accepted_with_temperature() {
         "max_tokens": 100
     });
 
-    let response = app().oneshot(post_json("/api/claude/chat", body)).await.unwrap();
+    let response = app()
+        .oneshot(post_json("/api/claude/chat", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 
@@ -103,7 +112,10 @@ async fn chat_request_accepted_with_session_id() {
         "session_id": "550e8400-e29b-41d4-a716-446655440000"
     });
 
-    let response = app().oneshot(post_json("/api/claude/chat", body)).await.unwrap();
+    let response = app()
+        .oneshot(post_json("/api/claude/chat", body))
+        .await
+        .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
 

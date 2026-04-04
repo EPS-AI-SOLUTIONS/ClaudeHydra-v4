@@ -1,10 +1,10 @@
 // router.rs — AI Gateway sub-router builder and shared error helpers.
 
+use axum::Router;
 use axum::extract::Json;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
-use axum::Router;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::ai_gateway::{
     AiProvider, HasAiGateway,
@@ -78,14 +78,17 @@ pub(crate) fn parse_provider(provider: &str) -> Result<AiProvider, (StatusCode, 
             Json(json!({
                 "error": "unknown_provider",
                 "message": e,
-                "valid_providers": AiProvider::ALL.iter().map(|p| p.to_string()).collect::<Vec<_>>(),
+                "valid_providers": AiProvider::ALL.iter().map(std::string::ToString::to_string).collect::<Vec<_>>(),
             })),
         )
     })
 }
 
 /// Map a `VaultError` to an HTTP status code + JSON error body.
-pub(crate) fn vault_error_response(provider: &AiProvider, err: VaultError) -> (StatusCode, Json<Value>) {
+pub(crate) fn vault_error_response(
+    provider: &AiProvider,
+    err: VaultError,
+) -> (StatusCode, Json<Value>) {
     match &err {
         VaultError::AnomalyDetected(msg) => {
             tracing::error!(

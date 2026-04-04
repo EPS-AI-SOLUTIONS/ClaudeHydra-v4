@@ -7,13 +7,12 @@
  */
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Badge, Button, cn } from '@jaskier/ui';
 import type { TFunction } from 'i18next';
 import { Bot, Clock, MessageSquare, Network, Plus, Sparkles, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button } from '@/components/atoms';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { HealthDashboard } from '@/features/health/components/HealthDashboard';
 import { PasskeyLoginSection } from '@/features/home/components/PasskeyLoginSection';
@@ -120,14 +119,14 @@ const SessionRow = memo<SessionRowProps>(({ session, onOpen, theme }) => {
     >
       <MessageSquare
         size={16}
-        className={cn('flex-shrink-0 transition-colors', 'group-hover:text-[var(--matrix-accent)]', theme.iconMuted)}
+        className={cn('shrink-0 transition-colors', 'group-hover:text-[var(--matrix-accent)]', theme.iconMuted)}
       />
       <div className="flex-1 min-w-0">
         <p className={cn('text-sm truncate transition-colors', 'group-hover:text-[var(--matrix-accent)]', theme.text)}>
           {session.title}
         </p>
       </div>
-      <div className="flex flex-col items-end flex-shrink-0">
+      <div className="flex flex-col items-end shrink-0">
         <span className={cn('text-[10px] font-mono', theme.textMuted)}>{timeAgo(session.createdAt, t)}</span>
         {(session.messageCount ?? 0) > 0 && (
           <span className={cn('text-[10px] font-mono', theme.textMuted)}>

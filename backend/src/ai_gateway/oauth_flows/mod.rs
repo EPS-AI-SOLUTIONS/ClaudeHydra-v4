@@ -5,13 +5,13 @@
 // - `manager` — OAuthFlowManager (login, callback, refresh, cleanup)
 // - `pkce` — PKCE utilities (random_base64url, sha256_base64url, parse_token_response)
 
-mod types;
 pub mod manager;
 pub(crate) mod pkce;
+mod types;
 
 // ── Public re-exports ────────────────────────────────────────────────────
-pub use types::*;
 pub use manager::OAuthFlowManager;
+pub use types::*;
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Tests
@@ -24,9 +24,9 @@ mod tests {
 
     use serde_json::Value;
 
+    use super::manager::OAuthFlowManager;
     use super::pkce::*;
     use super::types::*;
-    use super::manager::OAuthFlowManager;
 
     // ── OAuthProvider Display + Serialize ──────────────────────────────────────
 
@@ -252,8 +252,14 @@ mod tests {
         let cfg = OAuthFlowManager::default_anthropic_config();
         assert_eq!(cfg.provider, OAuthProvider::Anthropic);
         assert_eq!(cfg.authorize_url, "https://claude.ai/oauth/authorize");
-        assert_eq!(cfg.token_url, "https://console.anthropic.com/v1/oauth/token");
-        assert_eq!(cfg.redirect_uri, "https://console.anthropic.com/oauth/code/callback");
+        assert_eq!(
+            cfg.token_url,
+            "https://console.anthropic.com/v1/oauth/token"
+        );
+        assert_eq!(
+            cfg.redirect_uri,
+            "https://console.anthropic.com/oauth/code/callback"
+        );
         assert!(cfg.client_secret.is_none());
         assert_eq!(cfg.pkce_method, PkceMethod::S256);
         assert!(cfg.scopes.contains(&"user:inference".to_string()));
@@ -319,8 +325,14 @@ mod tests {
         assert_eq!(parsed.host_str(), Some("claude.ai"));
 
         let params: HashMap<_, _> = parsed.query_pairs().collect();
-        assert_eq!(params.get("response_type").map(|c| c.as_ref()), Some("code"));
-        assert_eq!(params.get("code_challenge_method").map(|c| c.as_ref()), Some("S256"));
+        assert_eq!(
+            params.get("response_type").map(|c| c.as_ref()),
+            Some("code")
+        );
+        assert_eq!(
+            params.get("code_challenge_method").map(|c| c.as_ref()),
+            Some("S256")
+        );
         assert!(params.contains_key("code_challenge"));
         assert!(params.contains_key("state"));
         assert_eq!(params.get("code").map(|c| c.as_ref()), Some("true"));

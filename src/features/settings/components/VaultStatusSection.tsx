@@ -1,7 +1,7 @@
 /** Jaskier Shared Pattern — Vault Status Dashboard Section */
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Badge, Button, cn, Input } from '@jaskier/ui';
 import type { AuditEntry, NamespaceInfo, VaultHealth } from '@jaskier/vault-client';
 import {
   resolveVaultStatus,
@@ -29,7 +29,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Badge, Button, Input } from '@/components/atoms';
 import { apiGet, apiPost } from '@/shared/api/client';
 
 function formatTimestamp(iso: string): string {
@@ -87,7 +86,7 @@ export default function VaultStatusSection() {
 
   // ── Derived state ──
 
-  const status = useMemo(() => resolveVaultStatus(vaultHealth), [vaultHealth]);
+  const status = useMemo(() => resolveVaultStatus(vaultHealth ?? null), [vaultHealth]);
   const statusCfg = VAULT_STATUS_CONFIG[status];
 
   // ── Handlers ──

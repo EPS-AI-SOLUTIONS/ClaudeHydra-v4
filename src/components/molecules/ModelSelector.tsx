@@ -198,14 +198,14 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
           disabled && 'opacity-50 cursor-not-allowed',
         )}
       >
-        {selectedModel?.icon && <span className="flex-shrink-0">{selectedModel.icon}</span>}
+        {selectedModel?.icon && <span className="shrink-0">{selectedModel.icon}</span>}
         <span className="text-[var(--matrix-text-primary)] font-medium truncate flex-1 text-left">
           {selectedModel?.name ?? placeholder}
         </span>
         <ChevronDown
           size={16}
           className={cn(
-            'text-[var(--matrix-text-secondary)] transition-transform flex-shrink-0',
+            'text-[var(--matrix-text-secondary)] transition-transform shrink-0',
             isOpen && 'rotate-180',
           )}
         />
@@ -225,7 +225,7 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
             {/* Search */}
             {models.length > 5 && (
               <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--glass-border)]">
-                <Search size={14} className="text-[var(--matrix-text-secondary)] flex-shrink-0" />
+                <Search size={14} className="text-[var(--matrix-text-secondary)] shrink-0" />
                 <input
                   ref={searchRef}
                   type="text"
@@ -273,7 +273,7 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
                     )}
                   >
                     {/* Check / icon */}
-                    <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                    <span className="w-4 h-4 flex items-center justify-center shrink-0">
                       {isSelected ? <Check size={14} className="text-[var(--matrix-accent)]" /> : (model.icon ?? null)}
                     </span>
 
@@ -289,7 +289,7 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
 
                     {/* Provider badge */}
                     {model.provider && (
-                      <span className="badge badge-default text-[10px] font-mono uppercase flex-shrink-0">
+                      <span className="badge badge-default text-[10px] font-mono uppercase shrink-0">
                         {model.provider}
                       </span>
                     )}

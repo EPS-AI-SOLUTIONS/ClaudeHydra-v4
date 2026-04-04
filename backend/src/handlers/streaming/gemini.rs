@@ -6,9 +6,7 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use serde_json::{Value, json};
 
-use jaskier_core::handlers::anthropic_streaming::{
-    build_ndjson_response, sanitize_api_error,
-};
+use jaskier_core::handlers::anthropic_streaming::{build_ndjson_response, sanitize_api_error};
 
 use crate::models::*;
 use crate::state::AppState;
@@ -20,7 +18,7 @@ pub(crate) async fn google_chat_stream(
     req: ChatRequest,
     ctx: ChatContext,
 ) -> Result<Response, (StatusCode, Json<Value>)> {
-    let credential = jaskier_oauth::google::get_google_credential(&state).await;
+    let credential = jaskier_net_sec::oauth::google::get_google_credential(&state).await;
     let (api_key, is_oauth) = match credential {
         Some(c) => c,
         None => {
@@ -60,7 +58,7 @@ pub(crate) async fn google_chat_stream(
     });
 
     let request =
-        jaskier_oauth::google::apply_google_auth(state.http_client.post(&url), &api_key, is_oauth)
+        jaskier_net_sec::oauth::google::apply_google_auth(state.http_client.post(&url), &api_key, is_oauth)
             .json(&body)
             .timeout(std::time::Duration::from_secs(300));
 
@@ -116,7 +114,7 @@ pub(crate) async fn google_chat_stream(
                                 yield Ok::<_, std::io::Error>(axum::body::Bytes::from(format!("{}\n", ndjson_line)));
                             }
                         if let Some(usage) = event.get("usageMetadata") {
-                            total_tokens = usage.get("totalTokenCount").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+                            total_tokens = usage.get("totalTokenCount").and_then(serde_json::Value::as_u64).unwrap_or(0) as u32;
                         }
                     }
             }

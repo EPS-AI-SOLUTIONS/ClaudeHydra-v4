@@ -386,7 +386,7 @@ function SemanticCacheViewContent() {
         {/* Warning if Qdrant is unreachable */}
         {health && !health.qdrant_reachable && (
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+            <AlertTriangle size={16} className="text-amber-400 shrink-0" />
             <p className="text-sm text-amber-300">
               Qdrant is unreachable at {config?.qdrant_url ?? 'localhost:6333'}. Start Qdrant to enable semantic
               caching.

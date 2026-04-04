@@ -1,12 +1,12 @@
 // ai_gateway/mod.rs — Unified AI Provider Gateway
 // Strategia STRICT_PLAN_ONLY: zero API billing, wszystko przez subskrypcje konsumenckie
 
-pub mod vault_bridge;
-pub mod vault_handlers;
 pub mod handlers;
+pub mod model_router;
 pub mod oauth_flows;
 pub mod session_manager;
-pub mod model_router;
+pub mod vault_bridge;
+pub mod vault_handlers;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -132,125 +132,147 @@ pub fn default_provider_configs() -> HashMap<AiProvider, ProviderConfig> {
     let mut configs = HashMap::with_capacity(6);
 
     // ── Anthropic (Claude Max — $100/mo, OAuth PKCE) ──────────────────
-    configs.insert(AiProvider::Anthropic, ProviderConfig {
-        provider: AiProvider::Anthropic,
-        plan_name: "Claude Max".to_string(),
-        auth_type: AuthType::OAuthPkce,
-        vault_namespace: "ai_providers".to_string(),
-        vault_service: "anthropic_max".to_string(),
-        chat_endpoint: "/api/ai/anthropic/chat".to_string(),
-        stream_endpoint: "/api/ai/anthropic/stream".to_string(),
-        upstream_url: "https://api.anthropic.com/v1/messages".to_string(),
-        extra_headers: HashMap::from([
-            ("anthropic-version".to_string(), "2023-06-01".to_string()),
-            ("anthropic-beta".to_string(), "oauth-2025-04-20,prompt-caching-2024-07-31".to_string()),
-        ]),
-        monthly_cost_cents: 10000,
-        model_tiers: ModelTiers {
-            commander: "claude-opus-4-6".to_string(),
-            coordinator: "claude-sonnet-4-6".to_string(),
-            executor: "claude-haiku-4-5-20251001".to_string(),
+    configs.insert(
+        AiProvider::Anthropic,
+        ProviderConfig {
+            provider: AiProvider::Anthropic,
+            plan_name: "Claude Max".to_string(),
+            auth_type: AuthType::OAuthPkce,
+            vault_namespace: "ai_providers".to_string(),
+            vault_service: "anthropic_max".to_string(),
+            chat_endpoint: "/api/ai/anthropic/chat".to_string(),
+            stream_endpoint: "/api/ai/anthropic/stream".to_string(),
+            upstream_url: "https://api.anthropic.com/v1/messages".to_string(),
+            extra_headers: HashMap::from([
+                ("anthropic-version".to_string(), "2023-06-01".to_string()),
+                (
+                    "anthropic-beta".to_string(),
+                    "oauth-2025-04-20,prompt-caching-2024-07-31".to_string(),
+                ),
+            ]),
+            monthly_cost_cents: 10000,
+            model_tiers: ModelTiers {
+                commander: "claude-opus-4-6".to_string(),
+                coordinator: "claude-sonnet-4-6".to_string(),
+                executor: "claude-haiku-4-5-20251001".to_string(),
+            },
         },
-    });
+    );
 
     // ── OpenAI (ChatGPT Plus — $20/mo, Session Token) ─────────────────
-    configs.insert(AiProvider::OpenAI, ProviderConfig {
-        provider: AiProvider::OpenAI,
-        plan_name: "ChatGPT Plus".to_string(),
-        auth_type: AuthType::SessionToken,
-        vault_namespace: "ai_providers".to_string(),
-        vault_service: "openai_session".to_string(),
-        chat_endpoint: "/api/ai/openai/chat".to_string(),
-        stream_endpoint: "/api/ai/openai/stream".to_string(),
-        upstream_url: "https://chatgpt.com/backend-api/conversation".to_string(),
-        extra_headers: HashMap::from([
-            ("oai-language".to_string(), "en-US".to_string()),
-        ]),
-        monthly_cost_cents: 2000,
-        model_tiers: ModelTiers {
-            commander: "gpt-4o".to_string(),
-            coordinator: "gpt-4o-mini".to_string(),
-            executor: "gpt-4o-mini".to_string(),
+    configs.insert(
+        AiProvider::OpenAI,
+        ProviderConfig {
+            provider: AiProvider::OpenAI,
+            plan_name: "ChatGPT Plus".to_string(),
+            auth_type: AuthType::SessionToken,
+            vault_namespace: "ai_providers".to_string(),
+            vault_service: "openai_session".to_string(),
+            chat_endpoint: "/api/ai/openai/chat".to_string(),
+            stream_endpoint: "/api/ai/openai/stream".to_string(),
+            upstream_url: "https://chatgpt.com/backend-api/conversation".to_string(),
+            extra_headers: HashMap::from([("oai-language".to_string(), "en-US".to_string())]),
+            monthly_cost_cents: 2000,
+            model_tiers: ModelTiers {
+                commander: "gpt-4o".to_string(),
+                coordinator: "gpt-4o-mini".to_string(),
+                executor: "gpt-4o-mini".to_string(),
+            },
         },
-    });
+    );
 
     // ── Google (Gemini Advanced — $19.99/mo, Google OAuth PKCE) ────────
-    configs.insert(AiProvider::Google, ProviderConfig {
-        provider: AiProvider::Google,
-        plan_name: "Gemini Advanced".to_string(),
-        auth_type: AuthType::OAuthPkce,
-        vault_namespace: "ai_providers".to_string(),
-        vault_service: "google_gemini".to_string(),
-        chat_endpoint: "/api/ai/google/chat".to_string(),
-        stream_endpoint: "/api/ai/google/stream".to_string(),
-        upstream_url: "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent".to_string(),
-        extra_headers: HashMap::new(),
-        monthly_cost_cents: 1999,
-        model_tiers: ModelTiers {
-            commander: "gemini-2.5-pro-preview-06-05".to_string(),
-            coordinator: "gemini-2.5-flash-preview-05-20".to_string(),
-            executor: "gemini-2.0-flash".to_string(),
+    configs.insert(
+        AiProvider::Google,
+        ProviderConfig {
+            provider: AiProvider::Google,
+            plan_name: "Gemini Advanced".to_string(),
+            auth_type: AuthType::OAuthPkce,
+            vault_namespace: "ai_providers".to_string(),
+            vault_service: "google_gemini".to_string(),
+            chat_endpoint: "/api/ai/google/chat".to_string(),
+            stream_endpoint: "/api/ai/google/stream".to_string(),
+            upstream_url:
+                "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                    .to_string(),
+            extra_headers: HashMap::new(),
+            monthly_cost_cents: 1999,
+            model_tiers: ModelTiers {
+                commander: "gemini-2.5-pro-preview-06-05".to_string(),
+                coordinator: "gemini-2.5-flash-preview-05-20".to_string(),
+                executor: "gemini-2.0-flash".to_string(),
+            },
         },
-    });
+    );
 
     // ── xAI (X Premium+ / Grok — $16/mo, Cookie Session) ─────────────
-    configs.insert(AiProvider::Xai, ProviderConfig {
-        provider: AiProvider::Xai,
-        plan_name: "X Premium+".to_string(),
-        auth_type: AuthType::CookieSession,
-        vault_namespace: "ai_providers".to_string(),
-        vault_service: "xai_grok".to_string(),
-        chat_endpoint: "/api/ai/xai/chat".to_string(),
-        stream_endpoint: "/api/ai/xai/stream".to_string(),
-        upstream_url: "https://grok.x.com/rest/app-chat/conversations/new".to_string(),
-        extra_headers: HashMap::from([
-            ("x-twitter-auth-type".to_string(), "OAuth2Session".to_string()),
-        ]),
-        monthly_cost_cents: 1600,
-        model_tiers: ModelTiers {
-            commander: "grok-3".to_string(),
-            coordinator: "grok-3-mini".to_string(),
-            executor: "grok-3-mini-fast".to_string(),
+    configs.insert(
+        AiProvider::Xai,
+        ProviderConfig {
+            provider: AiProvider::Xai,
+            plan_name: "X Premium+".to_string(),
+            auth_type: AuthType::CookieSession,
+            vault_namespace: "ai_providers".to_string(),
+            vault_service: "xai_grok".to_string(),
+            chat_endpoint: "/api/ai/xai/chat".to_string(),
+            stream_endpoint: "/api/ai/xai/stream".to_string(),
+            upstream_url: "https://grok.x.com/rest/app-chat/conversations/new".to_string(),
+            extra_headers: HashMap::from([(
+                "x-twitter-auth-type".to_string(),
+                "OAuth2Session".to_string(),
+            )]),
+            monthly_cost_cents: 1600,
+            model_tiers: ModelTiers {
+                commander: "grok-3".to_string(),
+                coordinator: "grok-3-mini".to_string(),
+                executor: "grok-3-mini-fast".to_string(),
+            },
         },
-    });
+    );
 
     // ── DeepSeek (free/Pro — $0, API Key via Vault Bouncer) ───────────
-    configs.insert(AiProvider::DeepSeek, ProviderConfig {
-        provider: AiProvider::DeepSeek,
-        plan_name: "DeepSeek".to_string(),
-        auth_type: AuthType::ApiKeyViaVault,
-        vault_namespace: "ai_providers".to_string(),
-        vault_service: "deepseek".to_string(),
-        chat_endpoint: "/api/ai/deepseek/chat".to_string(),
-        stream_endpoint: "/api/ai/deepseek/stream".to_string(),
-        upstream_url: "https://api.deepseek.com/v1/chat/completions".to_string(),
-        extra_headers: HashMap::new(),
-        monthly_cost_cents: 0,
-        model_tiers: ModelTiers {
-            commander: "deepseek-reasoner".to_string(),
-            coordinator: "deepseek-chat".to_string(),
-            executor: "deepseek-chat".to_string(),
+    configs.insert(
+        AiProvider::DeepSeek,
+        ProviderConfig {
+            provider: AiProvider::DeepSeek,
+            plan_name: "DeepSeek".to_string(),
+            auth_type: AuthType::ApiKeyViaVault,
+            vault_namespace: "ai_providers".to_string(),
+            vault_service: "deepseek".to_string(),
+            chat_endpoint: "/api/ai/deepseek/chat".to_string(),
+            stream_endpoint: "/api/ai/deepseek/stream".to_string(),
+            upstream_url: "https://api.deepseek.com/v1/chat/completions".to_string(),
+            extra_headers: HashMap::new(),
+            monthly_cost_cents: 0,
+            model_tiers: ModelTiers {
+                commander: "deepseek-reasoner".to_string(),
+                coordinator: "deepseek-chat".to_string(),
+                executor: "deepseek-chat".to_string(),
+            },
         },
-    });
+    );
 
     // ── Ollama (local, free — no auth) ────────────────────────────────
-    configs.insert(AiProvider::Ollama, ProviderConfig {
-        provider: AiProvider::Ollama,
-        plan_name: "Ollama Local".to_string(),
-        auth_type: AuthType::None,
-        vault_namespace: "ai_providers".to_string(),
-        vault_service: "ollama_local".to_string(),
-        chat_endpoint: "/api/ai/ollama/chat".to_string(),
-        stream_endpoint: "/api/ai/ollama/stream".to_string(),
-        upstream_url: "http://localhost:11434/api/chat".to_string(),
-        extra_headers: HashMap::new(),
-        monthly_cost_cents: 0,
-        model_tiers: ModelTiers {
-            commander: "llama3.1:70b".to_string(),
-            coordinator: "llama3.1:8b".to_string(),
-            executor: "llama3.1:8b".to_string(),
+    configs.insert(
+        AiProvider::Ollama,
+        ProviderConfig {
+            provider: AiProvider::Ollama,
+            plan_name: "Ollama Local".to_string(),
+            auth_type: AuthType::None,
+            vault_namespace: "ai_providers".to_string(),
+            vault_service: "ollama_local".to_string(),
+            chat_endpoint: "/api/ai/ollama/chat".to_string(),
+            stream_endpoint: "/api/ai/ollama/stream".to_string(),
+            upstream_url: "http://localhost:11434/api/chat".to_string(),
+            extra_headers: HashMap::new(),
+            monthly_cost_cents: 0,
+            model_tiers: ModelTiers {
+                commander: "llama3.1:70b".to_string(),
+                coordinator: "llama3.1:8b".to_string(),
+                executor: "llama3.1:8b".to_string(),
+            },
         },
-    });
+    );
 
     configs
 }
@@ -270,7 +292,11 @@ mod tests {
         let configs = default_provider_configs();
         assert_eq!(configs.len(), 6);
         for provider in AiProvider::ALL {
-            assert!(configs.contains_key(&provider), "Missing config for {}", provider);
+            assert!(
+                configs.contains_key(&provider),
+                "Missing config for {}",
+                provider
+            );
         }
     }
 

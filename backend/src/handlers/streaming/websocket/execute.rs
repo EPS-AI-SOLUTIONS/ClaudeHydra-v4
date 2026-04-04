@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 //! Core WebSocket streaming execution with rich protocol.
 //!
 //! This remains CH-specific because:
@@ -16,22 +17,23 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 use jaskier_core::handlers::anthropic_streaming::{
-    AnthropicSseEvent, AnthropicSseParser, build_iteration_nudge,
-    dynamic_max_iterations, parse_sse_lines, sanitize_api_error,
-    tool_result_context_limit, trim_conversation,
+    AnthropicSseEvent, AnthropicSseParser, build_iteration_nudge, dynamic_max_iterations,
+    parse_sse_lines, sanitize_api_error, tool_result_context_limit, trim_conversation,
     truncate_for_context_with_limit as truncate_tool_output,
 };
 
 use crate::models::*;
 use crate::state::AppState;
 
-use crate::handlers::streaming::{
-    TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings,
-    send_to_anthropic, truncate_for_context_with_limit,
-};
-use crate::handlers::streaming::agent_call::execute_agent_call;
-use crate::handlers::streaming::helpers::{detect_view_hints, load_session_history, store_ws_messages};
 use crate::handlers::prompt::resolve_chat_context;
+use crate::handlers::streaming::agent_call::execute_agent_call;
+use crate::handlers::streaming::helpers::{
+    detect_view_hints, load_session_history, store_ws_messages,
+};
+use crate::handlers::streaming::{
+    TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings, send_to_anthropic,
+    truncate_for_context_with_limit,
+};
 
 use super::ws_send;
 
@@ -105,22 +107,43 @@ pub(crate) async fn execute_streaming_ws(
     // Non-tools path: simple streaming without tool loop
     if !tools_enabled {
         execute_no_tools(
-            sender, state, &model, max_tokens, effective_temperature,
-            &system_prompt, &initial_messages, &prompt, &ctx.session_id,
-            execution_start, &cancel,
-        ).await;
+            sender,
+            state,
+            &model,
+            max_tokens,
+            effective_temperature,
+            &system_prompt,
+            &initial_messages,
+            &prompt,
+            &ctx.session_id,
+            execution_start,
+            &cancel,
+        )
+        .await;
         return;
     }
 
     // ── Tools-enabled path: agentic tool_use loop ───────────────────────
     execute_with_tools(
-        sender, state, &model, max_tokens, effective_temperature,
-        &system_prompt, initial_messages, &prompt, &ctx.session_id,
-        &wd, max_tool_iterations, execution_start, &cancel,
-    ).await;
+        sender,
+        state,
+        &model,
+        max_tokens,
+        effective_temperature,
+        &system_prompt,
+        initial_messages,
+        &prompt,
+        &ctx.session_id,
+        &wd,
+        max_tool_iterations,
+        execution_start,
+        &cancel,
+    )
+    .await;
 }
 
 /// Non-tools path: simple streaming without tool loop.
+#[allow(clippy::too_many_arguments)]
 async fn execute_no_tools(
     sender: &mut SplitSink<WebSocket, WsMessage>,
     state: &AppState,
@@ -167,9 +190,7 @@ async fn execute_no_tools(
     };
 
     // Fallback chain
-    let resp = if !resp.status().is_success()
-        && is_retryable_status(resp.status().as_u16())
-    {
+    let resp = if !resp.status().is_success() && is_retryable_status(resp.status().as_u16()) {
         let original_status = resp.status();
         let fallback_models = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"];
         let mut fallback_resp = None;
@@ -292,6 +313,7 @@ async fn execute_no_tools(
 
 /// Tools-enabled path: agentic tool_use loop.
 /// Uses shared AnthropicSseParser for SSE parsing.
+#[allow(clippy::too_many_arguments)]
 async fn execute_with_tools(
     sender: &mut SplitSink<WebSocket, WsMessage>,
     state: &AppState,
@@ -467,13 +489,7 @@ async fn execute_with_tools(
                             text_content.push_str(&text);
                             full_text.push_str(&text);
                             agent_text_len += text.len();
-                            ws_send(
-                                sender,
-                                &WsServerMessage::Token {
-                                    content: text,
-                                },
-                            )
-                            .await;
+                            ws_send(sender, &WsServerMessage::Token { content: text }).await;
                         }
                         AnthropicSseEvent::ToolUse { id, name, input } => {
                             ws_send(
@@ -566,10 +582,9 @@ async fn execute_with_tools(
                                 .await
                                 {
                                     Ok(res) => res,
-                                    Err(_) => (
-                                        "Agent delegation timed out after 120s".to_string(),
-                                        true,
-                                    ),
+                                    Err(_) => {
+                                        ("Agent delegation timed out after 120s".to_string(), true)
+                                    }
                                 }
                             }
                         }
@@ -665,11 +680,9 @@ async fn execute_with_tools(
             trim_conversation(&mut conversation);
 
             // Iteration nudges
-            if let Some(nudge) = build_iteration_nudge(
-                iteration,
-                max_tool_iterations as u32,
-                &conversation,
-            ) {
+            if let Some(nudge) =
+                build_iteration_nudge(iteration, max_tool_iterations as u32, &conversation)
+            {
                 conversation.push(json!({ "role": "user", "content": nudge }));
             }
 
@@ -679,7 +692,18 @@ async fn execute_with_tools(
 
         // Auto-fix phase
         if !has_written_file && !full_text.is_empty() && agent_text_len > 50 {
-            execute_auto_fix(sender, state, model, max_tokens, system_prompt, &conversation, &tool_defs, wd, iteration).await;
+            execute_auto_fix(
+                sender,
+                state,
+                model,
+                max_tokens,
+                system_prompt,
+                &conversation,
+                &tool_defs,
+                wd,
+                iteration,
+            )
+            .await;
         }
 
         // Store messages if session present
@@ -700,6 +724,7 @@ async fn execute_with_tools(
 }
 
 /// Auto-fix phase — detects when agent described changes but never wrote files.
+#[allow(clippy::too_many_arguments)]
 async fn execute_auto_fix(
     sender: &mut SplitSink<WebSocket, WsMessage>,
     state: &AppState,
@@ -712,7 +737,8 @@ async fn execute_auto_fix(
     iteration: u32,
 ) {
     // Check if the full text mentions fix/edit keywords
-    let full_text: String = conversation.iter()
+    let full_text: String = conversation
+        .iter()
         .filter_map(|m| {
             if m.get("role").and_then(|r| r.as_str()) == Some("assistant") {
                 m.get("content").and_then(|c| c.as_str()).map(String::from)
@@ -723,8 +749,16 @@ async fn execute_auto_fix(
         .collect();
 
     let fix_keywords = [
-        "fix", "napraw", "zmian", "popraw", "zastosow",
-        "write_file", "edit_file", "zmieni", "edytu", "zapisa",
+        "fix",
+        "napraw",
+        "zmian",
+        "popraw",
+        "zastosow",
+        "write_file",
+        "edit_file",
+        "zmieni",
+        "edytu",
+        "zapisa",
     ];
     let lower = full_text.to_lowercase();
     let needs_fix = fix_keywords.iter().any(|kw| lower.contains(kw));
@@ -781,9 +815,7 @@ async fn execute_auto_fix(
                 .await
                 {
                     Ok(res) => res,
-                    Err(_) => {
-                        (format!("Tool '{}' timed out", fix_tool_name), true)
-                    }
+                    Err(_) => (format!("Tool '{}' timed out", fix_tool_name), true),
                 };
 
                 ws_send(

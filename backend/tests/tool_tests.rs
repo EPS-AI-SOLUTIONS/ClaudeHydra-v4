@@ -23,8 +23,7 @@ async fn test_tool_write_and_read_file() {
     let work_dir = base.join("write_read");
     std::fs::create_dir_all(&work_dir).unwrap();
 
-    let executor = ToolExecutor::default()
-        .with_working_directory(&work_dir.to_string_lossy());
+    let executor = ToolExecutor::default().with_working_directory(&work_dir.to_string_lossy());
 
     let file_name = "test_file_op.txt";
     let file_content = "Hello from automated test!";
@@ -66,8 +65,7 @@ async fn test_tool_list_directory() {
     }
     std::fs::create_dir_all(&work_dir).unwrap();
 
-    let executor = ToolExecutor::default()
-        .with_working_directory(&work_dir.to_string_lossy());
+    let executor = ToolExecutor::default().with_working_directory(&work_dir.to_string_lossy());
 
     // Create some dummy files
     std::fs::write(work_dir.join("a.txt"), "A").unwrap();

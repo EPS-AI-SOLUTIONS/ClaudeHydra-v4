@@ -10,12 +10,12 @@
 pub use jaskier_model_router::{
     // Types
     AiProvider,
+    // Functions
+    DEFAULT_FALLBACK_CHAIN,
     ModelRoute,
     ModelRouter,
     ModelTier,
     ModelTiers,
-    // Functions
-    DEFAULT_FALLBACK_CHAIN,
     build_fallback_chain,
     default_provider_model_tiers,
     detect_provider,

@@ -1,12 +1,11 @@
 // src/features/analytics/components/AnalyticsView.tsx
 
 import { useViewTheme } from '@jaskier/chat-module';
-import { cn } from '@jaskier/ui';
+import { Card, cn } from '@jaskier/ui';
 import { BarChart3, Clock, DollarSign, Target, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/atoms';
 import {
   type CostBreakdown,
   type DailyLatency,

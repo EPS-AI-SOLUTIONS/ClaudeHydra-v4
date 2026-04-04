@@ -395,6 +395,8 @@ fn ocr_response_serializes_correctly() {
         confidence: Some(0.95),
         detected_preset: Some("invoice".to_string()),
         structured_data: None,
+        detected_language: None,
+        translated_to: None,
     };
 
     let json = serde_json::to_value(&response).unwrap();

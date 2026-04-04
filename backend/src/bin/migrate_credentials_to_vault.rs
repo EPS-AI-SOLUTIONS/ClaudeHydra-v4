@@ -1,3 +1,4 @@
+#![allow(clippy::print_stdout, clippy::print_stderr, clippy::expect_used)]
 // migrate_credentials_to_vault — One-shot migration of PostgreSQL OAuth tokens to Jaskier Vault
 //
 // Reads existing OAuth/service tokens from ClaudeHydra's ch_* tables, decrypts
@@ -62,7 +63,11 @@ async fn vault_set(
     } else {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        Err(format!("Vault returned {}: {}", status, &body[..body.len().min(300)]))
+        Err(format!(
+            "Vault returned {}: {}",
+            status,
+            &body[..body.len().min(300)]
+        ))
     }
 }
 
@@ -75,7 +80,7 @@ fn try_decrypt(stored: &str, field_name: &str) -> String {
     if stored.is_empty() {
         return String::new();
     }
-    match jaskier_oauth::decrypt_token(stored) {
+    match jaskier_net_sec::oauth::decrypt_token(stored) {
         Ok(plaintext) => plaintext,
         Err(e) => {
             warn!(
@@ -146,7 +151,10 @@ async fn migrate_anthropic(
     });
 
     vault_set(client, vault_url, namespace, service, data).await?;
-    info!("Migrated Anthropic OAuth token to {}/{}", namespace, service);
+    info!(
+        "Migrated Anthropic OAuth token to {}/{}",
+        namespace, service
+    );
     Ok(true)
 }
 
@@ -223,12 +231,11 @@ async fn migrate_github(
         return Ok(false);
     }
 
-    let row: Option<(String, String)> = sqlx::query_as(
-        "SELECT access_token, scope FROM ch_oauth_github WHERE id = 1",
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| format!("Query ch_oauth_github failed: {}", e))?;
+    let row: Option<(String, String)> =
+        sqlx::query_as("SELECT access_token, scope FROM ch_oauth_github WHERE id = 1")
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| format!("Query ch_oauth_github failed: {}", e))?;
 
     let Some((access_token, scope)) = row else {
         info!("No GitHub OAuth token row found in ch_oauth_github");
@@ -264,12 +271,11 @@ async fn migrate_vercel(
         return Ok(false);
     }
 
-    let row: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT access_token, team_id FROM ch_oauth_vercel WHERE id = 1",
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| format!("Query ch_oauth_vercel failed: {}", e))?;
+    let row: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT access_token, team_id FROM ch_oauth_vercel WHERE id = 1")
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| format!("Query ch_oauth_vercel failed: {}", e))?;
 
     let Some((access_token, team_id)) = row else {
         info!("No Vercel OAuth token row found in ch_oauth_vercel");
@@ -299,12 +305,11 @@ async fn migrate_service_tokens(
         return Ok(0);
     }
 
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT service, encrypted_token FROM ch_service_tokens ORDER BY service",
-    )
-    .fetch_all(pool)
-    .await
-    .map_err(|e| format!("Query ch_service_tokens failed: {}", e))?;
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT service, encrypted_token FROM ch_service_tokens ORDER BY service")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| format!("Query ch_service_tokens failed: {}", e))?;
 
     if rows.is_empty() {
         info!("No service tokens found in ch_service_tokens");
@@ -338,10 +343,7 @@ async fn migrate_service_tokens(
                 migrated += 1;
             }
             Err(e) => {
-                error!(
-                    "Failed to migrate service token '{}': {}",
-                    service_name, e
-                );
+                error!("Failed to migrate service token '{}': {}", service_name, e);
             }
         }
     }
@@ -374,10 +376,10 @@ async fn main() {
         }
     };
 
-    let vault_url = std::env::var("VAULT_URL")
-        .unwrap_or_else(|_| "http://localhost:5190".to_string());
+    let vault_url =
+        std::env::var("VAULT_URL").unwrap_or_else(|_| "http://localhost:5190".to_string());
 
-    let encryption_configured = jaskier_oauth::is_encryption_configured();
+    let encryption_configured = jaskier_net_sec::oauth::is_encryption_configured();
     if encryption_configured {
         info!("Encryption key detected (AUTH_SECRET / OAUTH_ENCRYPTION_KEY) — will decrypt tokens");
     } else {
@@ -405,7 +407,10 @@ async fn main() {
             info!("Vault is reachable and healthy");
         }
         Ok(resp) => {
-            warn!("Vault returned status {} — proceeding anyway", resp.status());
+            warn!(
+                "Vault returned status {} — proceeding anyway",
+                resp.status()
+            );
         }
         Err(e) => {
             error!("Cannot reach Vault at {}: {}", vault_url, e);
@@ -547,11 +552,12 @@ async fn main() {
 fn mask_connection_string(url: &str) -> String {
     // postgresql://user:password@host:port/db -> postgresql://user:***@host:port/db
     if let Some(at_pos) = url.find('@')
-        && let Some(colon_pos) = url[..at_pos].rfind(':') {
-            let scheme_end = url.find("://").map(|p| p + 3).unwrap_or(0);
-            if colon_pos > scheme_end {
-                return format!("{}***{}", &url[..colon_pos + 1], &url[at_pos..]);
-            }
+        && let Some(colon_pos) = url[..at_pos].rfind(':')
+    {
+        let scheme_end = url.find("://").map(|p| p + 3).unwrap_or(0);
+        if colon_pos > scheme_end {
+            return format!("{}***{}", &url[..colon_pos + 1], &url[at_pos..]);
         }
+    }
     url.to_string()
 }

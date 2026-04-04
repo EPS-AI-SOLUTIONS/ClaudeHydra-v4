@@ -136,7 +136,10 @@ async fn circuit_breaker_is_shared_across_clones() {
     let state1 = test_state();
     let state2 = state1.clone();
     // Same Arc<CircuitBreaker>
-    assert!(Arc::ptr_eq(&state1.circuit_breaker, &state2.circuit_breaker));
+    assert!(Arc::ptr_eq(
+        &state1.circuit_breaker,
+        &state2.circuit_breaker
+    ));
     // Failure on one clone affects the other
     for _ in 0..3 {
         state1.circuit_breaker.record_failure().await;
@@ -150,7 +153,7 @@ async fn circuit_breaker_is_shared_across_clones() {
 
 #[tokio::test]
 async fn google_oauth_table_names_use_ch_prefix() {
-    use jaskier_oauth::google::HasGoogleOAuthState;
+    use jaskier_net_sec::oauth::google::HasGoogleOAuthState;
     let state = test_state();
     assert_eq!(state.google_auth_table(), "ch_google_auth");
     assert_eq!(state.default_port(), "8082");
@@ -158,21 +161,21 @@ async fn google_oauth_table_names_use_ch_prefix() {
 
 #[tokio::test]
 async fn github_oauth_table_uses_ch_prefix() {
-    use jaskier_oauth::github::HasGitHubOAuthState;
+    use jaskier_net_sec::oauth::github::HasGitHubOAuthState;
     let state = test_state();
     assert_eq!(state.github_oauth_table(), "ch_oauth_github");
 }
 
 #[tokio::test]
 async fn vercel_oauth_table_uses_ch_prefix() {
-    use jaskier_oauth::vercel::HasVercelOAuthState;
+    use jaskier_net_sec::oauth::vercel::HasVercelOAuthState;
     let state = test_state();
     assert_eq!(state.vercel_oauth_table(), "ch_oauth_vercel");
 }
 
 #[tokio::test]
 async fn service_tokens_table_uses_ch_prefix() {
-    use jaskier_oauth::service_tokens::HasServiceTokensState;
+    use jaskier_net_sec::oauth::service_tokens::HasServiceTokensState;
     let state = test_state();
     assert_eq!(state.service_tokens_table(), "ch_service_tokens");
 }
@@ -195,7 +198,10 @@ async fn model_cache_initially_empty() {
     use jaskier_core::model_registry::HasModelRegistryState;
     let state = test_state();
     let cache = state.model_cache().read().await;
-    assert!(cache.models.is_empty(), "model cache should be empty at init");
+    assert!(
+        cache.models.is_empty(),
+        "model cache should be empty at init"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -387,8 +393,20 @@ fn api_error_variants_have_correct_codes() {
     assert_eq!(ApiError::NotFound("".into()).error_code(), "NOT_FOUND");
     assert_eq!(ApiError::Upstream("".into()).error_code(), "UPSTREAM_ERROR");
     assert_eq!(ApiError::Internal("".into()).error_code(), "INTERNAL_ERROR");
-    assert_eq!(ApiError::Unauthorized("".into()).error_code(), "UNAUTHORIZED");
-    assert_eq!(ApiError::Unavailable("".into()).error_code(), "SERVICE_UNAVAILABLE");
-    assert_eq!(ApiError::ToolTimeout("".into()).error_code(), "TOOL_TIMEOUT");
-    assert_eq!(ApiError::RateLimited("".into()).error_code(), "RATE_LIMITED");
+    assert_eq!(
+        ApiError::Unauthorized("".into()).error_code(),
+        "UNAUTHORIZED"
+    );
+    assert_eq!(
+        ApiError::Unavailable("".into()).error_code(),
+        "SERVICE_UNAVAILABLE"
+    );
+    assert_eq!(
+        ApiError::ToolTimeout("".into()).error_code(),
+        "TOOL_TIMEOUT"
+    );
+    assert_eq!(
+        ApiError::RateLimited("".into()).error_code(),
+        "RATE_LIMITED"
+    );
 }

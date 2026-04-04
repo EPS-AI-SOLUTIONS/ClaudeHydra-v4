@@ -55,8 +55,11 @@ pub async fn list_files(
         }
 
         let metadata = entry.metadata().ok();
-        let is_dir = metadata.as_ref().map(|m| m.is_dir()).unwrap_or(false);
-        let size = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+        let is_dir = metadata
+            .as_ref()
+            .map(std::fs::Metadata::is_dir)
+            .unwrap_or(false);
+        let size = metadata.as_ref().map(std::fs::Metadata::len).unwrap_or(0);
 
         entries.push(json!({
             "name": file_name,
@@ -70,11 +73,11 @@ pub async fn list_files(
     entries.sort_by(|a, b| {
         let a_dir = a
             .get("is_directory")
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         let b_dir = b
             .get("is_directory")
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
         match (b_dir, a_dir) {
             (true, false) => std::cmp::Ordering::Greater,
