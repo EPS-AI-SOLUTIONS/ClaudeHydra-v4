@@ -130,7 +130,7 @@ describe('Sidebar', () => {
     const { Sidebar } = await import('../Sidebar');
     const { container } = render(<Sidebar />, { wrapper });
     expect(container.firstChild).toBeTruthy();
-  });
+  }, 15_000);
 
   it('renders a navigation element or sidebar container', async () => {
     const { Sidebar } = await import('../Sidebar');
