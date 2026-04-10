@@ -7,6 +7,8 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { Plugin } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
+import Icons from 'unplugin-icons/vite';
+
 
 /**
  * Generates sw-manifest.json in dist/ after build completes.
@@ -146,6 +148,7 @@ export default defineConfig(({ mode }) => {
     // qw58: Disable screen clearing in CI for readable logs
     clearScreen: !process.env.CI,
     plugins: [
+      Icons({ compiler: 'jsx', jsx: 'react' }),
       wasmPrecompressedServe(),
       react({ babel: { plugins: [['babel-plugin-react-compiler', { target: '19' }]] } } as any),
       tailwindcss(),
@@ -166,6 +169,11 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': resolve(__dirname, './src'),
       },
+      dedupe: [
+        'react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime',
+        '@tanstack/react-query', 'zustand', 'sonner',
+        'i18next', 'react-i18next', 'motion', 'lucide-react',
+      ],
     },
     optimizeDeps: {
       include: ['@jaskier/ui', '@jaskier/core', '@jaskier/state', '@jaskier/i18n'],
@@ -173,6 +181,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5199,
+      // B1111-08 QW: strictPort: false → auto-increment port if taken (5199 → 5200)
+      strictPort: false,
       proxy: {
         '/api': {
           target: backendUrl,
