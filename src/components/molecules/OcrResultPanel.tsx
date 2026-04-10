@@ -1,21 +1,17 @@
 /** Jaskier Shared Pattern — OcrResultPanel */
 
-import { Badge, Button, Card, cn } from '@jaskier/ui';
+import { Badge, Button, Card, MarkdownRenderer, cn } from '@jaskier/ui';
 import DOMPurify from 'dompurify';
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Code2,
-  Copy,
-  Download,
-  Eye,
-  FileDown,
-  Loader2,
-} from 'lucide-react';
+import Check from '~icons/lucide/check';
+import ChevronLeft from '~icons/lucide/chevron-left';
+import ChevronRight from '~icons/lucide/chevron-right';
+import Code2 from '~icons/lucide/code-2';
+import Copy from '~icons/lucide/copy';
+import Download from '~icons/lucide/download';
+import Eye from '~icons/lucide/eye';
+import FileDown from '~icons/lucide/file-down';
+import Loader2 from '~icons/lucide/loader-2';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 interface OcrResultPanelProps {
   pages: Array<{ page_number: number; text: string }>;
@@ -420,9 +416,7 @@ th{font-weight:bold;background:#f0f0f0}h1,h2,h3{margin:16px 0 8px}</style>
             border: '1px solid var(--matrix-border)',
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {currentText}
-          </ReactMarkdown>
+          <MarkdownRenderer content={currentText} className="text-xs leading-relaxed" />
         </div>
       ) : (
         <pre
