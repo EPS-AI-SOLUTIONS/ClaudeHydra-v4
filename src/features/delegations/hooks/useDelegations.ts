@@ -48,7 +48,8 @@ const useDelegationStore = create<DelegationStore>((set) => ({
     try {
       const data = await apiGet<DelegationsResponse>('/api/agents/delegations');
       set({ data, isLoading: false, isError: false });
-    } catch (_error) {
+    } catch (error) {
+      console.error('[useDelegations] Failed to fetch delegations:', error);
       set({ isError: true, isLoading: false });
     }
   },
