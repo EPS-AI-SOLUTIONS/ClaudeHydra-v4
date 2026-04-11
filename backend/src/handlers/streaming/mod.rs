@@ -30,10 +30,12 @@ use jaskier_core::handlers::anthropic_streaming::{
 use crate::models::*;
 use crate::state::AppState;
 
+// Re-export so sub-modules (agent_call, trait_impl, websocket/execute*) can use
+// `super::send_to_anthropic` as before. The implementation now lives in `anthropic_client`.
+pub(crate) use super::anthropic_client::send_to_anthropic;
 use super::prompt::resolve_chat_context;
 use super::{
-    TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings, send_to_anthropic,
-    truncate_for_context_with_limit,
+    TOOL_TIMEOUT_SECS, is_retryable_status, sanitize_json_strings, truncate_for_context_with_limit,
 };
 use helpers::{detect_view_hints, filter_client_system_prompt, load_session_history};
 

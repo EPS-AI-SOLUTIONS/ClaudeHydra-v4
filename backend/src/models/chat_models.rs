@@ -1,91 +1,16 @@
+//! Chat and session API request/response types.
+//!
+//! Covers: ChatRequest, ChatMessage, ChatResponse, UsageInfo, SessionSummary,
+//! Session, HistoryEntry, ToolInteractionInfo, AppSettings, SystemStats, and
+//! related request bodies used by the chat and session handler modules.
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 
-// ── DB row types ────────────────────────────────────────────────────────
-
-#[derive(sqlx::FromRow)]
-pub struct SettingsRow {
-    pub theme: String,
-    pub language: String,
-    pub default_model: String,
-    pub auto_start: bool,
-    pub welcome_message: String,
-    /// Working directory for filesystem tools (empty = uses ALLOWED_FILE_DIRS / Desktop fallback)
-    #[sqlx(default)]
-    pub working_directory: String,
-    /// Max tool-call iterations per agent request (default 10)
-    #[sqlx(default)]
-    pub max_iterations: i32,
-    /// Temperature for generation (default 0.7)
-    #[sqlx(default)]
-    pub temperature: f64,
-    /// Max output tokens (default 4096)
-    #[sqlx(default)]
-    pub max_tokens: i32,
-    /// Custom instructions injected into system prompt
-    #[sqlx(default)]
-    pub custom_instructions: String,
-    /// Auto-updater enabled
-    #[sqlx(default)]
-    pub auto_updater: bool,
-    /// Telemetry (error reporting) enabled
-    #[sqlx(default)]
-    pub telemetry: bool,
-    /// Message compaction threshold — compact after this many messages (default 25)
-    #[sqlx(default)]
-    pub compaction_threshold: i32,
-    /// Message compaction keep — keep this many recent messages after compaction (default 15)
-    #[sqlx(default)]
-    pub compaction_keep: i32,
-}
-
-#[derive(sqlx::FromRow)]
-pub struct SessionRow {
-    pub id: uuid::Uuid,
-    pub title: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-    #[sqlx(default)]
-    pub working_directory: String,
-}
-
-#[derive(sqlx::FromRow)]
-pub struct SessionSummaryRow {
-    pub id: uuid::Uuid,
-    pub title: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub message_count: i64,
-    #[sqlx(default)]
-    pub working_directory: String,
-}
-
-#[derive(sqlx::FromRow)]
-pub struct MessageRow {
-    pub id: uuid::Uuid,
-    pub session_id: uuid::Uuid,
-    pub role: String,
-    pub content: String,
-    pub model: Option<String>,
-    pub agent: Option<String>,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-// ── Agent ───────────────────────────────────────────────────────────────
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct WitcherAgent {
-    pub id: String,
-    pub name: String,
-    pub role: String,
-    pub tier: String,
-    pub status: String,
-    pub description: String,
-    pub model: String,
-}
-
 // ── Health ──────────────────────────────────────────────────────────────
 
+/// Response body for the `/api/health` endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HealthResponse {
     pub status: String,
@@ -97,6 +22,7 @@ pub struct HealthResponse {
     pub browser_proxy: Option<crate::browser_proxy::BrowserProxyStatus>,
 }
 
+/// AI provider availability info returned in the health response.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProviderInfo {
     pub name: String,
@@ -105,6 +31,7 @@ pub struct ProviderInfo {
 
 // ── Chat ────────────────────────────────────────────────────────────────
 
+/// Request body for the `POST /api/claude/chat` and streaming endpoints.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
@@ -117,6 +44,7 @@ pub struct ChatRequest {
     pub session_id: Option<String>,
 }
 
+/// A single chat turn (role + content).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatMessage {
     pub role: String,
@@ -127,6 +55,7 @@ pub struct ChatMessage {
     pub timestamp: Option<String>,
 }
 
+/// Response body for a completed (non-streaming) chat request.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChatResponse {
     pub id: String,
@@ -135,6 +64,7 @@ pub struct ChatResponse {
     pub usage: Option<UsageInfo>,
 }
 
+/// Token usage breakdown for a completed chat request.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UsageInfo {
     pub prompt_tokens: u32,
@@ -144,6 +74,7 @@ pub struct UsageInfo {
 
 // ── Claude Models ───────────────────────────────────────────────────────
 
+/// Anthropic model descriptor returned by `GET /api/claude/models`.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ClaudeModelInfo {
     pub id: String,
@@ -155,6 +86,7 @@ pub struct ClaudeModelInfo {
 
 // ── Settings ────────────────────────────────────────────────────────────
 
+/// Application settings as returned/updated by the settings API.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AppSettings {
     pub theme: String,
@@ -215,6 +147,7 @@ fn default_compaction_keep() -> i32 {
     15
 }
 
+/// Request body for updating the Anthropic API key.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ApiKeyRequest {
     pub provider: String,
@@ -223,6 +156,7 @@ pub struct ApiKeyRequest {
 
 // ── History ─────────────────────────────────────────────────────────────
 
+/// A single history entry (message + optional tool interactions).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HistoryEntry {
     pub id: String,
@@ -239,6 +173,7 @@ pub struct HistoryEntry {
 
 // ── Session ─────────────────────────────────────────────────────────────
 
+/// Full session with all messages (returned by `GET /api/sessions/{id}`).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Session {
     pub id: String,
@@ -247,7 +182,7 @@ pub struct Session {
     pub messages: Vec<HistoryEntry>,
 }
 
-/// Lightweight view returned in session listing (no messages body).
+/// Lightweight session descriptor for session listing (no messages body).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SessionSummary {
     pub id: String,
@@ -258,35 +193,31 @@ pub struct SessionSummary {
     pub working_directory: String,
 }
 
+/// Request body for creating a new session.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateSessionRequest {
     pub title: String,
 }
 
+/// Request body for renaming an existing session.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateSessionRequest {
     pub title: String,
 }
 
+/// Request body for updating the working directory of a session.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateWorkingDirectoryRequest {
     pub working_directory: String,
 }
 
-// ── Prompt History ─────────────────────────────────────────────────────
-
-#[derive(sqlx::FromRow)]
-pub struct PromptHistoryRow {
-    pub id: i32,
-    pub content: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
+/// Request body for adding a new prompt to history.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AddPromptRequest {
     pub content: String,
 }
 
+/// Request body for adding a message to a session.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AddMessageRequest {
     pub role: String,
@@ -301,6 +232,7 @@ pub struct AddMessageRequest {
 
 // ── System ──────────────────────────────────────────────────────────────
 
+/// System resource stats snapshot returned by `/api/system/stats`.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SystemStats {
     pub cpu_usage_percent: f32,
@@ -309,6 +241,7 @@ pub struct SystemStats {
     pub platform: String,
 }
 
+/// A single metric item with label, value, optional max and unit.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MetricItem {
@@ -320,6 +253,7 @@ pub struct MetricItem {
     pub unit: Option<String>,
 }
 
+/// Network availability metric item.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkMetric {
@@ -330,6 +264,7 @@ pub struct NetworkMetric {
     pub ping: Option<u64>,
 }
 
+/// Combined system metrics response (CPU + RAM + network) for the dashboard.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SystemMetricsResponse {
@@ -340,24 +275,12 @@ pub struct SystemMetricsResponse {
 
 // ── Tool Use (Anthropic API) ────────────────────────────────────────────
 
+/// Anthropic tool definition sent with API requests when tools are enabled.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolDefinition {
     pub name: String,
     pub description: String,
     pub input_schema: Value,
-}
-
-/// DB row for tool interactions.
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct ToolInteractionRow {
-    pub id: uuid::Uuid,
-    pub message_id: uuid::Uuid,
-    pub tool_use_id: String,
-    pub tool_name: String,
-    pub tool_input: Value,
-    pub result: Option<String>,
-    pub is_error: bool,
-    pub executed_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Serializable tool interaction for API responses.
@@ -369,144 +292,4 @@ pub struct ToolInteractionInfo {
     pub tool_input: Value,
     pub result: Option<String>,
     pub is_error: bool,
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-//  WebSocket Protocol — Jaskier Shared Pattern
-// ═══════════════════════════════════════════════════════════════════════
-
-/// Messages sent from the frontend client to the backend via WebSocket.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum WsClientMessage {
-    /// Start a new chat execution.
-    Execute {
-        prompt: String,
-        #[serde(default)]
-        model: Option<String>,
-        #[serde(default)]
-        tools_enabled: Option<bool>,
-        #[serde(default)]
-        session_id: Option<String>,
-    },
-    /// Cancel the currently running execution.
-    Cancel,
-    /// Heartbeat ping — expects a `Pong` response.
-    Ping,
-}
-
-/// Messages sent from the backend to the frontend client via WebSocket.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum WsServerMessage {
-    /// Execution has started.
-    Start {
-        id: String,
-        model: String,
-        #[serde(skip_serializing_if = "Vec::is_empty", default)]
-        files_loaded: Vec<String>,
-    },
-    /// A streamed text token.
-    Token { content: String },
-    /// Execution completed successfully.
-    Complete { duration_ms: u64 },
-    /// A tool call has been initiated.
-    ToolCall {
-        name: String,
-        args: Value,
-        iteration: u32,
-    },
-    /// A tool call has completed.
-    ToolResult {
-        name: String,
-        success: bool,
-        summary: String,
-        iteration: u32,
-    },
-    /// Progress update for parallel tool execution.
-    ToolProgress {
-        iteration: u32,
-        tools_completed: u32,
-        tools_total: u32,
-    },
-    /// Current iteration in the tool-use loop.
-    Iteration { number: u32, max: u32 },
-    /// An error occurred during execution.
-    Error {
-        message: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        code: Option<String>,
-    },
-    /// Heartbeat pong response.
-    Pong,
-    /// Server-initiated heartbeat to keep the connection alive.
-    Heartbeat,
-    /// Model fallback occurred (rate-limited or error on primary model).
-    Fallback {
-        from: String,
-        to: String,
-        reason: String,
-    },
-    /// Predictive UI hint — suggests views the user might navigate to next.
-    /// Frontend uses these to prefetch lazy-loaded chunks and query data.
-    ViewHint { views: Vec<String> },
-}
-
-// ── Agent Config (DB-driven) ────────────────────────────────────────────
-
-/// DB row for agent configuration (ch_agents_config table).
-#[derive(Debug, Clone, sqlx::FromRow)]
-pub struct AgentConfigRow {
-    pub id: String,
-    pub name: String,
-    pub role: String,
-    pub tier: String,
-    pub status: String,
-    pub description: String,
-    pub model: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl From<AgentConfigRow> for WitcherAgent {
-    fn from(row: AgentConfigRow) -> Self {
-        Self {
-            id: row.id,
-            name: row.name,
-            role: row.role,
-            tier: row.tier,
-            status: row.status,
-            description: row.description,
-            model: row.model,
-        }
-    }
-}
-
-/// Request body for creating a new agent.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct CreateAgentRequest {
-    pub name: String,
-    pub role: String,
-    pub tier: String,
-    #[serde(default = "default_agent_status")]
-    pub status: String,
-    #[serde(default)]
-    pub description: String,
-    #[serde(default)]
-    pub model: String,
-}
-
-fn default_agent_status() -> String {
-    "active".to_string()
-}
-
-/// Request body for updating an existing agent (partial update).
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct UpdateAgentRequest {
-    pub name: Option<String>,
-    pub role: Option<String>,
-    pub tier: Option<String>,
-    pub status: Option<String>,
-    pub description: Option<String>,
-    pub model: Option<String>,
 }

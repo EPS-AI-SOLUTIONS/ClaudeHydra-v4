@@ -14,6 +14,8 @@
 //! - CancellationToken integration is CH-specific
 
 mod execute;
+pub(crate) mod execute_batch;
+pub(crate) mod execute_stream;
 
 use std::collections::HashMap;
 

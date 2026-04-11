@@ -31,6 +31,7 @@ use crate::memory_pruning::{HasMemoryPruning, MemoryPruningState};
 use crate::models::WitcherAgent;
 use crate::sandbox::{HasSandboxState, SandboxState};
 use crate::semantic_cache::{HasSemanticCache, SemanticCacheState};
+use crate::state_agent_helpers::{init_witcher_agents, load_agents_from_db};
 use crate::swarm::SwarmState;
 use crate::tools::ToolExecutor;
 
@@ -661,62 +662,6 @@ impl jaskier_core::sessions::HasAnthropicCredential for AppState {
 
         None
     }
-}
-
-// ── CH-specific agent helpers ───────────────────────────────────────────────
-
-/// Load agents from `ch_agents_config` table. Falls back to hardcoded defaults
-/// when the table doesn't exist yet or is empty.
-async fn load_agents_from_db(db: &PgPool) -> Vec<WitcherAgent> {
-    match sqlx::query_as::<_, crate::models::AgentConfigRow>(
-        "SELECT id, name, role, tier, status, description, model, created_at, updated_at \
-         FROM ch_agents_config ORDER BY id",
-    )
-    .fetch_all(db)
-    .await
-    {
-        Ok(rows) if !rows.is_empty() => {
-            tracing::info!("Loaded {} agents from DB (ch_agents_config)", rows.len());
-            rows.into_iter().map(WitcherAgent::from).collect()
-        }
-        Ok(_) => {
-            tracing::info!("ch_agents_config is empty — using hardcoded defaults");
-            init_witcher_agents()
-        }
-        Err(e) => {
-            tracing::warn!(
-                "Failed to load agents from DB ({}), using hardcoded defaults",
-                e
-            );
-            init_witcher_agents()
-        }
-    }
-}
-
-fn model_for_tier(tier: &str) -> &'static str {
-    match tier {
-        "Commander" => "claude-opus-4-6",
-        "Coordinator" => "claude-sonnet-4-6",
-        "Executor" => "claude-haiku-4-5-20251001",
-        _ => "claude-sonnet-4-6",
-    }
-}
-
-/// Build default agent roster from shared jaskier-core list, converting to CH's
-/// local `WitcherAgent` type (which includes a `model` field based on tier).
-fn init_witcher_agents() -> Vec<WitcherAgent> {
-    jaskier_core::models::default_agent_roster()
-        .into_iter()
-        .map(|shared| WitcherAgent {
-            model: model_for_tier(&shared.tier).to_string(),
-            id: shared.id,
-            name: shared.name,
-            role: shared.role,
-            tier: shared.tier,
-            status: shared.status,
-            description: shared.description,
-        })
-        .collect()
 }
 
 // ── HasHealthState — required by HydraState supertrait (router_builder) ─────
