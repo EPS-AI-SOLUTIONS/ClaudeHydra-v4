@@ -1,3 +1,4 @@
+import Icons from 'unplugin-icons/vite';
 /// <reference types="vitest/config" />
 
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -7,7 +8,6 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import type { Plugin } from 'vite';
 import { defineConfig, loadEnv } from 'vite';
-import Icons from 'unplugin-icons/vite';
 
 
 /**
@@ -150,7 +150,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       Icons({ compiler: 'jsx', jsx: 'react' }),
       wasmPrecompressedServe(),
-      react({ babel: { plugins: [['babel-plugin-react-compiler', { target: '19' }]] } } as any),
+      react(),
       tailwindcss(),
       // PWA: custom SW manifest generator replaces vite-plugin-pwa (which was
       // incompatible with Vite 6+ monorepo due to secondary Rollup build
@@ -162,7 +162,7 @@ export default defineConfig(({ mode }) => {
       // stats.html is ~3MB and should never ship in dist/
       // Usage: MODE=analyze bun run build
       ...(mode === 'analyze'
-        ? [(visualizer as any)({ open: true, filename: 'stats.html', gzipSize: true, brotliSize: true })]
+        ? [visualizer({ open: true, filename: 'stats.html', gzipSize: true, brotliSize: true })]
         : []),
     ],
     resolve: {
@@ -246,10 +246,8 @@ export default defineConfig(({ mode }) => {
         external: (id: string) => id.endsWith('.node') || id.startsWith('/wasm/') || id.includes('../pkg'),
         output: {
           manualChunks(id: string) {
-            // NOTE: BaseMessageBubble/BaseCodeBlock are NOT carved out from shared-ui
-            // because the React Compiler prevents Rollup from splitting them.
-            // Instead, vendor-markdown is loaded on-demand via dynamic import() in
-            // BaseMessageBubble itself (see MarkdownRenderer.tsx lazy wrapper).
+            // NOTE: MarkdownRenderer in @jaskier/ui uses marked+shiki (not react-markdown).
+            // No vendor-markdown chunk needed — shiki is loaded lazily inside the renderer.
             // ── React core ──────────────────────────────────────────
             if (
               id.includes('/node_modules/react-dom/') ||
@@ -285,21 +283,8 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/node_modules/i18next') || id.includes('/node_modules/react-i18next/')) {
               return 'vendor-i18n';
             }
-            // ── Markdown rendering (heavy: highlight.js ~250kB) ─────
-            if (
-              id.includes('/node_modules/react-markdown/') ||
-              id.includes('/node_modules/remark-') ||
-              id.includes('/node_modules/rehype-') ||
-              id.includes('/node_modules/highlight.js/') ||
-              id.includes('/node_modules/lowlight/') ||
-              id.includes('/node_modules/hast-') ||
-              id.includes('/node_modules/mdast-') ||
-              id.includes('/node_modules/micromark') ||
-              id.includes('/node_modules/unified/') ||
-              id.includes('/node_modules/unist-')
-            ) {
-              return 'vendor-markdown';
-            }
+            // vendor-markdown chunk removed: react-markdown/remark/rehype/highlight.js
+            // are not used. MarkdownRenderer in @jaskier/ui uses marked+shiki instead.
             // ── Zod schema validation ───────────────────────────────
             if (id.includes('/node_modules/zod/')) {
               return 'vendor-zod';
@@ -327,8 +312,8 @@ export default defineConfig(({ mode }) => {
             ) {
               return 'shared-core';
             }
-            // MarkdownRenderer is dynamically imported by BaseMessageBubble.
-            // Force it into its own chunk so vendor-markdown (329 KB) stays
+            // MarkdownRenderer (marked+shiki) is dynamically imported.
+            // Force it into its own chunk so the shiki highlighter (~600KB) stays
             // out of the critical path — loaded only when chat view renders.
             if (id.includes('MarkdownRenderer')) {
               return 'lazy-markdown';
