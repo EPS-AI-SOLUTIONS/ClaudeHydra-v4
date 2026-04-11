@@ -18,16 +18,14 @@ import {
 } from '@xyflow/react';
 import React, { useCallback, useRef, useState } from 'react';
 import '@xyflow/react/dist/style.css';
-import {
-  Bot,
-  Database,
-  Download,
-  Image as ImageIcon,
-  Play,
-  Save,
-  Shield,
-  Wrench,
-} from 'lucide-react';
+import Bot from '~icons/lucide/bot';
+import Database from '~icons/lucide/database';
+import Download from '~icons/lucide/download';
+import ImageIcon from '~icons/lucide/image';
+import Play from '~icons/lucide/play';
+import Save from '~icons/lucide/save';
+import Shield from '~icons/lucide/shield';
+import Wrench from '~icons/lucide/wrench';
 import { toast } from 'sonner';
 
 // ── Custom Nodes ─────────────────────────────────────────────────────────────
@@ -66,7 +64,7 @@ function AgentNode({ data }: { data: NodeData }) {
           marginBottom: '8px',
         }}
       >
-        <Bot size={16} color="#60a5fa" />
+        <Bot width={16} height={16} color="#60a5fa" />
         {data.label}
       </div>
       <div style={{ color: '#94a3b8', fontSize: '10px' }}>
@@ -90,7 +88,7 @@ function McpNode({ data }: { data: NodeData }) {
           marginBottom: '8px',
         }}
       >
-        <Wrench size={16} color="#facc15" />
+        <Wrench width={16} height={16} color="#facc15" />
         {data.label}
       </div>
       <div style={{ color: '#94a3b8', fontSize: '10px' }}>
@@ -114,7 +112,7 @@ function DbNode({ data }: { data: NodeData }) {
           marginBottom: '8px',
         }}
       >
-        <Database size={16} color="#4ade80" />
+        <Database width={16} height={16} color="#4ade80" />
         {data.label}
       </div>
       <div style={{ color: '#94a3b8', fontSize: '10px' }}>
@@ -144,7 +142,7 @@ function SandboxNode({ data }: { data: NodeData }) {
           marginBottom: '8px',
         }}
       >
-        <Shield size={16} color="#10b981" />
+        <Shield width={16} height={16} color="#10b981" />
         {data.label}
       </div>
       <div style={{ color: '#94a3b8', fontSize: '10px' }}>
@@ -225,7 +223,7 @@ function MediaEdge({
           }}
           className="nodrag nopan"
         >
-          <ImageIcon size={12} color="#60a5fa" />
+          <ImageIcon width={12} height={12} color="#60a5fa" />
         </div>
       </EdgeLabelRenderer>
     </>
@@ -326,35 +324,35 @@ function Sidebar() {
         label="Claude Agent"
         extraData={{ model: 'claude-3-5-sonnet', peerId: 'claudehydra' }}
       >
-        <Bot size={14} color="#60a5fa" /> Claude
+        <Bot width={14} height={14} color="#60a5fa" /> Claude
       </DraggableItem>
       <DraggableItem
         nodeType="agent"
         label="DeepSeek Agent"
         extraData={{ model: 'deepseek-coder', peerId: 'deepseekhydra' }}
       >
-        <Bot size={14} color="#60a5fa" /> DeepSeek
+        <Bot width={14} height={14} color="#60a5fa" /> DeepSeek
       </DraggableItem>
       <DraggableItem
         nodeType="agent"
         label="Gemini Agent"
         extraData={{ model: 'gemini-1.5-pro', peerId: 'geminihydra' }}
       >
-        <Bot size={14} color="#60a5fa" /> Gemini
+        <Bot width={14} height={14} color="#60a5fa" /> Gemini
       </DraggableItem>
       <DraggableItem
         nodeType="agent"
         label="Grok Agent"
         extraData={{ model: 'grok-beta', peerId: 'grokhydra' }}
       >
-        <Bot size={14} color="#60a5fa" /> Grok
+        <Bot width={14} height={14} color="#60a5fa" /> Grok
       </DraggableItem>
       <DraggableItem
         nodeType="agent"
         label="OpenAI Agent"
         extraData={{ model: 'gpt-4o', peerId: 'openaihydra' }}
       >
-        <Bot size={14} color="#60a5fa" /> OpenAI
+        <Bot width={14} height={14} color="#60a5fa" /> OpenAI
       </DraggableItem>
 
       <div
@@ -373,14 +371,14 @@ function Sidebar() {
         label="Playwright MCP"
         extraData={{ server: 'playwright' }}
       >
-        <Wrench size={14} color="#facc15" /> Playwright
+        <Wrench width={14} height={14} color="#facc15" /> Playwright
       </DraggableItem>
       <DraggableItem
         nodeType="mcp"
         label="Repomix MCP"
         extraData={{ server: 'repomix' }}
       >
-        <Wrench size={14} color="#facc15" /> Repomix
+        <Wrench width={14} height={14} color="#facc15" /> Repomix
       </DraggableItem>
 
       <div
@@ -399,14 +397,14 @@ function Sidebar() {
         label="Postgres"
         extraData={{ dbType: 'PostgreSQL 17' }}
       >
-        <Database size={14} color="#4ade80" /> Postgres
+        <Database width={14} height={14} color="#4ade80" /> Postgres
       </DraggableItem>
       <DraggableItem
         nodeType="database"
         label="Qdrant Vector"
         extraData={{ dbType: 'Vector DB' }}
       >
-        <Database size={14} color="#4ade80" /> Qdrant
+        <Database width={14} height={14} color="#4ade80" /> Qdrant
       </DraggableItem>
 
       <div
@@ -425,21 +423,21 @@ function Sidebar() {
         label="Node.js Sandbox"
         extraData={{ language: 'node', isolated: true }}
       >
-        <Shield size={14} color="#10b981" /> Node.js
+        <Shield width={14} height={14} color="#10b981" /> Node.js
       </DraggableItem>
       <DraggableItem
         nodeType="sandbox"
         label="Python Sandbox"
         extraData={{ language: 'python', isolated: true }}
       >
-        <Shield size={14} color="#10b981" /> Python
+        <Shield width={14} height={14} color="#10b981" /> Python
       </DraggableItem>
       <DraggableItem
         nodeType="sandbox"
         label="Bash Sandbox"
         extraData={{ language: 'bash', isolated: true }}
       >
-        <Shield size={14} color="#10b981" /> Bash
+        <Shield width={14} height={14} color="#10b981" /> Bash
       </DraggableItem>
     </div>
   );
@@ -470,7 +468,10 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
           setEdges(data.edges || []);
         }
       })
-      .catch((err) => console.error('Failed to load architecture', err));
+      .catch((err: unknown) => {
+        console.error('[SwarmBuilder] Failed to load architecture:', err);
+        toast.error('Failed to load swarm architecture — check console for details');
+      });
   }, [setNodes, setEdges]);
 
   // Monitor live events to animate edges
@@ -705,7 +706,7 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
                     cursor: 'pointer',
                   }}
                 >
-                  <Save size={14} />
+                  <Save width={14} height={14} />
                   Save
                 </button>
                 <button
@@ -724,7 +725,7 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
                     cursor: 'pointer',
                   }}
                 >
-                  <Download size={14} />
+                  <Download width={14} height={14} />
                   Export
                 </button>
                 <button
@@ -748,9 +749,9 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
                   }}
                 >
                   {isRunning ? (
-                    <Bot size={14} className="animate-pulse" />
+                    <Bot width={14} height={14} className="animate-pulse" />
                   ) : (
-                    <Play size={14} />
+                    <Play width={14} height={14} />
                   )}
                   {isRunning ? 'Running...' : 'Execute'}
                 </button>

@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,7 +78,8 @@ export function useSandbox() {
       setHealth(data);
       return data;
     } catch (err) {
-      console.error('Sandbox health check failed:', err);
+      console.error('[useSandbox] health check failed:', err);
+      toast.error('Sandbox health check failed');
       return null;
     }
   }, []);
@@ -99,7 +101,8 @@ export function useSandbox() {
         }
         return data;
       } catch (err) {
-        console.error('Sandbox create failed:', err);
+        console.error('[useSandbox] createSession failed:', err);
+        toast.error('Failed to create sandbox session');
         return null;
       } finally {
         setIsCreating(false);
@@ -135,7 +138,8 @@ export function useSandbox() {
         setExecutions((prev) => [data, ...prev].slice(0, 100));
         return data;
       } catch (err) {
-        console.error('Sandbox execute failed:', err);
+        console.error('[useSandbox] executeCode failed:', err);
+        toast.error('Sandbox code execution failed');
         return null;
       } finally {
         setIsExecuting(false);
@@ -152,7 +156,8 @@ export function useSandbox() {
       const data: SandboxSession[] = await resp.json();
       setSessions(data);
     } catch (err) {
-      console.error('Sandbox sessions load failed:', err);
+      console.error('[useSandbox] loadSessions failed:', err);
+      toast.error('Failed to load sandbox sessions');
     }
   }, []);
 
@@ -164,7 +169,8 @@ export function useSandbox() {
       const data: SandboxExecution[] = await resp.json();
       setExecutions(data);
     } catch (err) {
-      console.error('Sandbox executions load failed:', err);
+      console.error('[useSandbox] loadExecutions failed:', err);
+      toast.error('Failed to load sandbox executions');
     }
   }, []);
 
@@ -177,7 +183,8 @@ export function useSandbox() {
       });
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (err) {
-      console.error('Sandbox destroy failed:', err);
+      console.error('[useSandbox] destroySession failed:', err);
+      toast.error('Failed to destroy sandbox session');
     }
   }, []);
 

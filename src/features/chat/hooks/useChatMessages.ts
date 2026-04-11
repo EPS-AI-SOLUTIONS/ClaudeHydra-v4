@@ -95,8 +95,14 @@ export function useChatMessages() {
       if (sessionId === useViewStore.getState().currentSessionId) {
         setMessages(mapped);
       }
-    } catch {
-      // Best-effort — session may not exist in DB yet
+    } catch (err: unknown) {
+      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      if (isNetworkError) {
+        console.warn('[useChatMessages] Network unavailable, loadFullHistory skipped');
+      } else {
+        // Best-effort — session may not exist in DB yet, but log unexpected errors
+        console.error('[useChatMessages] loadFullHistory unexpected error:', err);
+      }
     }
   }, []);
 
@@ -158,9 +164,16 @@ export function useChatMessages() {
         sessionMessagesRef.current[currentSessionId] = mapped;
         setMessages(mapped);
       })
-      .catch(() => {
-        // Best-effort: session may not exist in DB yet (local-only)
-        if (!cancelled) setMessages([]);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+        if (isNetworkError) {
+          console.warn('[useChatMessages] Network unavailable, falling back to local');
+        } else {
+          // Best-effort: session may not exist in DB yet (local-only), but log unexpected errors
+          console.error('[useChatMessages] Unexpected error loading session:', err);
+        }
+        setMessages([]);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
