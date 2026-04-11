@@ -109,53 +109,27 @@ pub async fn browse_directory(
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
-    // Build PowerShell script for native folder dialog
-    let ps_script = format!(
-        r#"Add-Type -AssemblyName System.Windows.Forms
-$dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-$dialog.ShowNewFolderButton = $true
-$dialog.Description = "Select working directory"
-{}
-$form = New-Object System.Windows.Forms.Form
-$form.TopMost = $true
-$result = $dialog.ShowDialog($form)
-if ($result -eq [System.Windows.Forms.DialogResult]::OK) {{
-    Write-Output $dialog.SelectedPath
-}} else {{
-    Write-Output "CANCELLED"
-}}"#,
-        if initial_dir.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "$dialog.SelectedPath = '{}'",
-                initial_dir.replace('\'', "''")
-            )
-        }
-    );
+    // Open native folder dialog via Python tkinter
+    // (policy §8: no powershell — COM automation uses Python pywin32/tkinter)
+    let python_script = r#"
+import tkinter as tk
+from tkinter import filedialog
+import os, sys
+root = tk.Tk()
+root.withdraw()
+root.wm_attributes('-topmost', 1)
+initial = os.environ.get('JASKIER_INITIAL_DIR') or None
+path = filedialog.askdirectory(title='Select working directory', initialdir=initial)
+print(path if path else 'CANCELLED')
+sys.stdout.flush()
+"#;
 
-    // Write temp .ps1 file (PowerShell -Command has issues with complex scripts)
-    let temp_dir = std::env::temp_dir();
-    let ps_path = temp_dir.join("jaskier_browse_folder.ps1");
-    if let Err(e) = std::fs::write(&ps_path, &ps_script) {
-        tracing::error!("Failed to write PS1 script: {}", e);
-        return Json(json!({ "error": "Failed to prepare folder dialog" }));
+    let mut cmd = tokio::process::Command::new("python");
+    cmd.args(["-c", python_script]);
+    if !initial_dir.is_empty() {
+        cmd.env("JASKIER_INITIAL_DIR", initial_dir);
     }
-
-    let output = tokio::process::Command::new("powershell")
-        .args([
-            "-NoProfile",
-            "-STA",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            &ps_path.to_string_lossy(),
-        ])
-        .output()
-        .await;
-
-    // Clean up temp file
-    let _ = std::fs::remove_file(&ps_path);
+    let output = cmd.output().await;
 
     match output {
         Ok(out) => {
