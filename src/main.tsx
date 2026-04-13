@@ -1,4 +1,7 @@
-import { FeatureErrorFallback } from '@jaskier/hydra-app/components/molecules';
+import {
+  ApprovalGate,
+  FeatureErrorFallback,
+} from '@jaskier/hydra-app/components/molecules';
 import { ErrorBoundary } from '@jaskier/ui';
 import {
   QueryClientProvider,
@@ -29,9 +32,9 @@ const ReactQueryDevtools = lazy(() =>
 import {
   type AuthConfig,
   AuthProvider,
-  LoginButton,
   useAuth,
 } from '@jaskier/auth';
+import { ClaudeHydraLoginView } from '@/features/auth/components/LoginView';
 import { OfflineBanner } from '@/components/molecules/OfflineBanner';
 import { ViewSkeleton } from '@/components/molecules/ViewSkeleton';
 import { AppShell } from '@/components/organisms/AppShell';
@@ -311,16 +314,10 @@ function JaskierAuthGate({ children }: { children: ReactNode }) {
     );
   }
   if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen gap-6 font-mono">
-        <h1 className="text-2xl font-bold">ClaudeHydra</h1>
-        <p className="text-zinc-500">Sign in to continue</p>
-        <LoginButton />
-      </div>
-    );
+    return <ClaudeHydraLoginView />;
   }
 
-  return <>{children}</>;
+  return <ApprovalGate appName="Claude Hydra">{children}</ApprovalGate>;
 }
 
 function App() {
