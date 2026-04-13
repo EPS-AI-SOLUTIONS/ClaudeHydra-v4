@@ -114,7 +114,24 @@ async fn main() -> shuttle_axum::ShuttleAxum {
         .expect("Migrations failed");
 
     let log_buffer = std::sync::Arc::new(LogRingBuffer::new(1000));
-    let state = AppState::new(pool, log_buffer).await;
+    // Shuttle mode: AUTH_DB_URL support (falls back to app DB)
+    let auth_pool = match std::env::var("AUTH_DB_URL") {
+        Ok(auth_url) => {
+            tracing::info!("AUTH_DB_URL set — using jaskier_identity for shared auth");
+            let p = jaskier_db::pool::create_pool(&auth_url, jaskier_db::pool::PoolConfig::light())
+                .await
+                .expect("Failed to connect to jaskier_identity (AUTH_DB_URL)");
+            if let Err(e) = jaskier_auth::run_migrations(&p).await {
+                tracing::warn!("Auth migrations skipped (schema likely exists): {}", e);
+            }
+            p
+        }
+        Err(_) => {
+            tracing::info!("AUTH_DB_URL not set — auth tables in app DB (single-DB mode)");
+            pool.clone()
+        }
+    };
+    let state = AppState::new(pool, auth_pool, log_buffer).await;
 
     // ── Spawn system monitor (CPU/memory stats, refreshed every 5s) ──
     claudehydra_backend::system_monitor::spawn(state.system_monitor.clone());
@@ -148,7 +165,25 @@ async fn main() -> anyhow::Result<()> {
         tracing::warn!("Migration skipped (schema likely exists): {}", e);
     }
 
-    let state = AppState::new(pool, log_buffer).await;
+    // ── Shared identity DB (jaskier_identity) — falls back to app DB ──
+    let auth_pool = match std::env::var("AUTH_DB_URL") {
+        Ok(auth_url) => {
+            tracing::info!("AUTH_DB_URL set — using jaskier_identity for shared auth");
+            let p = jaskier_db::pool::create_pool(&auth_url, jaskier_db::pool::PoolConfig::light())
+                .await
+                .expect("Failed to connect to jaskier_identity (AUTH_DB_URL)");
+            if let Err(e) = jaskier_auth::run_migrations(&p).await {
+                tracing::warn!("Auth migrations skipped (schema likely exists): {}", e);
+            }
+            p
+        }
+        Err(_) => {
+            tracing::info!("AUTH_DB_URL not set — auth tables in app DB (single-DB mode)");
+            pool.clone()
+        }
+    };
+
+    let state = AppState::new(pool, auth_pool, log_buffer).await;
 
     // ── Spawn system monitor (CPU/memory stats, refreshed every 5s) ──
     claudehydra_backend::system_monitor::spawn(state.system_monitor.clone());

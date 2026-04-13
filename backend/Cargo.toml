@@ -2,6 +2,7 @@
 name = "claudehydra-backend"
 version = "4.0.0"
 edition = "2024"
+license = "MIT"
 publish = false
 
 [lints]

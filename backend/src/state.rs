@@ -97,8 +97,8 @@ impl Deref for AppState {
 // ── Constructor ─────────────────────────────────────────────────────────────
 
 impl AppState {
-    pub async fn new(db: PgPool, log_buffer: Arc<LogRingBuffer>) -> Self {
-        let db_for_auth = db.clone();
+    pub async fn new(db: PgPool, auth_db: PgPool, log_buffer: Arc<LogRingBuffer>) -> Self {
+        let db_for_auth = auth_db;
         let base = BaseHydraState::new(
             db.clone(),
             log_buffer,
