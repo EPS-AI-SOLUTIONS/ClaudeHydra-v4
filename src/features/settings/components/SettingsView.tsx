@@ -2,10 +2,10 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Card, cn } from '@jaskier/ui';
-import { Settings } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import Settings from '~icons/lucide/settings';
 import AiProvidersSection from './AiProvidersSection';
 import { AutoUpdaterSection } from './AutoUpdaterSection';
 import { BrowserProxySection } from './BrowserProxySection';
@@ -39,7 +39,11 @@ export const SettingsView = memo(() => {
       >
         {/* Header */}
         <div className="flex items-center gap-3">
-          <Settings size={22} className="text-[var(--matrix-accent)]" />
+          <Settings
+            width={22}
+            height={22}
+            className="text-[var(--matrix-accent)]"
+          />
           <h1
             className={cn(
               'text-2xl font-bold font-mono tracking-tight',

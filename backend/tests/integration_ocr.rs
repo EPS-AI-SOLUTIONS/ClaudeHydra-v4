@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 // BE-CH-007 — Integration tests for ClaudeHydra OCR endpoints.
 //
 // Tests OCR request validation, preset auto-detection, page splitting,

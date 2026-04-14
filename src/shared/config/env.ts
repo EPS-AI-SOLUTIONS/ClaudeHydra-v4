@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   VITE_BACKEND_URL: z.string().url().optional(),
-  VITE_AUTH_SECRET: z.string().optional(),
+  AUTH_SECRET: z.string().optional(),
   VITE_PARTNER_AUTH_SECRET: z.string().optional(),
 });
 
@@ -20,7 +20,7 @@ type Env = z.infer<typeof envSchema>;
 function validateEnv(): Env {
   const raw = {
     VITE_BACKEND_URL: import.meta.env['VITE_BACKEND_URL'] as string | undefined,
-    VITE_AUTH_SECRET: import.meta.env['VITE_AUTH_SECRET'] as string | undefined,
+    AUTH_SECRET: import.meta.env['AUTH_SECRET'] as string | undefined,
     VITE_PARTNER_AUTH_SECRET: import.meta.env['VITE_PARTNER_AUTH_SECRET'] as
       | string
       | undefined,

@@ -1,15 +1,13 @@
-import {
-  Activity,
-  FileText,
-  Plug,
-  PlugZap,
-  Redo2,
-  Undo2,
-  Users,
-} from 'lucide-react';
 import { motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Activity from '~icons/lucide/activity';
+import FileText from '~icons/lucide/file-text';
+import Plug from '~icons/lucide/plug';
+import PlugZap from '~icons/lucide/plug-zap';
+import Redo2 from '~icons/lucide/redo-2';
+import Undo2 from '~icons/lucide/undo-2';
+import Users from '~icons/lucide/users';
 import { useCollabDocument } from '../hooks/useCollabDocument';
 import { useCollabStats } from '../hooks/useCollabStats';
 import { CollabCursors } from './CollabCursors';

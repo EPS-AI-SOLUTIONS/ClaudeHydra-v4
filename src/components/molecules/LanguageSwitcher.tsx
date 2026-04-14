@@ -8,8 +8,8 @@
  */
 
 import { cn } from '@jaskier/ui';
-import { Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import Languages from '~icons/lucide/languages';
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },

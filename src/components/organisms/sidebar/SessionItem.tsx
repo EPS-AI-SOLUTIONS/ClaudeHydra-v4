@@ -1,10 +1,15 @@
 import { cn } from '@jaskier/ui';
-import { Check, Edit2, Loader2, MessageSquare, Trash2, X } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TagChip } from '@/components/molecules/TagChip';
 import { AddTagButton, TagInput } from '@/components/molecules/TagInput';
 import type { ChatSession } from '@/stores/viewStore';
+import Check from '~icons/lucide/check';
+import Edit2 from '~icons/lucide/edit-2';
+import Loader2 from '~icons/lucide/loader-2';
+import MessageSquare from '~icons/lucide/message-square';
+import Trash2 from '~icons/lucide/trash-2';
+import X from '~icons/lucide/x';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -121,7 +126,7 @@ export function SessionItem({
         )}
         title={session.title}
       >
-        <MessageSquare size={16} />
+        <MessageSquare width={16} height={16} />
       </button>
     );
   }
@@ -146,7 +151,7 @@ export function SessionItem({
             isDark ? 'hover:bg-white/15' : 'hover:bg-black/5',
           )}
         >
-          <Check size={14} />
+          <Check width={14} height={14} />
         </button>
         <button
           type="button"
@@ -158,7 +163,7 @@ export function SessionItem({
               : 'hover:bg-red-500/15 text-red-600',
           )}
         >
-          <X size={14} />
+          <X width={14} height={14} />
         </button>
       </div>
     );
@@ -198,11 +203,12 @@ export function SessionItem({
         {/* #16 - Show spinner for pending sessions */}
         {session._pending ? (
           <Loader2
-            size={14}
+            width={14}
+            height={14}
             className="shrink-0 animate-spin text-[var(--matrix-accent)]/60"
           />
         ) : (
-          <MessageSquare size={14} className="shrink-0" />
+          <MessageSquare width={14} height={14} className="shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <p
@@ -232,7 +238,7 @@ export function SessionItem({
             )}
             title={t('sidebar.rename', 'Rename')}
           >
-            <Edit2 size={12} />
+            <Edit2 width={12} height={12} />
           </button>
           <button
             type="button"
@@ -253,7 +259,7 @@ export function SessionItem({
                 : t('common.delete', 'Delete')
             }
           >
-            <Trash2 size={12} />
+            <Trash2 width={12} height={12} />
           </button>
         </div>
       </div>

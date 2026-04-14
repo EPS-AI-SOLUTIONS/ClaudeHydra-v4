@@ -12,8 +12,9 @@
 
 import i18n from '@jaskier/i18n';
 import { Button, Card } from '@jaskier/ui';
-import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import RotateCcw from '~icons/lucide/rotate-ccw';
 
 // ============================================================================
 // TYPES
@@ -93,7 +94,11 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
           <Card variant="elevated" padding="lg" className="max-w-md w-full">
             <div className="flex flex-col items-center gap-4 text-center">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-red-500/10 border border-red-500/20">
-                <AlertTriangle size={28} className="text-red-400" />
+                <AlertTriangle
+                  width={28}
+                  height={28}
+                  className="text-red-400"
+                />
               </div>
 
               <div>
@@ -114,7 +119,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               <Button
                 variant="primary"
                 size="md"
-                leftIcon={<RotateCcw size={16} />}
+                leftIcon={<RotateCcw width={16} height={16} />}
                 onClick={this.handleRetry}
               >
                 {i18n.t('common.tryAgain')}

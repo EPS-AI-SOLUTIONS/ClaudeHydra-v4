@@ -4,9 +4,10 @@
  * Extracted from ChatInput.tsx for reusability and cleaner component boundaries.
  */
 
-import { FileText, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo, useCallback } from 'react';
+import FileText from '~icons/lucide/file-text';
+import X from '~icons/lucide/x';
 import type { Attachment } from './ChatInput';
 
 // ---------------------------------------------------------------------------
@@ -52,7 +53,7 @@ const AttachmentChip = memo(function AttachmentChip({
           />
         </div>
       ) : (
-        <FileText size={16} className="text-blue-400 shrink-0" />
+        <FileText width={16} height={16} className="text-blue-400 shrink-0" />
       )}
       <span className="text-sm truncate max-w-[150px] text-[var(--matrix-text-primary)]">
         {attachment.name}
@@ -63,7 +64,7 @@ const AttachmentChip = memo(function AttachmentChip({
         className="text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-error)] transition-colors"
         aria-label={`Remove ${attachment.name}`}
       >
-        <X size={14} />
+        <X width={14} height={14} />
       </button>
     </motion.div>
   );

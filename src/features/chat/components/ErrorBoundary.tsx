@@ -1,7 +1,8 @@
 import { Button, cn } from '@jaskier/ui';
-import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { isTelemetryEnabled } from '@/shared/hooks/useSettings';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import RefreshCcw from '~icons/lucide/refresh-ccw';
 
 interface Props {
   children: ReactNode;

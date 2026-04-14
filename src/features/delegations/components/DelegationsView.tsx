@@ -2,19 +2,17 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  Network,
-  RefreshCw,
-  Users,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Activity from '~icons/lucide/activity';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import CheckCircle2 from '~icons/lucide/check-circle-2';
+import Clock from '~icons/lucide/clock';
+import Loader2 from '~icons/lucide/loader-2';
+import Network from '~icons/lucide/network';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Users from '~icons/lucide/users';
 import { type DelegationTask, useDelegations } from '../hooks/useDelegations';
 
 const TIER_COLORS: Record<string, string> = {
@@ -79,7 +77,8 @@ function TaskRow({
     >
       <div className="flex items-center gap-3">
         <StatusIcon
-          size={16}
+          width={16}
+          height={16}
           className={cn(
             isError
               ? 'text-red-400'
@@ -190,7 +189,11 @@ function DelegationsView() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <Network size={20} className="text-[var(--matrix-accent)]" />
+          <Network
+            width={20}
+            height={20}
+            className="text-[var(--matrix-accent)]"
+          />
           <h1
             className={cn(
               'text-lg font-bold',
@@ -247,7 +250,7 @@ function DelegationsView() {
             className="p-1.5 rounded text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)] transition-colors"
             title="Refresh"
           >
-            <RefreshCw size={16} />
+            <RefreshCw width={16} height={16} />
           </button>
         </div>
       </div>
@@ -289,7 +292,7 @@ function DelegationsView() {
               )}
             >
               <div className="flex items-center gap-2 mb-1">
-                <Icon size={14} className={stat.color} />
+                <Icon width={14} height={14} className={stat.color} />
                 <span className={cn('text-xs', theme.textMuted)}>
                   {stat.label}
                 </span>
@@ -311,7 +314,8 @@ function DelegationsView() {
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2
-            size={24}
+            width={24}
+            height={24}
             className="animate-spin text-[var(--matrix-accent)]"
           />
         </div>

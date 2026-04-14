@@ -5,20 +5,18 @@
  * display. Integrates with the Swarm for CI-like test-before-apply workflows.
  */
 
-import {
-  Box,
-  CheckCircle2,
-  Clock,
-  Container,
-  Loader2,
-  Play,
-  Plus,
-  Shield,
-  Trash2,
-  XCircle,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useState } from 'react';
+import Box from '~icons/lucide/box';
+import CheckCircle2 from '~icons/lucide/check-circle-2';
+import Clock from '~icons/lucide/clock';
+import Container from '~icons/lucide/container';
+import Loader2 from '~icons/lucide/loader-2';
+import Play from '~icons/lucide/play';
+import Plus from '~icons/lucide/plus';
+import Shield from '~icons/lucide/shield';
+import Trash2 from '~icons/lucide/trash-2';
+import XCircle from '~icons/lucide/x-circle';
 import {
   type SandboxExecution,
   type SandboxLanguage,
@@ -130,7 +128,7 @@ export function SandboxPanel() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Shield size={16} color="#10b981" />
+            <Shield width={16} height={16} color="#10b981" />
             <span
               style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0' }}
             >
@@ -145,7 +143,8 @@ export function SandboxPanel() {
           {/* Docker status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Container
-              size={14}
+              width={14}
+              height={14}
               color={health?.docker_available ? '#22c55e' : '#f59e0b'}
             />
             <span style={{ fontSize: '11px', color: '#94a3b8' }}>
@@ -178,7 +177,7 @@ export function SandboxPanel() {
               cursor: 'pointer',
             }}
           >
-            <Box size={12} />
+            <Box width={12} height={12} />
             Sessions ({sessions.length})
           </button>
         </div>
@@ -246,7 +245,7 @@ export function SandboxPanel() {
                 color: '#22c55e',
               }}
             >
-              <Container size={12} />
+              <Container width={12} height={12} />
               Session active
               <button
                 type="button"
@@ -284,9 +283,9 @@ export function SandboxPanel() {
             }}
           >
             {isCreating ? (
-              <Loader2 size={12} className="animate-spin" />
+              <Loader2 width={12} height={12} className="animate-spin" />
             ) : (
-              <Plus size={12} />
+              <Plus width={12} height={12} />
             )}
             New Session
           </button>
@@ -373,12 +372,12 @@ export function SandboxPanel() {
             >
               {isExecuting ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 width={14} height={14} className="animate-spin" />
                   Running...
                 </>
               ) : (
                 <>
-                  <Play size={14} />
+                  <Play width={14} height={14} />
                   Run (Ctrl+Enter)
                 </>
               )}
@@ -508,11 +507,11 @@ function ExecutionOutput({ execution }: { execution: SandboxExecution }) {
         }}
       >
         {isSuccess ? (
-          <CheckCircle2 size={14} color="#22c55e" />
+          <CheckCircle2 width={14} height={14} color="#22c55e" />
         ) : isTimeout ? (
-          <Clock size={14} color="#f59e0b" />
+          <Clock width={14} height={14} color="#f59e0b" />
         ) : (
-          <XCircle size={14} color="#ef4444" />
+          <XCircle width={14} height={14} color="#ef4444" />
         )}
         <span
           style={{
@@ -685,7 +684,7 @@ function SessionCard({
               display: 'flex',
             }}
           >
-            <Trash2 size={12} />
+            <Trash2 width={12} height={12} />
           </button>
         </div>
       </div>
@@ -722,9 +721,9 @@ function ExecutionRow({ execution }: { execution: SandboxExecution }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {isSuccess ? (
-            <CheckCircle2 size={10} color="#22c55e" />
+            <CheckCircle2 width={10} height={10} color="#22c55e" />
           ) : (
-            <XCircle size={10} color="#ef4444" />
+            <XCircle width={10} height={10} color="#ef4444" />
           )}
           <span
             style={{

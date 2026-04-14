@@ -10,16 +10,6 @@
 
 import { cn, EmptyState } from '@jaskier/ui';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  ArrowDown,
-  Code2,
-  FileSearch,
-  FileText,
-  GitBranch,
-  Globe,
-  MessageSquare,
-  Search,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +17,14 @@ import {
   type PromptSuggestion,
   PromptSuggestions,
 } from '@/components/molecules/PromptSuggestions';
+import ArrowDown from '~icons/lucide/arrow-down';
+import Code2 from '~icons/lucide/code-2';
+import FileSearch from '~icons/lucide/file-search';
+import FileText from '~icons/lucide/file-text';
+import GitBranch from '~icons/lucide/git-branch';
+import Globe from '~icons/lucide/globe';
+import MessageSquare from '~icons/lucide/message-square';
+import Search from '~icons/lucide/search';
 import { COMPACTION_DIVIDER_ID } from '../hooks/useChatMessages';
 import type { ChatMessage } from './MessageBubble';
 import { MessageBubble } from './MessageBubble';
@@ -351,7 +349,7 @@ export const VirtualizedMessageArea = memo<VirtualizedMessageAreaProps>(
                 'New messages, scroll to bottom',
               )}
             >
-              <ArrowDown size={14} />
+              <ArrowDown width={14} height={14} />
               {t('chat.newMessages', 'New messages')}
             </motion.button>
           )}

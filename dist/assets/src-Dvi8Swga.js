@@ -1,0 +1,1 @@
+import{n as e}from"./shared-core-Cfx08D5D.js";export{e as reportWebVitals};

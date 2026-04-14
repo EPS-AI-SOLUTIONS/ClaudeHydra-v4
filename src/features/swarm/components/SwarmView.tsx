@@ -18,26 +18,24 @@ import {
 } from '@xyflow/react';
 import { useCallback, useMemo, useState } from 'react';
 import '@xyflow/react/dist/style.css';
-import {
-  Activity,
-  Brain,
-  CheckCircle2,
-  Globe,
-  Image as ImageIcon,
-  LayoutTemplate,
-  Loader2,
-  Network,
-  Paperclip,
-  Play,
-  RefreshCw,
-  Send,
-  Shield,
-  Trash2,
-  XCircle,
-  Zap,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useTranslation } from 'react-i18next';
+import Activity from '~icons/lucide/activity';
+import Brain from '~icons/lucide/brain';
+import CheckCircle2 from '~icons/lucide/check-circle-2';
+import Globe from '~icons/lucide/globe';
+import ImageIcon from '~icons/lucide/image';
+import LayoutTemplate from '~icons/lucide/layout-template';
+import Loader2 from '~icons/lucide/loader-2';
+import Network from '~icons/lucide/network';
+import Paperclip from '~icons/lucide/paperclip';
+import Play from '~icons/lucide/play';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Send from '~icons/lucide/send';
+import Shield from '~icons/lucide/shield';
+import Trash2 from '~icons/lucide/trash-2';
+import XCircle from '~icons/lucide/x-circle';
+import Zap from '~icons/lucide/zap';
 import {
   type OrchestrationPattern,
   type SwarmPeer,
@@ -313,7 +311,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <Activity size={16} /> {t('swarm.tabs.monitoring')}
+          <Activity width={16} height={16} /> {t('swarm.tabs.monitoring')}
         </button>
         <button
           type="button"
@@ -334,7 +332,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <LayoutTemplate size={16} /> {t('swarm.tabs.builder')}
+          <LayoutTemplate width={16} height={16} /> {t('swarm.tabs.builder')}
         </button>
         <button
           type="button"
@@ -355,7 +353,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <Shield size={16} /> {t('swarm.tabs.sandbox')}
+          <Shield width={16} height={16} /> {t('swarm.tabs.sandbox')}
         </button>
         <button
           type="button"
@@ -376,7 +374,7 @@ export function SwarmView() {
             fontSize: '13px',
           }}
         >
-          <Brain size={16} /> {t('swarm.tabs.pruning')}
+          <Brain width={16} height={16} /> {t('swarm.tabs.pruning')}
         </button>
       </div>
 
@@ -437,7 +435,7 @@ export function SwarmView() {
                       gap: '6px',
                     }}
                   >
-                    <Network size={16} color="#3b82f6" />
+                    <Network width={16} height={16} color="#3b82f6" />
                     <span
                       style={{
                         fontSize: '13px',
@@ -457,25 +455,25 @@ export function SwarmView() {
                   />
 
                   <Stat
-                    icon={<Globe size={14} />}
+                    icon={<Globe width={14} height={14} />}
                     label={t('swarm.stats.online')}
                     value={`${stats.onlinePeers}/${stats.totalPeers}`}
                     color="#22c55e"
                   />
                   <Stat
-                    icon={<Activity size={14} />}
+                    icon={<Activity width={14} height={14} />}
                     label={t('swarm.stats.running')}
                     value={stats.runningTasks}
                     color="#3b82f6"
                   />
                   <Stat
-                    icon={<CheckCircle2 size={14} />}
+                    icon={<CheckCircle2 width={14} height={14} />}
                     label={t('swarm.stats.done')}
                     value={stats.completedTasks}
                     color="#22c55e"
                   />
                   <Stat
-                    icon={<XCircle size={14} />}
+                    icon={<XCircle width={14} height={14} />}
                     label={t('swarm.stats.failed')}
                     value={stats.failedTasks}
                     color="#ef4444"
@@ -507,9 +505,13 @@ export function SwarmView() {
                     }}
                   >
                     {isDiscovering ? (
-                      <Loader2 size={14} className="animate-spin" />
+                      <Loader2
+                        width={14}
+                        height={14}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <RefreshCw size={14} />
+                      <RefreshCw width={14} height={14} />
                     )}
                     {t('swarm.discover')}
                   </button>
@@ -530,7 +532,7 @@ export function SwarmView() {
                       cursor: 'pointer',
                     }}
                   >
-                    <Send size={14} />
+                    <Send width={14} height={14} />
                     {t('swarm.delegate')}
                   </button>
                 </div>
@@ -565,7 +567,8 @@ export function SwarmView() {
                     }}
                   >
                     <Zap
-                      size={16}
+                      width={16}
+                      height={16}
                       style={{ display: 'inline', marginRight: '6px' }}
                     />
                     {t('swarm.delegateTitle')}
@@ -688,7 +691,7 @@ export function SwarmView() {
                         gap: '4px',
                       }}
                     >
-                      <Paperclip size={12} />
+                      <Paperclip width={12} height={12} />
                       {t('swarm.delegateAttachments')}
                     </div>
                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -752,9 +755,17 @@ export function SwarmView() {
                             }}
                           >
                             {att.contentType.startsWith('image/') ? (
-                              <ImageIcon size={10} color="#3b82f6" />
+                              <ImageIcon
+                                width={10}
+                                height={10}
+                                color="#3b82f6"
+                              />
                             ) : (
-                              <Paperclip size={10} color="#94a3b8" />
+                              <Paperclip
+                                width={10}
+                                height={10}
+                                color="#94a3b8"
+                              />
                             )}
                             <span
                               style={{
@@ -778,7 +789,7 @@ export function SwarmView() {
                                 display: 'flex',
                               }}
                             >
-                              <Trash2 size={10} />
+                              <Trash2 width={10} height={10} />
                             </button>
                           </div>
                         ))}
@@ -810,12 +821,16 @@ export function SwarmView() {
                   >
                     {isDelegating ? (
                       <>
-                        <Loader2 size={14} className="animate-spin" />
+                        <Loader2
+                          width={14}
+                          height={14}
+                          className="animate-spin"
+                        />
                         {t('swarm.delegating')}
                       </>
                     ) : (
                       <>
-                        <Play size={14} />
+                        <Play width={14} height={14} />
                         {t('swarm.executing')}
                       </>
                     )}

@@ -16,10 +16,11 @@
 import { credentialToJSON, parseRequestOptionsFromJSON } from '@jaskier/auth';
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import { Fingerprint, ShieldCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Fingerprint from '~icons/lucide/fingerprint';
+import ShieldCheck from '~icons/lucide/shield-check';
 
 const API_BASE = (import.meta.env['VITE_API_URL'] as string | undefined) ?? '';
 
@@ -64,7 +65,7 @@ async function authenticateWithPasskey(email?: string): Promise<void> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       auth_state: startData.auth_state,
-      credential: credentialToJSON(credential),
+      credential: credentialToJSON(credential as PublicKeyCredential),
     }),
   });
 
@@ -154,7 +155,8 @@ export const PasskeyLoginSection = memo(() => {
                 )}
               >
                 <Fingerprint
-                  size={20}
+                  width={20}
+                  height={20}
                   className={cn(
                     isLight ? 'text-indigo-600' : 'text-indigo-400',
                   )}
@@ -197,7 +199,7 @@ export const PasskeyLoginSection = memo(() => {
                   </>
                 ) : (
                   <>
-                    <ShieldCheck size={16} />
+                    <ShieldCheck width={16} height={16} />
                     {t('passkey.signIn', 'Passkey')}
                   </>
                 )}
@@ -240,7 +242,7 @@ export const PasskeyLoginSection = memo(() => {
                 : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
             )}
           >
-            <ShieldCheck size={18} />
+            <ShieldCheck width={18} height={18} />
             <span className="text-sm font-medium">
               {t('passkey.success', 'Successfully authenticated with passkey')}
             </span>

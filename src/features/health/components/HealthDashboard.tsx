@@ -10,9 +10,11 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { QueryError } from '@jaskier/hydra-app/components/molecules';
 import { BaseMetricsDashboard, Card, cn } from '@jaskier/ui';
-import { Clock, RefreshCw, Shield } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Clock from '~icons/lucide/clock';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Shield from '~icons/lucide/shield';
 import { useHealthDashboard } from '../hooks/useHealthDashboard';
 
 // ============================================================================
@@ -148,7 +150,11 @@ export const HealthDashboard = memo(() => {
           aria-label={t('health.refresh', 'Refresh health data')}
           title={t('health.refresh', 'Refresh')}
         >
-          <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+          <RefreshCw
+            width={14}
+            height={14}
+            className={isRefreshing ? 'animate-spin' : ''}
+          />
         </button>
       </div>
 
@@ -205,7 +211,7 @@ export const HealthDashboard = memo(() => {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {/* Auth Mode */}
         <StatCard
-          icon={<Shield size={16} />}
+          icon={<Shield width={16} height={16} />}
           label={t('health.auth', 'Authentication')}
           value={
             data.authRequired === null
@@ -218,7 +224,7 @@ export const HealthDashboard = memo(() => {
 
         {/* Uptime */}
         <StatCard
-          icon={<Clock size={16} />}
+          icon={<Clock width={16} height={16} />}
           label={t('health.uptime', 'Uptime')}
           value={
             data.uptimeSeconds !== null

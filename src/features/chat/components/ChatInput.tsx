@@ -8,7 +8,6 @@
  */
 
 import { BaseChatInput, type BaseChatInputHandle, cn } from '@jaskier/ui';
-import { Loader2, Paperclip, Send } from 'lucide-react';
 import { motion } from 'motion/react';
 import {
   type ChangeEvent,
@@ -21,6 +20,9 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import Loader2 from '~icons/lucide/loader-2';
+import Paperclip from '~icons/lucide/paperclip';
+import Send from '~icons/lucide/send';
 
 import { AttachmentPreview } from './AttachmentPreview';
 import { WorkingFolderPicker } from './WorkingFolderPicker';
@@ -200,7 +202,11 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       >
         {isDragging && (
           <div className="flex items-center justify-center py-3 px-4 glass-panel border-dashed border-2 border-[var(--matrix-accent)] bg-[var(--matrix-accent)]/5 rounded-lg">
-            <Paperclip size={18} className="text-[var(--matrix-accent)] mr-2" />
+            <Paperclip
+              width={18}
+              height={18}
+              className="text-[var(--matrix-accent)] mr-2"
+            />
             <span className="text-sm text-[var(--matrix-accent)]">
               {t('chat.dropFilesHere', 'Drop files here')}
             </span>
@@ -254,7 +260,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                 title={t('chat.attachFile', 'Attach file')}
                 aria-label={t('chat.attachFile', 'Attach file')}
               >
-                <Paperclip size={18} />
+                <Paperclip width={18} height={18} />
               </button>
             </>
           }
@@ -277,9 +283,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               aria-label={t('chat.sendMessage', 'Send message')}
             >
               {isLoading ? (
-                <Loader2 size={18} className="animate-spin" />
+                <Loader2 width={18} height={18} className="animate-spin" />
               ) : (
-                <Send size={18} />
+                <Send width={18} height={18} />
               )}
             </motion.button>
           }

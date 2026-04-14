@@ -6,25 +6,23 @@
  * Integrated into SwarmView as a tab alongside Monitoring and Builder.
  */
 
-import {
-  BarChart3,
-  Brain,
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  GitMerge,
-  Layers,
-  Loader2,
-  Play,
-  Settings2,
-  Trash2,
-  XCircle,
-  Zap,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import BarChart3 from '~icons/lucide/bar-chart-3';
+import Brain from '~icons/lucide/brain';
+import CheckCircle2 from '~icons/lucide/check-circle-2';
+import ChevronDown from '~icons/lucide/chevron-down';
+import ChevronRight from '~icons/lucide/chevron-right';
+import Clock from '~icons/lucide/clock';
+import GitMerge from '~icons/lucide/git-merge';
+import Layers from '~icons/lucide/layers';
+import Loader2 from '~icons/lucide/loader-2';
+import Play from '~icons/lucide/play';
+import Settings2 from '~icons/lucide/settings-2';
+import Trash2 from '~icons/lucide/trash-2';
+import XCircle from '~icons/lucide/x-circle';
+import Zap from '~icons/lucide/zap';
 import {
   type PruneCycleSummary,
   type PruneLogEntry,
@@ -72,7 +70,7 @@ function StatCard({
           justifyContent: 'center',
         }}
       >
-        <Icon size={20} color={color} />
+        <Icon width={20} height={20} color={color} />
       </div>
       <div>
         <div
@@ -126,7 +124,7 @@ function ActionBadge({ action }: { action: string }) {
         fontWeight: 600,
       }}
     >
-      <Icon size={12} />
+      <Icon width={12} height={12} />
       {action}
     </span>
   );
@@ -175,7 +173,7 @@ function CycleDetails({ cycleId }: { cycleId: string }) {
           gap: '8px',
         }}
       >
-        <Loader2 size={14} className="animate-spin" />
+        <Loader2 width={14} height={14} className="animate-spin" />
         {t('pruning.loadingDetails')}
       </div>
     );
@@ -315,7 +313,7 @@ export function MemoryPruningPanel() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Brain size={24} color="#c084fc" />
+          <Brain width={24} height={24} color="#c084fc" />
           <div>
             <h2 style={{ margin: 0, fontSize: '20px', color: '#e0e0ff' }}>
               {t('pruning.title')}
@@ -342,7 +340,7 @@ export function MemoryPruningPanel() {
               fontSize: '13px',
             }}
           >
-            <Settings2 size={14} />
+            <Settings2 width={14} height={14} />
             {t('pruning.config')}
           </button>
           <button
@@ -366,12 +364,12 @@ export function MemoryPruningPanel() {
           >
             {isRunning ? (
               <>
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 width={14} height={14} className="animate-spin" />
                 {t('pruning.pruningInProgress')}
               </>
             ) : (
               <>
-                <Play size={14} />
+                <Play width={14} height={14} />
                 {t('pruning.triggerPruning')}
               </>
             )}
@@ -669,7 +667,8 @@ export function MemoryPruningPanel() {
             style={{ padding: '40px', textAlign: 'center', color: '#8b8ba7' }}
           >
             <Loader2
-              size={24}
+              width={24}
+              height={24}
               className="animate-spin"
               style={{ margin: '0 auto 8px' }}
             />
@@ -679,7 +678,11 @@ export function MemoryPruningPanel() {
           <div
             style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}
           >
-            <Brain size={32} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
+            <Brain
+              width={32}
+              height={32}
+              style={{ margin: '0 auto 8px', opacity: 0.3 }}
+            />
             <div>{t('pruning.noCycles')}</div>
             <div style={{ fontSize: '12px', marginTop: '4px' }}>
               {t('pruning.noCyclesHint')}
@@ -712,9 +715,9 @@ export function MemoryPruningPanel() {
                     }}
                   >
                     {isExpanded ? (
-                      <ChevronDown size={14} />
+                      <ChevronDown width={14} height={14} />
                     ) : (
-                      <ChevronRight size={14} />
+                      <ChevronRight width={14} height={14} />
                     )}
                     <StatusBadge status={cycle.status} />
                     <span
@@ -737,7 +740,8 @@ export function MemoryPruningPanel() {
                     >
                       <span title={t('pruning.tooltips.deleted')}>
                         <Trash2
-                          size={12}
+                          width={12}
+                          height={12}
                           style={{
                             marginRight: '2px',
                             verticalAlign: 'middle',
@@ -747,7 +751,8 @@ export function MemoryPruningPanel() {
                       </span>
                       <span title={t('pruning.tooltips.merged')}>
                         <GitMerge
-                          size={12}
+                          width={12}
+                          height={12}
                           style={{
                             marginRight: '2px',
                             verticalAlign: 'middle',
@@ -757,7 +762,8 @@ export function MemoryPruningPanel() {
                       </span>
                       <span title={t('pruning.tooltips.kept')}>
                         <CheckCircle2
-                          size={12}
+                          width={12}
+                          height={12}
                           style={{
                             marginRight: '2px',
                             verticalAlign: 'middle',
@@ -770,7 +776,8 @@ export function MemoryPruningPanel() {
                         style={{ color: '#4ade80' }}
                       >
                         <Zap
-                          size={12}
+                          width={12}
+                          height={12}
                           style={{
                             marginRight: '2px',
                             verticalAlign: 'middle',
@@ -811,7 +818,7 @@ export function MemoryPruningPanel() {
                                 gap: '6px',
                               }}
                             >
-                              <XCircle size={14} />
+                              <XCircle width={14} height={14} />
                               {cycle.error}
                             </div>
                           )}

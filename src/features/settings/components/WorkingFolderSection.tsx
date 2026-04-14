@@ -2,20 +2,18 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Button, cn, Input } from '@jaskier/ui';
-import {
-  AlertCircle,
-  Check,
-  FolderOpen,
-  Loader2,
-  Pencil,
-  X,
-} from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiPost } from '@/shared/api/client';
 import type { Settings } from '@/shared/api/schemas';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
+import AlertCircle from '~icons/lucide/alert-circle';
+import Check from '~icons/lucide/check';
+import FolderOpen from '~icons/lucide/folder-open';
+import Loader2 from '~icons/lucide/loader-2';
+import Pencil from '~icons/lucide/pencil';
+import X from '~icons/lucide/x';
 
 export const WorkingFolderSection = memo(() => {
   const { t } = useTranslation();
@@ -105,7 +103,11 @@ export const WorkingFolderSection = memo(() => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <FolderOpen size={18} className="text-[var(--matrix-accent)]" />
+        <FolderOpen
+          width={18}
+          height={18}
+          className="text-[var(--matrix-accent)]"
+        />
         <h3
           className={cn(
             'text-sm font-semibold font-mono uppercase tracking-wider',
@@ -136,7 +138,7 @@ export const WorkingFolderSection = memo(() => {
           />
           {error && (
             <div className="flex items-center gap-2 text-red-400">
-              <AlertCircle size={14} />
+              <AlertCircle width={14} height={14} />
               <span className="text-xs">{error}</span>
             </div>
           )}
@@ -144,7 +146,7 @@ export const WorkingFolderSection = memo(() => {
             <Button
               variant="primary"
               size="sm"
-              leftIcon={<Check size={14} />}
+              leftIcon={<Check width={14} height={14} />}
               onClick={handleSave}
               isLoading={saving}
             >
@@ -153,7 +155,7 @@ export const WorkingFolderSection = memo(() => {
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<X size={14} />}
+              leftIcon={<X width={14} height={14} />}
               onClick={handleCancel}
               disabled={saving}
             >
@@ -186,9 +188,9 @@ export const WorkingFolderSection = memo(() => {
               size="sm"
               leftIcon={
                 browsing ? (
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 width={14} height={14} className="animate-spin" />
                 ) : (
-                  <FolderOpen size={14} />
+                  <FolderOpen width={14} height={14} />
                 )
               }
               onClick={handleBrowse}
@@ -205,7 +207,7 @@ export const WorkingFolderSection = memo(() => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  leftIcon={<Pencil size={14} />}
+                  leftIcon={<Pencil width={14} height={14} />}
                   onClick={() => setEditing(true)}
                   disabled={browsing || saving}
                 >
@@ -214,7 +216,7 @@ export const WorkingFolderSection = memo(() => {
                 <Button
                   variant="danger"
                   size="sm"
-                  leftIcon={<X size={14} />}
+                  leftIcon={<X width={14} height={14} />}
                   onClick={handleClear}
                   isLoading={saving}
                 >

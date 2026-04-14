@@ -37,7 +37,7 @@ interface NdjsonEvent {
 
 export const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
-const AUTH_SECRET = env.VITE_AUTH_SECRET;
+const AUTH_SECRET = env.AUTH_SECRET;
 
 // ---------------------------------------------------------------------------
 // API helpers

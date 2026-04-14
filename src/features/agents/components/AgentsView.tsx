@@ -18,19 +18,6 @@ import {
   EmptyState,
   ErrorBoundary,
 } from '@jaskier/ui';
-import {
-  Bot,
-  Brain,
-  Crown,
-  Filter,
-  GitBranch,
-  Shield,
-  Swords,
-  Terminal as TerminalIcon,
-  Users,
-  Wand2,
-  Zap,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +29,17 @@ import {
   type BackendLogEntry,
   useBackendLogs,
 } from '@/features/logs/hooks/useLogs';
+import Bot from '~icons/lucide/bot';
+import Brain from '~icons/lucide/brain';
+import Crown from '~icons/lucide/crown';
+import Filter from '~icons/lucide/filter';
+import GitBranch from '~icons/lucide/git-branch';
+import Shield from '~icons/lucide/shield';
+import Swords from '~icons/lucide/swords';
+import TerminalIcon from '~icons/lucide/terminal';
+import Users from '~icons/lucide/users';
+import Wand2 from '~icons/lucide/wand-2';
+import Zap from '~icons/lucide/zap';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -327,7 +325,7 @@ function AgentCard({ agent }: AgentCardProps) {
                 agent.color,
               )}
             >
-              <Icon size={20} />
+              <Icon width={20} height={20} />
             </div>
 
             <div className="flex-1 min-w-0">
@@ -356,7 +354,7 @@ function AgentCard({ agent }: AgentCardProps) {
             <Badge
               variant={tierBadgeVariant[agent.tier]}
               size="sm"
-              icon={<TierIcon size={10} />}
+              icon={<TierIcon width={10} height={10} />}
             >
               {agent.tier}
             </Badge>
@@ -425,7 +423,11 @@ export function AgentsView() {
           >
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-[var(--matrix-accent)]/10 border border-[var(--matrix-accent)]/20 flex items-center justify-center">
-                <Users size={20} className="text-[var(--matrix-accent)]" />
+                <Users
+                  width={20}
+                  height={20}
+                  className="text-[var(--matrix-accent)]"
+                />
               </div>
               <div>
                 <h2
@@ -454,7 +456,8 @@ export function AgentsView() {
               className="flex items-center gap-2 flex-wrap"
             >
               <Filter
-                size={14}
+                width={14}
+                height={14}
                 className="text-[var(--matrix-text-secondary)]"
               />
               {TIER_FILTERS.map((tier) => (
@@ -510,7 +513,11 @@ export function AgentsView() {
         {/* Terminal Logs Sidebar */}
         <div className="w-full xl:w-96 h-64 xl:h-full shrink-0 flex flex-col border border-[var(--matrix-border)] rounded-xl bg-[var(--matrix-bg-secondary)] overflow-hidden shadow-lg">
           <div className="flex items-center gap-2 p-3 border-b border-[var(--matrix-border)] bg-black/20">
-            <TerminalIcon size={16} className="text-[var(--matrix-accent)]" />
+            <TerminalIcon
+              width={16}
+              height={16}
+              className="text-[var(--matrix-accent)]"
+            />
             <h3 className="text-sm font-mono font-semibold text-[var(--matrix-text-primary)]">
               Agents Terminal
             </h3>

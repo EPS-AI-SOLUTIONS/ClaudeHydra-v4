@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 // BE-CH-007 — Integration tests for ClaudeHydra OAuth endpoints.
 //
 // Tests Anthropic provider OAuth PKCE (at /api/auth/anthropic/*) and

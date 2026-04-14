@@ -11,13 +11,15 @@
  */
 
 import { cn } from '@jaskier/ui';
-import { Cloud, Cpu, Zap } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatusIndicator } from '@/components/molecules/StatusIndicator';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { BrowserProxyStatus } from '@/features/settings/hooks/useBrowserProxy';
 import { useBrowserProxyStatus } from '@/features/settings/hooks/useBrowserProxy';
+import Cloud from '~icons/lucide/cloud';
+import Cpu from '~icons/lucide/cpu';
+import Zap from '~icons/lucide/zap';
 
 // ============================================================================
 // TYPES
@@ -276,7 +278,7 @@ function StatusFooterComponent({
         {/* Model tier badge */}
         {modelTier && (
           <div className={cn('flex items-center gap-1', modelTier.cls)}>
-            <modelTier.icon size={10} aria-hidden="true" />
+            <modelTier.icon width={10} height={10} aria-hidden="true" />
             <span className="font-bold">{modelTier.label}</span>
           </div>
         )}

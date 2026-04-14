@@ -9,15 +9,6 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { Badge, Button, cn } from '@jaskier/ui';
 import type { TFunction } from 'i18next';
-import {
-  Bot,
-  Clock,
-  MessageSquare,
-  Network,
-  Plus,
-  Sparkles,
-  Users,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +17,13 @@ import { HealthDashboard } from '@/features/health/components/HealthDashboard';
 import { PasskeyLoginSection } from '@/features/home/components/PasskeyLoginSection';
 import { OAuthBanner } from '@/features/settings/components/OAuthBanner';
 import { type ChatSession, useViewStore } from '@/stores/viewStore';
+import Bot from '~icons/lucide/bot';
+import Clock from '~icons/lucide/clock';
+import MessageSquare from '~icons/lucide/message-square';
+import Network from '~icons/lucide/network';
+import Plus from '~icons/lucide/plus';
+import Sparkles from '~icons/lucide/sparkles';
+import Users from '~icons/lucide/users';
 
 // ============================================================================
 // CONSTANTS
@@ -136,7 +134,8 @@ const SessionRow = memo<SessionRowProps>(({ session, onOpen, theme }) => {
       whileTap={{ scale: 0.98 }}
     >
       <MessageSquare
-        size={16}
+        width={16}
+        height={16}
         className={cn(
           'shrink-0 transition-colors',
           'group-hover:text-[var(--matrix-accent)]',
@@ -262,7 +261,11 @@ export const HomePage = memo(() => {
           >
             {FEATURE_BADGES.map(({ key, fallback, icon: Icon }) => (
               <motion.div key={key} variants={badgeItemVariants}>
-                <Badge variant="accent" size="sm" icon={<Icon size={12} />}>
+                <Badge
+                  variant="accent"
+                  size="sm"
+                  icon={<Icon width={12} height={12} />}
+                >
                   {t(key, fallback)}
                 </Badge>
               </motion.div>
@@ -279,7 +282,7 @@ export const HomePage = memo(() => {
             <Button
               variant="primary"
               size="md"
-              leftIcon={<Plus size={16} />}
+              leftIcon={<Plus width={16} height={16} />}
               onClick={() => createSessionWithSync()}
               className="w-full"
               data-testid="btn-new-chat"
@@ -306,7 +309,7 @@ export const HomePage = memo(() => {
               exit="hidden"
             >
               <div className="flex items-center gap-2 mb-3">
-                <Clock size={14} className={theme.iconMuted} />
+                <Clock width={14} height={14} className={theme.iconMuted} />
                 <span
                   className={cn(
                     'text-xs uppercase tracking-wider font-mono',
@@ -342,7 +345,8 @@ export const HomePage = memo(() => {
               transition={{ delay: 0.35 }}
             >
               <Sparkles
-                size={32}
+                width={32}
+                height={32}
                 className={cn(theme.iconMuted, 'opacity-40')}
               />
               <p className={cn('text-sm', theme.textMuted)}>

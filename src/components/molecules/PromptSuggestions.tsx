@@ -1,7 +1,9 @@
 /** Jaskier Shared Pattern */
 
 import { cn } from '@jaskier/ui';
-import type { LucideIcon } from 'lucide-react';
+
+type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
 import { motion } from 'motion/react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,7 +57,8 @@ export const PromptSuggestions = memo<PromptSuggestionsProps>(
               )}
             >
               <Icon
-                size={18}
+                width={18}
+                height={18}
                 className="text-[var(--matrix-text-secondary)] group-hover:text-[var(--matrix-accent)] transition-colors mt-0.5 shrink-0"
               />
               <span className="text-sm font-mono text-[var(--matrix-text-secondary)] group-hover:text-[var(--matrix-text-primary)] transition-colors leading-snug">

@@ -6,10 +6,10 @@
 } from '@jaskier/chat-module';
 import { AgentAvatar, cn } from '@jaskier/ui';
 import { BaseMessageBubble } from '@jaskier/ui/markdown';
-import { RefreshCw } from 'lucide-react';
 import { type MouseEvent, memo, useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCurrentSession } from '@/stores/viewStore';
+import RefreshCw from '~icons/lucide/refresh-cw';
 import { ErrorBoundary } from './ErrorBoundary';
 import { MessageRating } from './MessageRating';
 import { ToolResultRenderer } from './ToolResultRenderer';
@@ -148,7 +148,7 @@ export const MessageBubble = memo<MessageBubbleProps>(
                 onClick={() => onRetry(message)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors"
               >
-                <RefreshCw size={12} />
+                <RefreshCw width={12} height={12} />
                 {t('chat.retry', 'Retry')}
               </button>
             </div>

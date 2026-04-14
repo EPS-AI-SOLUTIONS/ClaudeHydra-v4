@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 // ai_gateway_tests.rs — Integration tests for AI Gateway + Vault Bridge
 //
 // Tests cross-module interactions between:

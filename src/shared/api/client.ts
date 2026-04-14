@@ -15,7 +15,7 @@ import { env } from '../config/env';
 initApiClient({
   flyUrl: 'https://claudehydra-v4-backend.fly.dev',
   localPort: 8082,
-  authSecret: env.VITE_AUTH_SECRET,
+  authSecret: env.AUTH_SECRET,
 });
 
 export type {

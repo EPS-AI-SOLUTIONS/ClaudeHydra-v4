@@ -18,6 +18,7 @@ import {
 } from '@xyflow/react';
 import React, { useCallback, useRef, useState } from 'react';
 import '@xyflow/react/dist/style.css';
+import { toast } from 'sonner';
 import Bot from '~icons/lucide/bot';
 import Database from '~icons/lucide/database';
 import Download from '~icons/lucide/download';
@@ -26,7 +27,6 @@ import Play from '~icons/lucide/play';
 import Save from '~icons/lucide/save';
 import Shield from '~icons/lucide/shield';
 import Wrench from '~icons/lucide/wrench';
-import { toast } from 'sonner';
 
 // ── Custom Nodes ─────────────────────────────────────────────────────────────
 
@@ -470,7 +470,9 @@ export function SwarmBuilder({ events = [] }: { events?: SwarmEventType[] }) {
       })
       .catch((err: unknown) => {
         console.error('[SwarmBuilder] Failed to load architecture:', err);
-        toast.error('Failed to load swarm architecture — check console for details');
+        toast.error(
+          'Failed to load swarm architecture — check console for details',
+        );
       });
   }, [setNodes, setEdges]);
 

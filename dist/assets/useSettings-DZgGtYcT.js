@@ -1,0 +1,1 @@
+import{it as e,tt as t}from"./shared-ui-C6vcbNRV.js";import{l as n,u as r}from"./shared-core-Cfx08D5D.js";import"./client-YLK9SG01.js";var i=`claude-hydra-telemetry`,a=n(i),o={telemetryLocalStorageKey:i,apiClient:{apiGet:t,apiPost:e}};function s(){return r(o)}export{s as n,a as t};

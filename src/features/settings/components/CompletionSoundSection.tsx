@@ -8,9 +8,10 @@ import {
   setCompletionVolume,
 } from '@jaskier/core';
 import { cn } from '@jaskier/ui';
-import { Bell, BellOff } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Bell from '~icons/lucide/bell';
+import BellOff from '~icons/lucide/bell-off';
 
 export const CompletionSoundSection = memo(() => {
   const { t } = useTranslation();
@@ -34,9 +35,17 @@ export const CompletionSoundSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         {enabled ? (
-          <Bell size={18} className="text-[var(--matrix-accent)]" />
+          <Bell
+            width={18}
+            height={18}
+            className="text-[var(--matrix-accent)]"
+          />
         ) : (
-          <BellOff size={18} className="text-[var(--matrix-accent)]" />
+          <BellOff
+            width={18}
+            height={18}
+            className="text-[var(--matrix-accent)]"
+          />
         )}
         <h3
           className={cn(

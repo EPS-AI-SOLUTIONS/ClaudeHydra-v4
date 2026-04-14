@@ -2,13 +2,13 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import { BarChart3 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiPost } from '@/shared/api/client';
 import type { Settings } from '@/shared/api/schemas';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
+import BarChart3 from '~icons/lucide/bar-chart-3';
 
 export const TelemetrySection = memo(() => {
   const { t } = useTranslation();
@@ -37,7 +37,11 @@ export const TelemetrySection = memo(() => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <BarChart3 size={18} className="text-[var(--matrix-accent)]" />
+        <BarChart3
+          width={18}
+          height={18}
+          className="text-[var(--matrix-accent)]"
+        />
         <h3
           className={cn(
             'text-sm font-semibold font-mono uppercase tracking-wider',

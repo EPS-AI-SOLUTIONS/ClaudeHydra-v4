@@ -5,9 +5,10 @@
  * Auto-dismisses after 10 seconds or can be closed manually.
  */
 
-import { AlertTriangle, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef } from 'react';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import X from '~icons/lucide/x';
 
 export interface FallbackBannerData {
   from: string;
@@ -56,7 +57,11 @@ export function FallbackBanner({ data, onDismiss }: FallbackBannerProps) {
           className="overflow-hidden"
         >
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-200 text-sm font-mono mb-2">
-            <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+            <AlertTriangle
+              width={16}
+              height={16}
+              className="text-amber-400 shrink-0"
+            />
             <span className="flex-1">
               Przełączono z <strong>{data.from}</strong> na{' '}
               <strong>{data.to}</strong>
@@ -69,7 +74,7 @@ export function FallbackBanner({ data, onDismiss }: FallbackBannerProps) {
               className="p-0.5 rounded hover:bg-amber-500/20 transition-colors shrink-0"
               aria-label="Zamknij"
             >
-              <X size={14} />
+              <X width={14} height={14} />
             </button>
           </div>
         </motion.div>

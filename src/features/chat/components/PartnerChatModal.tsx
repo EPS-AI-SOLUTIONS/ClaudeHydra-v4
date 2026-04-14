@@ -4,13 +4,16 @@
 
 import { useFocusTrap } from '@jaskier/core';
 import { cn } from '@jaskier/ui';
-import { Bot, Loader2, User, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePartnerSession } from '@/features/chat/hooks/usePartnerSessions';
 import { formatTime } from '@/shared/utils/locale';
+import Bot from '~icons/lucide/bot';
+import Loader2 from '~icons/lucide/loader-2';
+import User from '~icons/lucide/user';
+import X from '~icons/lucide/x';
 
 interface Props {
   sessionId: string | null;
@@ -112,7 +115,8 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
                 )}
               >
                 <X
-                  size={18}
+                  width={18}
+                  height={18}
                   className={isLight ? 'text-slate-600' : 'text-white/60'}
                 />
               </button>
@@ -125,7 +129,11 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
             >
               {isLoading && (
                 <div className="flex items-center justify-center h-full">
-                  <Loader2 size={24} className="animate-spin text-blue-500" />
+                  <Loader2
+                    width={24}
+                    height={24}
+                    className="animate-spin text-blue-500"
+                  />
                 </div>
               )}
               {error && (
@@ -159,9 +167,9 @@ export default function PartnerChatModal({ sessionId, onClose }: Props) {
                     )}
                   >
                     {msg.role === 'user' ? (
-                      <User size={14} />
+                      <User width={14} height={14} />
                     ) : (
-                      <Bot size={14} />
+                      <Bot width={14} height={14} />
                     )}
                   </div>
                   <div

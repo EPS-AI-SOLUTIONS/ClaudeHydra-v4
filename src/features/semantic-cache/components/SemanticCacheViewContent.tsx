@@ -7,20 +7,18 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Database,
-  DollarSign,
-  Gauge,
-  RefreshCw,
-  Settings2,
-  Trash2,
-  XCircle,
-  Zap,
-} from 'lucide-react';
 import { useState } from 'react';
+import Activity from '~icons/lucide/activity';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import CheckCircle2 from '~icons/lucide/check-circle-2';
+import Database from '~icons/lucide/database';
+import DollarSign from '~icons/lucide/dollar-sign';
+import Gauge from '~icons/lucide/gauge';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Settings2 from '~icons/lucide/settings-2';
+import Trash2 from '~icons/lucide/trash-2';
+import XCircle from '~icons/lucide/x-circle';
+import Zap from '~icons/lucide/zap';
 import {
   type CacheEntry,
   useCacheConfig,
@@ -60,7 +58,7 @@ function StatCard({
     >
       <div className="flex items-center gap-3">
         <div className={cn('p-2 rounded-lg', color)}>
-          <Icon size={18} />
+          <Icon width={18} height={18} />
         </div>
         <div className="flex-1 min-w-0">
           <p
@@ -109,9 +107,9 @@ function HealthBadge({
   return (
     <div className="flex items-center gap-2">
       {ok ? (
-        <CheckCircle2 size={14} className="text-green-400" />
+        <CheckCircle2 width={14} height={14} className="text-green-400" />
       ) : (
-        <XCircle size={14} className="text-red-400" />
+        <XCircle width={14} height={14} className="text-red-400" />
       )}
       <span
         className={cn('text-sm', isDark ? 'text-white/70' : 'text-gray-600')}
@@ -197,7 +195,7 @@ function EntryRow({
         )}
         title="Delete entry"
       >
-        <Trash2 size={14} />
+        <Trash2 width={14} height={14} />
       </button>
     </div>
   );
@@ -261,7 +259,7 @@ function SemanticCacheViewContent() {
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-600',
               )}
             >
-              <Settings2 size={14} />
+              <Settings2 width={14} height={14} />
               Config
             </button>
             <button
@@ -276,7 +274,8 @@ function SemanticCacheViewContent() {
               disabled={invalidateCache.isPending}
             >
               <RefreshCw
-                size={14}
+                width={14}
+                height={14}
                 className={invalidateCache.isPending ? 'animate-spin' : ''}
               />
               Flush Cache
@@ -556,7 +555,8 @@ function SemanticCacheViewContent() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-inherit">
             <div className="flex items-center gap-2">
               <Database
-                size={14}
+                width={14}
+                height={14}
                 className={isDark ? 'text-white/50' : 'text-gray-400'}
               />
               <h3
@@ -619,7 +619,11 @@ function SemanticCacheViewContent() {
         {/* Warning if Qdrant is unreachable */}
         {health && !health.qdrant_reachable && (
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-            <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+            <AlertTriangle
+              width={16}
+              height={16}
+              className="text-amber-400 shrink-0"
+            />
             <p className="text-sm text-amber-300">
               Qdrant is unreachable at {config?.qdrant_url ?? 'localhost:6333'}.
               Start Qdrant to enable semantic caching.

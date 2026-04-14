@@ -8,9 +8,9 @@
 
 import type { ToolSegment } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import { Terminal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import Terminal from '~icons/lucide/terminal';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 use claudehydra_backend::tools::ToolExecutor;
 use serde_json::json;
 use std::sync::Once;

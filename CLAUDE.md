@@ -141,7 +141,7 @@
 - **Provider credentials**: Via environment variables (Vault)
 
 ## Workspace CLAUDE.md (canonical reference)
-- Full Jaskier ecosystem docs: `C:\Users\BIURODOM\Desktop\JaskierWorkspace\CLAUDE.md`
+- Full Jaskier ecosystem docs: `../../CLAUDE.md`
 - This file is project-scoped summary; workspace CLAUDE.md is the source of truth
 - Last synced: 2026-03-15 (R13 -- shared crates expansion, observability, Process Compose)
 

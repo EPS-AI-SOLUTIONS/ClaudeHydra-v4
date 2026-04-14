@@ -11,7 +11,6 @@
 
 import { useDebounce } from '@jaskier/core';
 import { cn } from '@jaskier/ui';
-import { Check, ChevronDown, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   type KeyboardEvent,
@@ -23,6 +22,9 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import Check from '~icons/lucide/check';
+import ChevronDown from '~icons/lucide/chevron-down';
+import Search from '~icons/lucide/search';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -217,7 +219,8 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
           {selectedModel?.name ?? placeholder}
         </span>
         <ChevronDown
-          size={16}
+          width={16}
+          height={16}
           className={cn(
             'text-[var(--matrix-text-secondary)] transition-transform shrink-0',
             isOpen && 'rotate-180',
@@ -243,7 +246,8 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
             {models.length > 5 && (
               <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--glass-border)]">
                 <Search
-                  size={14}
+                  width={14}
+                  height={14}
                   className="text-[var(--matrix-text-secondary)] shrink-0"
                 />
                 <input
@@ -300,7 +304,8 @@ export function ModelSelector<T extends ModelOption = ModelOption>({
                     <span className="w-4 h-4 flex items-center justify-center shrink-0">
                       {isSelected ? (
                         <Check
-                          size={14}
+                          width={14}
+                          height={14}
                           className="text-[var(--matrix-accent)]"
                         />
                       ) : (

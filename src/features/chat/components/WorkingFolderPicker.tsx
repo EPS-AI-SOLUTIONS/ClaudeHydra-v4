@@ -2,12 +2,16 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import { Check, FolderOpen, Loader2, Pencil, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiPatch, apiPost } from '@/shared/api/client';
+import Check from '~icons/lucide/check';
+import FolderOpen from '~icons/lucide/folder-open';
+import Loader2 from '~icons/lucide/loader-2';
+import Pencil from '~icons/lucide/pencil';
+import X from '~icons/lucide/x';
 
 // ============================================================================
 // WORKING FOLDER PICKER (per-session)
@@ -123,7 +127,8 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
               className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-[var(--matrix-bg-secondary)]/50"
             >
               <FolderOpen
-                size={18}
+                width={18}
+                height={18}
                 className="shrink-0 text-[var(--matrix-accent)]"
               />
               <input
@@ -154,7 +159,7 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                 className="p-1.5 rounded hover:bg-green-500/20 text-green-400 transition-colors"
                 title={t('common.save', 'Save')}
               >
-                <Check size={16} />
+                <Check width={16} height={16} />
               </button>
               <button
                 type="button"
@@ -163,7 +168,7 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                 className="p-1.5 rounded hover:bg-red-500/20 text-red-400 transition-colors"
                 title={t('common.cancel', 'Cancel')}
               >
-                <X size={16} />
+                <X width={16} height={16} />
               </button>
             </motion.div>
           ) : (
@@ -184,9 +189,13 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                     title={t('settings.workingFolder.browse', 'Browse folders')}
                   >
                     {browsing ? (
-                      <Loader2 size={18} className="animate-spin" />
+                      <Loader2
+                        width={18}
+                        height={18}
+                        className="animate-spin"
+                      />
                     ) : (
-                      <FolderOpen size={18} />
+                      <FolderOpen width={18} height={18} />
                     )}
                   </button>
                   <span
@@ -208,7 +217,7 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                     )}
                     title={t('settings.workingFolder.change', 'Change')}
                   >
-                    <Pencil size={14} />
+                    <Pencil width={14} height={14} />
                   </button>
                   <button
                     type="button"
@@ -221,7 +230,7 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                     )}
                     title={t('settings.workingFolder.clear', 'Clear')}
                   >
-                    <X size={14} />
+                    <X width={14} height={14} />
                   </button>
                 </>
               ) : (
@@ -236,9 +245,9 @@ export const WorkingFolderPicker = memo<WorkingFolderPickerProps>(
                   )}
                 >
                   {browsing ? (
-                    <Loader2 size={18} className="animate-spin" />
+                    <Loader2 width={18} height={18} className="animate-spin" />
                   ) : (
-                    <FolderOpen size={18} />
+                    <FolderOpen width={18} height={18} />
                   )}
                   {browsing
                     ? t('settings.workingFolder.opening', 'Opening dialog…')

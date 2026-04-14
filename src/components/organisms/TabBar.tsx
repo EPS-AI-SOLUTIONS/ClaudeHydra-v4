@@ -8,12 +8,14 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
-import { Pin, Plus, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { type ChatTab, useViewStore } from '@/stores/viewStore';
+import Pin from '~icons/lucide/pin';
+import Plus from '~icons/lucide/plus';
+import X from '~icons/lucide/x';
 
 // ============================================================================
 // TAB ITEM
@@ -166,7 +168,8 @@ const TabItem = memo<TabItemProps>(
       >
         {tab.isPinned && (
           <Pin
-            size={13}
+            width={13}
+            height={13}
             className={cn(
               'shrink-0',
               theme.isLight ? 'text-emerald-600' : 'text-white/70',
@@ -207,7 +210,7 @@ const TabItem = memo<TabItemProps>(
             )}
             title={t('tabs.closeTab', 'Close tab')}
           >
-            <X size={14} />
+            <X width={14} height={14} />
           </button>
         )}
       </motion.div>
@@ -375,7 +378,7 @@ export const TabBar = memo(() => {
         title={`${t('tabs.newTab', 'New tab')} (Ctrl+T)`}
         aria-label={t('tabs.newTab', 'New tab')}
       >
-        <Plus size={18} strokeWidth={2.5} />
+        <Plus width={18} height={18} strokeWidth={2.5} />
       </button>
 
       <AnimatePresence>
@@ -420,7 +423,7 @@ export const TabBar = memo(() => {
                         : 'text-white/80 hover:bg-white/10 hover:text-white',
                     )}
                   >
-                    <Pin size={14} />
+                    <Pin width={14} height={14} />
                     {targetTab.isPinned
                       ? t('tabs.unpinTab', 'Unpin tab')
                       : t('tabs.pinTab', 'Pin tab')}
@@ -440,7 +443,7 @@ export const TabBar = memo(() => {
                           : 'text-white/80 hover:bg-red-500/15 hover:text-red-400',
                       )}
                     >
-                      <X size={14} />
+                      <X width={14} height={14} />
                       {t('tabs.closeTab', 'Close tab')}
                     </button>
                   )}
@@ -466,7 +469,7 @@ export const TabBar = memo(() => {
                             : 'text-white/80 hover:bg-white/10 hover:text-white',
                         )}
                       >
-                        <X size={14} />
+                        <X width={14} height={14} />
                         {t('tabs.closeOtherTabs', 'Close other tabs')}
                       </button>
                     </>

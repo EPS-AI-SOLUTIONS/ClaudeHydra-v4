@@ -1,0 +1,1 @@
+import{at as e}from"./shared-ui-C6vcbNRV.js";import{t}from"./env-DYa_lJo-.js";e({flyUrl:`https://claudehydra-v4-backend.fly.dev`,localPort:8082,authSecret:t.VITE_AUTH_SECRET});

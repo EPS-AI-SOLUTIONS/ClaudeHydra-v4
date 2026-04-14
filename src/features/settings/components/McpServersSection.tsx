@@ -2,19 +2,17 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Button, cn, Input } from '@jaskier/ui';
-import {
-  ChevronDown,
-  ChevronRight,
-  Network,
-  Plus,
-  Power,
-  PowerOff,
-  Trash2,
-  Wrench,
-} from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import ChevronDown from '~icons/lucide/chevron-down';
+import ChevronRight from '~icons/lucide/chevron-right';
+import Network from '~icons/lucide/network';
+import Plus from '~icons/lucide/plus';
+import Power from '~icons/lucide/power';
+import PowerOff from '~icons/lucide/power-off';
+import Trash2 from '~icons/lucide/trash-2';
+import Wrench from '~icons/lucide/wrench';
 import {
   type McpServer,
   useConnectMcpServer,
@@ -148,7 +146,8 @@ function ServerToolsList({ serverId }: { serverId: string }) {
       {toolsList.map((tool) => (
         <div key={tool.id} className="flex items-start gap-2">
           <Wrench
-            size={12}
+            width={12}
+            height={12}
             className="text-[var(--matrix-accent)] mt-0.5 shrink-0"
           />
           <div>
@@ -216,9 +215,9 @@ function ServerRow({ server }: { server: McpServer }) {
           aria-label="Toggle tools"
         >
           {expanded ? (
-            <ChevronDown size={14} className={theme.textMuted} />
+            <ChevronDown width={14} height={14} className={theme.textMuted} />
           ) : (
-            <ChevronRight size={14} className={theme.textMuted} />
+            <ChevronRight width={14} height={14} className={theme.textMuted} />
           )}
         </button>
 
@@ -246,7 +245,11 @@ function ServerRow({ server }: { server: McpServer }) {
           disabled={busy}
           aria-label={isConnected ? 'Disconnect' : 'Connect'}
         >
-          {isConnected ? <PowerOff size={14} /> : <Power size={14} />}
+          {isConnected ? (
+            <PowerOff width={14} height={14} />
+          ) : (
+            <Power width={14} height={14} />
+          )}
         </Button>
 
         <Button
@@ -256,7 +259,7 @@ function ServerRow({ server }: { server: McpServer }) {
           disabled={busy}
           aria-label="Delete"
         >
-          <Trash2 size={14} className="text-red-400" />
+          <Trash2 width={14} height={14} className="text-red-400" />
         </Button>
       </div>
 
@@ -278,7 +281,11 @@ export const McpServersSection = memo(() => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Network size={18} className="text-[var(--matrix-accent)]" />
+          <Network
+            width={18}
+            height={18}
+            className="text-[var(--matrix-accent)]"
+          />
           <h3
             className={cn(
               'text-sm font-semibold font-mono uppercase tracking-wider',
@@ -293,7 +300,7 @@ export const McpServersSection = memo(() => {
           size="sm"
           onClick={() => setShowAddForm(!showAddForm)}
         >
-          <Plus size={14} />
+          <Plus width={14} height={14} />
           <span className="ml-1 text-xs">
             {t('mcp.addServer', 'Add Server')}
           </span>

@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 // Jaskier Shared Pattern -- backend integration test
 // ClaudeHydra v4 - Health endpoint integration test
 //

@@ -62,7 +62,7 @@ interface WsCallbacks {
 
 function getWsUrl(): string {
   const backendUrl = env.VITE_BACKEND_URL;
-  const authSecret = env.VITE_AUTH_SECRET;
+  const authSecret = env.AUTH_SECRET;
   const tokenParam = authSecret
     ? `?token=${encodeURIComponent(authSecret)}`
     : '';

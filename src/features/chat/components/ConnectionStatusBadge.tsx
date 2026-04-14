@@ -6,10 +6,12 @@
  * retry attempts, a manual "Reconnect" button is shown.
  */
 
-import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo } from 'react';
 import type { ConnectionStatus } from '@/shared/hooks/useWebSocketChat';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Wifi from '~icons/lucide/wifi';
+import WifiOff from '~icons/lucide/wifi-off';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,7 +69,7 @@ export const ConnectionStatusBadge = memo(function ConnectionStatusBadge({
         <span
           className={`inline-block w-1.5 h-1.5 rounded-full ${config.dotClass}`}
         />
-        <Wifi size={12} className={config.color} />
+        <Wifi width={12} height={12} className={config.color} />
       </div>
     );
   }
@@ -95,9 +97,9 @@ export const ConnectionStatusBadge = memo(function ConnectionStatusBadge({
       )}
 
       {connectionStatus === 'reconnecting' ? (
-        <RefreshCw size={12} className="animate-spin" />
+        <RefreshCw width={12} height={12} className="animate-spin" />
       ) : (
-        <WifiOff size={12} />
+        <WifiOff width={12} height={12} />
       )}
 
       <span>{config.label}</span>

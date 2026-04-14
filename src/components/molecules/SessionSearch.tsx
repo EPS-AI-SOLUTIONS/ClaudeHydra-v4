@@ -5,9 +5,10 @@
  */
 
 import { cn } from '@jaskier/ui';
-import { Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import Search from '~icons/lucide/search';
+import X from '~icons/lucide/x';
 
 interface SessionSearchProps {
   /** Called with the debounced search query (lowercase). Empty string = no filter. */
@@ -37,7 +38,8 @@ export function SessionSearch({ onSearch, className }: SessionSearchProps) {
   return (
     <div className={cn('relative flex items-center', className)}>
       <Search
-        size={13}
+        width={13}
+        height={13}
         className="absolute left-2.5 text-[var(--matrix-text-secondary)]/60 pointer-events-none"
       />
       <input
@@ -61,7 +63,7 @@ export function SessionSearch({ onSearch, className }: SessionSearchProps) {
           className="absolute right-2 p-0.5 rounded text-[var(--matrix-text-secondary)]/60 hover:text-[var(--matrix-text-primary)] transition-colors"
           aria-label={t('common.clear', 'Clear')}
         >
-          <X size={12} />
+          <X width={12} height={12} />
         </button>
       )}
     </div>

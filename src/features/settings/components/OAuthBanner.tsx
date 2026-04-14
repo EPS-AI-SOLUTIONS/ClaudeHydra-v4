@@ -2,12 +2,15 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Button, cn } from '@jaskier/ui';
-import { ArrowRight, Crown, Key, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useOAuthStatus } from '@/shared/hooks/useOAuthStatus';
 import { useViewStore } from '@/stores/viewStore';
+import ArrowRight from '~icons/lucide/arrow-right';
+import Crown from '~icons/lucide/crown';
+import Key from '~icons/lucide/key';
+import X from '~icons/lucide/x';
 
 export const OAuthBanner = memo(() => {
   const { t } = useTranslation();
@@ -46,13 +49,17 @@ export const OAuthBanner = memo(() => {
               )}
               aria-label={t('common.close', 'Close')}
             >
-              <X size={14} />
+              <X width={14} height={14} />
             </button>
 
             <div className="flex items-start gap-4">
               {/* Icon */}
               <div className="shrink-0 p-2.5 rounded-xl bg-[var(--matrix-accent)]/10">
-                <Crown size={20} className="text-[var(--matrix-accent)]" />
+                <Crown
+                  width={20}
+                  height={20}
+                  className="text-[var(--matrix-accent)]"
+                />
               </div>
 
               {/* Content */}
@@ -71,7 +78,7 @@ export const OAuthBanner = memo(() => {
                   <Button
                     variant="primary"
                     size="sm"
-                    rightIcon={<ArrowRight size={13} />}
+                    rightIcon={<ArrowRight width={13} height={13} />}
                     onClick={() => setCurrentView('settings')}
                   >
                     {t('oauth.setupOAuth')}
@@ -79,7 +86,7 @@ export const OAuthBanner = memo(() => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    leftIcon={<Key size={13} />}
+                    leftIcon={<Key width={13} height={13} />}
                     onClick={dismiss}
                   >
                     {t('oauth.useApiKey')}

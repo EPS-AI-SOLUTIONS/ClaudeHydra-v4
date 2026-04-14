@@ -2,13 +2,15 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Button, cn } from '@jaskier/ui';
-import { Minus, PackageOpen, Plus } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiPost } from '@/shared/api/client';
 import type { Settings } from '@/shared/api/schemas';
 import { useSettingsQuery } from '@/shared/hooks/useSettings';
+import Minus from '~icons/lucide/minus';
+import PackageOpen from '~icons/lucide/package-open';
+import Plus from '~icons/lucide/plus';
 
 const THRESHOLD_MIN = 10;
 const THRESHOLD_MAX = 100;
@@ -60,7 +62,11 @@ export const CompactionSection = memo(() => {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2">
-        <PackageOpen size={18} className="text-[var(--matrix-accent)]" />
+        <PackageOpen
+          width={18}
+          height={18}
+          className="text-[var(--matrix-accent)]"
+        />
         <h3
           className={cn(
             'text-sm font-semibold font-mono uppercase tracking-wider',
@@ -91,7 +97,7 @@ export const CompactionSection = memo(() => {
             disabled={saving || threshold <= THRESHOLD_MIN}
             aria-label="Decrease threshold"
           >
-            <Minus size={14} />
+            <Minus width={14} height={14} />
           </Button>
 
           <input
@@ -119,7 +125,7 @@ export const CompactionSection = memo(() => {
             disabled={saving || threshold >= THRESHOLD_MAX}
             aria-label="Increase threshold"
           >
-            <Plus size={14} />
+            <Plus width={14} height={14} />
           </Button>
 
           <span
@@ -155,7 +161,7 @@ export const CompactionSection = memo(() => {
             disabled={saving || keep <= KEEP_MIN}
             aria-label="Decrease keep"
           >
-            <Minus size={14} />
+            <Minus width={14} height={14} />
           </Button>
 
           <input
@@ -180,7 +186,7 @@ export const CompactionSection = memo(() => {
             disabled={saving || keep >= Math.min(KEEP_MAX, threshold - 1)}
             aria-label="Increase keep"
           >
-            <Plus size={14} />
+            <Plus width={14} height={14} />
           </Button>
 
           <span

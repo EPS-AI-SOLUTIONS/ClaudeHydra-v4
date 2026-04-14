@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 use axum::http::StatusCode;
 use jaskier_core::testing::{body_json, get, post_json};
 use tower::ServiceExt;

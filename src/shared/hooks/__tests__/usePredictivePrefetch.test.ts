@@ -51,7 +51,7 @@ describe('dispatchViewHint', () => {
   });
 
   it('event detail contains the views array', () => {
-    let detail: any = null;
+    let detail: unknown = null;
     const handler = (e: Event) => {
       detail = (e as CustomEvent).detail;
     };

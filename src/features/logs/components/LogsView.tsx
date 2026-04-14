@@ -3,11 +3,15 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { Button, Card, cn, Input } from '@jaskier/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { Copy, RefreshCw, ScrollText, Search, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import Copy from '~icons/lucide/copy';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import ScrollText from '~icons/lucide/scroll-text';
+import Search from '~icons/lucide/search';
+import Trash2 from '~icons/lucide/trash-2';
 import {
   type BackendLogEntry,
   clearBackendLogs,
@@ -55,6 +59,14 @@ function formatTimestamp(ts: string): string {
 // Main LogsView
 // ---------------------------------------------------------------------------
 
+type LogTab = 'backend' | 'audit' | 'flyio' | 'activity';
+const LOG_TABS: { key: LogTab; i18nKey: string }[] = [
+  { key: 'backend', i18nKey: 'logs.tab.backend' },
+  { key: 'audit', i18nKey: 'logs.tab.audit' },
+  { key: 'flyio', i18nKey: 'logs.tab.flyio' },
+  { key: 'activity', i18nKey: 'logs.tab.activity' },
+];
+
 export const LogsView = memo(() => {
   const { t } = useTranslation();
   const theme = useViewTheme();
@@ -62,6 +74,7 @@ export const LogsView = memo(() => {
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [activeTab, setActiveTab] = useState<LogTab>('backend');
 
   const { data, isLoading, isError, refetch } = useBackendLogs(
     { limit: 200, level: level || undefined, search: search || undefined },
@@ -102,7 +115,11 @@ export const LogsView = memo(() => {
       >
         {/* Header */}
         <div className="flex items-center gap-3">
-          <ScrollText size={22} className="text-[var(--matrix-accent)]" />
+          <ScrollText
+            width={22}
+            height={22}
+            className="text-[var(--matrix-accent)]"
+          />
           <h1
             className={cn(
               'text-2xl font-bold font-mono tracking-tight',
@@ -116,7 +133,7 @@ export const LogsView = memo(() => {
               variant="ghost"
               size="sm"
               onClick={handleCopy}
-              leftIcon={<Copy size={14} />}
+              leftIcon={<Copy width={14} height={14} />}
             >
               {t('logs.copy', 'Copy')}
             </Button>
@@ -124,7 +141,7 @@ export const LogsView = memo(() => {
               variant="ghost"
               size="sm"
               onClick={() => void handleClear()}
-              leftIcon={<Trash2 size={14} />}
+              leftIcon={<Trash2 width={14} height={14} />}
             >
               {t('logs.clear', 'Clear')}
             </Button>
@@ -139,7 +156,7 @@ export const LogsView = memo(() => {
                 <Input
                   inputSize="sm"
                   placeholder={t('logs.searchPlaceholder', 'Search logs...')}
-                  icon={<Search size={14} />}
+                  icon={<Search width={14} height={14} />}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -166,7 +183,8 @@ export const LogsView = memo(() => {
                 onClick={() => setAutoRefresh(!autoRefresh)}
                 leftIcon={
                   <RefreshCw
-                    size={14}
+                    width={14}
+                    height={14}
                     className={autoRefresh ? 'animate-spin' : ''}
                   />
                 }
@@ -179,61 +197,100 @@ export const LogsView = memo(() => {
                 variant="ghost"
                 size="sm"
                 onClick={() => void refetch()}
-                leftIcon={<RefreshCw size={14} />}
+                leftIcon={<RefreshCw width={14} height={14} />}
               >
                 {t('logs.refresh', 'Refresh')}
               </Button>
             </div>
 
-            {isLoading && (
-              <p className="text-sm text-[var(--matrix-text-secondary)] text-center py-8">
-                {t('common.loading', 'Loading...')}
-              </p>
-            )}
-            {isError && (
-              <p className="text-sm text-red-400 text-center py-8">
-                {t('common.loadError', 'Failed to load data')}
-              </p>
-            )}
+            {/* Tab Bar */}
+            <div className="flex gap-1 border-b border-white/10">
+              {LOG_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-mono rounded-t-lg transition-colors',
+                    activeTab === tab.key
+                      ? 'bg-[var(--matrix-accent)]/10 text-[var(--matrix-accent)] border border-b-0 border-[var(--matrix-accent)]/30'
+                      : 'text-[var(--matrix-text-secondary)] hover:bg-white/5',
+                  )}
+                >
+                  {t(tab.i18nKey, tab.key)}
+                </button>
+              ))}
+            </div>
 
-            {!isLoading && !isError && logs.length === 0 && (
-              <p className="text-sm text-[var(--matrix-text-secondary)] text-center py-8">
-                {t('logs.empty', 'No log entries')}
-              </p>
-            )}
+            {activeTab === 'backend' && (
+              <>
+                {isLoading && (
+                  <p className="text-sm text-[var(--matrix-text-secondary)] text-center py-8">
+                    {t('common.loading', 'Loading...')}
+                  </p>
+                )}
+                {isError && (
+                  <p className="text-sm text-red-400 text-center py-8">
+                    {t('common.loadError', 'Failed to load data')}
+                  </p>
+                )}
 
-            {logs.length > 0 && (
-              <div className="space-y-0.5 max-h-[65vh] overflow-y-auto">
-                {logs.map((entry: BackendLogEntry, i: number) => (
-                  <div
-                    key={`${entry.timestamp}-${i}`}
-                    className={cn(
-                      'flex items-start gap-3 px-3 py-2 rounded-lg transition-colors',
-                      theme.isLight
-                        ? 'hover:bg-black/[0.03]'
-                        : 'hover:bg-white/[0.03]',
-                    )}
-                  >
-                    <span className="font-mono text-xs text-[var(--matrix-text-secondary)] shrink-0 pt-0.5 w-20">
-                      {formatTimestamp(entry.timestamp)}
-                    </span>
-                    <span
-                      className={cn(
-                        'inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0 w-14 text-center',
-                        levelBadgeClasses(entry.level, theme.isLight),
-                      )}
-                    >
-                      {entry.level}
-                    </span>
-                    <span className="font-mono text-xs text-[var(--matrix-text-secondary)] shrink-0 w-32 truncate pt-0.5">
-                      {entry.target}
-                    </span>
-                    <span className="font-mono text-xs text-[var(--matrix-text-primary)] flex-1 break-all">
-                      {entry.message}
-                    </span>
+                {!isLoading && !isError && logs.length === 0 && (
+                  <p className="text-sm text-[var(--matrix-text-secondary)] text-center py-8">
+                    {t('logs.empty', 'No log entries')}
+                  </p>
+                )}
+
+                {logs.length > 0 && (
+                  <div className="space-y-0.5 max-h-[65vh] overflow-y-auto">
+                    {logs.map((entry: BackendLogEntry, i: number) => (
+                      <div
+                        key={`${entry.timestamp}-${i}`}
+                        className={cn(
+                          'flex items-start gap-3 px-3 py-2 rounded-lg transition-colors',
+                          theme.isLight
+                            ? 'hover:bg-black/[0.03]'
+                            : 'hover:bg-white/[0.03]',
+                        )}
+                      >
+                        <span className="font-mono text-xs text-[var(--matrix-text-secondary)] shrink-0 pt-0.5 w-20">
+                          {formatTimestamp(entry.timestamp)}
+                        </span>
+                        <span
+                          className={cn(
+                            'inline-flex items-center justify-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase shrink-0 w-14 text-center',
+                            levelBadgeClasses(entry.level, theme.isLight),
+                          )}
+                        >
+                          {entry.level}
+                        </span>
+                        <span className="font-mono text-xs text-[var(--matrix-text-secondary)] shrink-0 w-32 truncate pt-0.5">
+                          {entry.target}
+                        </span>
+                        <span className="font-mono text-xs text-[var(--matrix-text-primary)] flex-1 break-all">
+                          {entry.message}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
+            )}
+
+            {activeTab === 'audit' && (
+              <p className="text-sm font-mono text-center py-8 text-[var(--matrix-text-secondary)]">
+                Audit logs — coming soon
+              </p>
+            )}
+            {activeTab === 'flyio' && (
+              <p className="text-sm font-mono text-center py-8 text-[var(--matrix-text-secondary)]">
+                Fly.io logs — coming soon
+              </p>
+            )}
+            {activeTab === 'activity' && (
+              <p className="text-sm font-mono text-center py-8 text-[var(--matrix-text-secondary)]">
+                Activity logs — coming soon
+              </p>
             )}
           </div>
         </Card>

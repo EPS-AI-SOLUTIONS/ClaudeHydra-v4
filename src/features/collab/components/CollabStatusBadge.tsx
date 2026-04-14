@@ -1,4 +1,6 @@
-import { Loader2, Wifi, WifiOff } from 'lucide-react';
+import Loader2 from '~icons/lucide/loader-2';
+import Wifi from '~icons/lucide/wifi';
+import WifiOff from '~icons/lucide/wifi-off';
 
 interface CollabStatusBadgeProps {
   status: 'connecting' | 'connected' | 'disconnected';

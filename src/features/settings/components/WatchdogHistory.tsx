@@ -6,16 +6,14 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { cn } from '@jaskier/ui';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Activity,
-  AlertTriangle,
-  CheckCircle,
-  RefreshCw,
-  WifiOff,
-} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '@/shared/api/client';
+import Activity from '~icons/lucide/activity';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import CheckCircle from '~icons/lucide/check-circle';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import WifiOff from '~icons/lucide/wifi-off';
 
 interface HealthEvent {
   event_type: string;
@@ -93,7 +91,11 @@ export const WatchdogHistory = memo(() => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Activity size={18} className="text-[var(--matrix-accent)]" />
+        <Activity
+          width={18}
+          height={18}
+          className="text-[var(--matrix-accent)]"
+        />
         <h3
           className={cn(
             'text-sm font-semibold font-mono uppercase tracking-wider',
@@ -132,7 +134,11 @@ export const WatchdogHistory = memo(() => {
                   theme.isLight ? 'hover:bg-black/5' : 'hover:bg-white/5',
                 )}
               >
-                <Icon size={13} className={cn('shrink-0', cfg.color)} />
+                <Icon
+                  width={13}
+                  height={13}
+                  className={cn('shrink-0', cfg.color)}
+                />
                 <span className={cn('w-16 shrink-0', theme.textMuted)}>
                   {formatTime(evt.timestamp)}
                 </span>

@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 // BE-CH-007 — Integration tests for ClaudeHydra chat streaming.
 //
 // Tests the streaming and non-streaming chat endpoints using `tower::ServiceExt::oneshot()`

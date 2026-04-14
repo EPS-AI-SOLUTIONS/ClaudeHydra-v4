@@ -229,9 +229,6 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       target: 'esnext',
-      rollupOptions: {
-        input: './index.html',
-      },
       // Disable source maps in production to save ~7.5MB
       sourcemap: !isProd,
       // qw99: Enable modulepreload polyfill for critical JS chunks
@@ -239,6 +236,7 @@ export default defineConfig(({ mode }) => {
         polyfill: true,
       },
       rolldownOptions: {
+        input: './index.html',
         // Externalize:
         // 1. Native .node binaries (e.g. @tailwindcss/oxide platform packages)
         // 2. WASM runtime imports (resolved at runtime from /public, not at build time)

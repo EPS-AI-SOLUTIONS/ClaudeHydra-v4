@@ -96,12 +96,18 @@ export function useChatMessages() {
         setMessages(mapped);
       }
     } catch (err: unknown) {
-      const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+      const isNetworkError =
+        err instanceof TypeError && err.message.includes('fetch');
       if (isNetworkError) {
-        console.warn('[useChatMessages] Network unavailable, loadFullHistory skipped');
+        console.warn(
+          '[useChatMessages] Network unavailable, loadFullHistory skipped',
+        );
       } else {
         // Best-effort — session may not exist in DB yet, but log unexpected errors
-        console.error('[useChatMessages] loadFullHistory unexpected error:', err);
+        console.error(
+          '[useChatMessages] loadFullHistory unexpected error:',
+          err,
+        );
       }
     }
   }, []);
@@ -166,12 +172,18 @@ export function useChatMessages() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
+        const isNetworkError =
+          err instanceof TypeError && err.message.includes('fetch');
         if (isNetworkError) {
-          console.warn('[useChatMessages] Network unavailable, falling back to local');
+          console.warn(
+            '[useChatMessages] Network unavailable, falling back to local',
+          );
         } else {
           // Best-effort: session may not exist in DB yet (local-only), but log unexpected errors
-          console.error('[useChatMessages] Unexpected error loading session:', err);
+          console.error(
+            '[useChatMessages] Unexpected error loading session:',
+            err,
+          );
         }
         setMessages([]);
       })

@@ -16,24 +16,22 @@ import {
   VAULT_STATUS_CONFIG,
 } from '@jaskier/vault-client';
 import { useQuery } from '@tanstack/react-query';
-import {
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
-  KeyRound,
-  Lock,
-  Mountain,
-  RefreshCw,
-  Server,
-  Shield,
-  ShieldAlert,
-  Trash2,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/shared/api/client';
+import ChevronDown from '~icons/lucide/chevron-down';
+import ChevronRight from '~icons/lucide/chevron-right';
+import ExternalLink from '~icons/lucide/external-link';
+import KeyRound from '~icons/lucide/key-round';
+import Lock from '~icons/lucide/lock';
+import Mountain from '~icons/lucide/mountain';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Server from '~icons/lucide/server';
+import Shield from '~icons/lucide/shield';
+import ShieldAlert from '~icons/lucide/shield-alert';
+import Trash2 from '~icons/lucide/trash-2';
 
 function formatTimestamp(iso: string): string {
   try {
@@ -131,7 +129,11 @@ export default function VaultStatusSection() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Mountain size={18} className="text-[var(--matrix-accent)]" />
+          <Mountain
+            width={18}
+            height={18}
+            className="text-[var(--matrix-accent)]"
+          />
           <div>
             <h3
               className={cn(
@@ -168,13 +170,13 @@ export default function VaultStatusSection() {
           theme={theme}
           label={t('settings.vault.credentialCount', 'Credentials')}
           value={vaultHealth?.credential_count ?? '—'}
-          icon={<KeyRound size={14} />}
+          icon={<KeyRound width={14} height={14} />}
         />
         <StatCard
           theme={theme}
           label={t('settings.vault.namespaceCount', 'Namespaces')}
           value={vaultHealth?.namespace_count ?? '—'}
-          icon={<Server size={14} />}
+          icon={<Server width={14} height={14} />}
         />
         <StatCard
           theme={theme}
@@ -184,14 +186,14 @@ export default function VaultStatusSection() {
               ? formatTimestamp(vaultHealth.last_audit)
               : '—'
           }
-          icon={<Shield size={14} />}
+          icon={<Shield width={14} height={14} />}
           small
         />
         <StatCard
           theme={theme}
           label={t('settings.vault.encryption', 'Encryption')}
           value={vaultHealth?.encryption ?? 'AES-256-GCM'}
-          icon={<Lock size={14} />}
+          icon={<Lock width={14} height={14} />}
           badge
         />
       </div>
@@ -202,19 +204,19 @@ export default function VaultStatusSection() {
           theme={theme}
           label={t('settings.vault.activeTickets', 'Bilety JIT')}
           value={vaultHealth?.active_tickets ?? 0}
-          icon={<Shield size={14} />}
+          icon={<Shield width={14} height={14} />}
         />
         <StatCard
           theme={theme}
           label={t('settings.vault.rotationServices', 'Auto-rotacja')}
           value={vaultHealth?.rotation_services ?? 0}
-          icon={<RefreshCw size={14} />}
+          icon={<RefreshCw width={14} height={14} />}
         />
         <StatCard
           theme={theme}
           label="ACL"
           value={vaultHealth?.acl_enabled ? 'ON' : 'OFF'}
-          icon={<ShieldAlert size={14} />}
+          icon={<ShieldAlert width={14} height={14} />}
           badge
         />
       </div>
@@ -232,9 +234,9 @@ export default function VaultStatusSection() {
           )}
         >
           {namespacesOpen ? (
-            <ChevronDown size={14} />
+            <ChevronDown width={14} height={14} />
           ) : (
-            <ChevronRight size={14} />
+            <ChevronRight width={14} height={14} />
           )}
           {t('settings.vault.namespaces', 'Namespace Browser')}
         </button>
@@ -309,11 +311,11 @@ export default function VaultStatusSection() {
             'text-red-400 hover:text-red-300 transition-colors',
           )}
         >
-          <ShieldAlert size={14} />
+          <ShieldAlert width={14} height={14} />
           {emergencyOpen ? (
-            <ChevronDown size={12} />
+            <ChevronDown width={12} height={12} />
           ) : (
-            <ChevronRight size={12} />
+            <ChevronRight width={12} height={12} />
           )}
           {t('settings.vault.emergency', 'Emergency Controls')}
         </button>
@@ -336,7 +338,7 @@ export default function VaultStatusSection() {
                 {/* Vault Panic */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Trash2 size={14} className="text-red-400" />
+                    <Trash2 width={14} height={14} className="text-red-400" />
                     <span
                       className={cn(
                         'text-xs font-mono font-semibold',
@@ -362,7 +364,7 @@ export default function VaultStatusSection() {
                     <Button
                       variant="danger"
                       size="sm"
-                      leftIcon={<Trash2 size={12} />}
+                      leftIcon={<Trash2 width={12} height={12} />}
                       onClick={handlePanic}
                       disabled={panicInput !== 'PANIC' || panicLoading}
                       isLoading={panicLoading}
@@ -375,7 +377,11 @@ export default function VaultStatusSection() {
                 {/* Rotate All */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <RefreshCw size={14} className="text-amber-400" />
+                    <RefreshCw
+                      width={14}
+                      height={14}
+                      className="text-amber-400"
+                    />
                     <span
                       className={cn(
                         'text-xs font-mono font-semibold',
@@ -397,7 +403,7 @@ export default function VaultStatusSection() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    leftIcon={<RefreshCw size={12} />}
+                    leftIcon={<RefreshCw width={12} height={12} />}
                     onClick={handleRotate}
                     isLoading={rotateLoading}
                   >
@@ -420,7 +426,7 @@ export default function VaultStatusSection() {
           'text-[var(--matrix-accent)] hover:underline',
         )}
       >
-        <ExternalLink size={12} />
+        <ExternalLink width={12} height={12} />
         {t('settings.vault.openDashboard', 'Otworz pelny dashboard Vault')}{' '}
         &rarr;
       </a>

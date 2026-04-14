@@ -2,10 +2,14 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Card, cn } from '@jaskier/ui';
-import { BarChart3, Clock, DollarSign, Target, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import BarChart3 from '~icons/lucide/bar-chart-3';
+import Clock from '~icons/lucide/clock';
+import DollarSign from '~icons/lucide/dollar-sign';
+import Target from '~icons/lucide/target';
+import Wrench from '~icons/lucide/wrench';
 import {
   type CostBreakdown,
   type DailyLatency,
@@ -133,7 +137,8 @@ function TokenUsageCard({
       <EmptyState
         icon={
           <BarChart3
-            size={20}
+            width={20}
+            height={20}
             className="text-[var(--matrix-text-secondary)]"
           />
         }
@@ -241,7 +246,11 @@ function LatencyCard({
     return (
       <EmptyState
         icon={
-          <Clock size={20} className="text-[var(--matrix-text-secondary)]" />
+          <Clock
+            width={20}
+            height={20}
+            className="text-[var(--matrix-text-secondary)]"
+          />
         }
         message={t('analytics.noLatencyData', 'No latency data yet')}
       />
@@ -361,7 +370,11 @@ function SuccessRateCard({
     return (
       <EmptyState
         icon={
-          <Target size={20} className="text-[var(--matrix-text-secondary)]" />
+          <Target
+            width={20}
+            height={20}
+            className="text-[var(--matrix-text-secondary)]"
+          />
         }
         message={t('analytics.noSuccessData', 'No success rate data yet')}
       />
@@ -436,7 +449,11 @@ function TopToolsCard({
     return (
       <EmptyState
         icon={
-          <Wrench size={20} className="text-[var(--matrix-text-secondary)]" />
+          <Wrench
+            width={20}
+            height={20}
+            className="text-[var(--matrix-text-secondary)]"
+          />
         }
         message={t('analytics.noToolData', 'No tool usage data yet')}
       />
@@ -586,7 +603,8 @@ function CostCard({
         <EmptyState
           icon={
             <DollarSign
-              size={20}
+              width={20}
+              height={20}
               className="text-[var(--matrix-text-secondary)]"
             />
           }
@@ -692,7 +710,11 @@ const AnalyticsViewContent = memo(() => {
       >
         {/* Header */}
         <div className="flex items-center gap-3 flex-wrap">
-          <BarChart3 size={22} className="text-[var(--matrix-accent)]" />
+          <BarChart3
+            width={22}
+            height={22}
+            className="text-[var(--matrix-accent)]"
+          />
           <h1
             className={cn(
               'text-2xl font-bold font-mono tracking-tight',
@@ -714,7 +736,8 @@ const AnalyticsViewContent = memo(() => {
         <SectionCard
           icon={
             <DollarSign
-              size={18}
+              width={18}
+              height={18}
               className={isLight ? 'text-emerald-600' : 'text-emerald-400'}
             />
           }
@@ -737,7 +760,8 @@ const AnalyticsViewContent = memo(() => {
           <SectionCard
             icon={
               <BarChart3
-                size={18}
+                width={18}
+                height={18}
                 className={isLight ? 'text-blue-600' : 'text-blue-400'}
               />
             }
@@ -752,7 +776,8 @@ const AnalyticsViewContent = memo(() => {
           <SectionCard
             icon={
               <Target
-                size={18}
+                width={18}
+                height={18}
                 className={isLight ? 'text-amber-600' : 'text-amber-400'}
               />
             }
@@ -773,7 +798,8 @@ const AnalyticsViewContent = memo(() => {
           <SectionCard
             icon={
               <Clock
-                size={18}
+                width={18}
+                height={18}
                 className={isLight ? 'text-purple-600' : 'text-purple-400'}
               />
             }
@@ -788,7 +814,8 @@ const AnalyticsViewContent = memo(() => {
           <SectionCard
             icon={
               <Wrench
-                size={18}
+                width={18}
+                height={18}
                 className={isLight ? 'text-orange-600' : 'text-orange-400'}
               />
             }

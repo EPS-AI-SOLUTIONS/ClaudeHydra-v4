@@ -10,13 +10,18 @@
 
 import { useFocusTrap } from '@jaskier/core';
 import { cn } from '@jaskier/ui';
-import { Home, MessageSquare, Moon, Plus, Search, Sun } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSessionSync } from '@/features/chat/hooks/useSessionSync';
 import { useViewStore } from '@/stores/viewStore';
+import Home from '~icons/lucide/home';
+import MessageSquare from '~icons/lucide/message-square';
+import Moon from '~icons/lucide/moon';
+import Plus from '~icons/lucide/plus';
+import Search from '~icons/lucide/search';
+import Sun from '~icons/lucide/sun';
 
 interface Action {
   id: string;
@@ -49,7 +54,7 @@ export function CommandPalette() {
       {
         id: 'home',
         label: t('nav.home', 'Home'),
-        icon: <Home size={16} />,
+        icon: <Home width={16} height={16} />,
         keywords: 'home start dashboard',
         handler: () => {
           setCurrentView('home');
@@ -59,7 +64,7 @@ export function CommandPalette() {
       {
         id: 'chat',
         label: t('nav.chat', 'Chat'),
-        icon: <MessageSquare size={16} />,
+        icon: <MessageSquare width={16} height={16} />,
         keywords: 'chat message conversation',
         handler: () => {
           setCurrentView('chat');
@@ -69,7 +74,7 @@ export function CommandPalette() {
       {
         id: 'new-session',
         label: t('command.newChat', 'New Chat Session'),
-        icon: <Plus size={16} />,
+        icon: <Plus width={16} height={16} />,
         keywords: 'new chat session create',
         handler: () => {
           setCurrentView('chat');
@@ -80,7 +85,7 @@ export function CommandPalette() {
       {
         id: 'toggle-sidebar',
         label: t('command.toggleSidebar', 'Toggle Sidebar'),
-        icon: <MessageSquare size={16} />,
+        icon: <MessageSquare width={16} height={16} />,
         keywords: 'sidebar toggle collapse expand',
         handler: () => {
           toggleSidebar();
@@ -92,7 +97,11 @@ export function CommandPalette() {
         label: isLight
           ? t('command.darkMode', 'Switch to Dark Mode')
           : t('command.lightMode', 'Switch to Light Mode'),
-        icon: isLight ? <Moon size={16} /> : <Sun size={16} />,
+        icon: isLight ? (
+          <Moon width={16} height={16} />
+        ) : (
+          <Sun width={16} height={16} />
+        ),
         keywords: 'theme dark light mode toggle',
         handler: () => {
           toggleTheme();
@@ -190,7 +199,8 @@ export function CommandPalette() {
           )}
         >
           <Search
-            size={16}
+            width={16}
+            height={16}
             className={isLight ? 'text-slate-400' : 'text-white/40'}
           />
           <input

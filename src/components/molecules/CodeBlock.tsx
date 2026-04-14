@@ -5,19 +5,22 @@
  * Syntax-highlighted code display with copy-to-clipboard, language badge,
  * optional line numbers, and glass-panel wrapper.
  *
- * Uses `hljs` CSS classes for syntax highlighting — works with rehype-highlight
- * when rendered inside react-markdown, and displays cleanly as plain code standalone.
+ * Uses plain `<pre><code>` rendering for syntax display.
+ * Full syntax highlighting is handled by MarkdownRenderer (shiki) for markdown content.
  *
  * ClaudeHydra: Green Matrix accent with glass-panel from globals.css.
  */
 
 import { cn } from '@jaskier/ui';
-import { Check, Clipboard, Maximize2, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { copyToClipboard } from '@/shared/utils/clipboard';
 import { useViewStore } from '@/stores/viewStore';
+import Check from '~icons/lucide/check';
+import Clipboard from '~icons/lucide/clipboard';
+import Maximize2 from '~icons/lucide/maximize-2';
+import Terminal from '~icons/lucide/terminal';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -172,7 +175,11 @@ const _CodeBlock = memo(function CodeBlock({
       <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--glass-border)] bg-[var(--matrix-bg-secondary)]/50">
         {/* Language icon + label */}
         <div className="flex items-center gap-2">
-          <Terminal size={14} className="text-[var(--matrix-accent)]" />
+          <Terminal
+            width={14}
+            height={14}
+            className="text-[var(--matrix-accent)]"
+          />
           <span className="text-xs font-mono text-[var(--matrix-text-secondary)] uppercase tracking-wider">
             {displayName}
           </span>
@@ -197,7 +204,7 @@ const _CodeBlock = memo(function CodeBlock({
               )}
               title="Open in Side Panel"
             >
-              <Maximize2 size={14} />
+              <Maximize2 width={14} height={14} />
               Open Panel
             </button>
           )}
@@ -222,7 +229,7 @@ const _CodeBlock = memo(function CodeBlock({
                   transition={{ duration: 0.15 }}
                   className="flex items-center gap-1 text-[var(--matrix-success)]"
                 >
-                  <Check size={14} />
+                  <Check width={14} height={14} />
                   {t('common.copied')}
                 </motion.span>
               ) : (
@@ -234,7 +241,7 @@ const _CodeBlock = memo(function CodeBlock({
                   transition={{ duration: 0.15 }}
                   className="flex items-center gap-1"
                 >
-                  <Clipboard size={14} />
+                  <Clipboard width={14} height={14} />
                   {t('common.copy')}
                 </motion.span>
               )}

@@ -5,6 +5,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "~icons/*": [
+        "./src/test/mocks/icon"
       ]
     },
     "noPropertyAccessFromIndexSignature": true,

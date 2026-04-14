@@ -2,20 +2,18 @@
 
 import { useViewTheme } from '@jaskier/chat-module';
 import { Badge, Button, cn } from '@jaskier/ui';
-import {
-  AlertTriangle,
-  CheckCircle,
-  Globe,
-  Loader2,
-  LogIn,
-  LogOut,
-  Power,
-  RefreshCw,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import CheckCircle from '~icons/lucide/check-circle';
+import Globe from '~icons/lucide/globe';
+import Loader2 from '~icons/lucide/loader-2';
+import LogIn from '~icons/lucide/log-in';
+import LogOut from '~icons/lucide/log-out';
+import Power from '~icons/lucide/power';
+import RefreshCw from '~icons/lucide/refresh-cw';
 import {
   useBrowserProxyLogin,
   useBrowserProxyLogout,
@@ -141,7 +139,7 @@ export const BrowserProxySection = memo(() => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Globe size={18} className="text-[var(--matrix-accent)]" />
+        <Globe width={18} height={18} className="text-[var(--matrix-accent)]" />
         <h3
           className={cn(
             'text-sm font-semibold font-mono uppercase tracking-wider',
@@ -159,7 +157,8 @@ export const BrowserProxySection = memo(() => {
       {isLoading ? (
         <div className="flex items-center gap-2">
           <Loader2
-            size={14}
+            width={14}
+            height={14}
             className="animate-spin text-[var(--matrix-accent)]"
           />
           <span className={cn('text-xs', theme.textMuted)}>
@@ -176,7 +175,7 @@ export const BrowserProxySection = memo(() => {
               className="space-y-2"
             >
               <div className="flex items-center gap-2 text-zinc-500">
-                <Power size={14} />
+                <Power width={14} height={14} />
                 <span className="text-xs font-mono">
                   {t('settings.browserProxy.notConfigured')}
                 </span>
@@ -208,7 +207,7 @@ export const BrowserProxySection = memo(() => {
               className="space-y-2"
             >
               <div className="flex items-center gap-2 text-red-400">
-                <AlertTriangle size={14} />
+                <AlertTriangle width={14} height={14} />
                 <span className="text-xs font-mono">
                   {t('settings.browserProxy.unreachable')}
                 </span>
@@ -242,7 +241,7 @@ export const BrowserProxySection = memo(() => {
               className="space-y-3"
             >
               <div className="flex items-center gap-2 text-amber-400">
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 width={14} height={14} className="animate-spin" />
                 <span className="text-xs font-mono font-medium">
                   {t('settings.browserProxy.loggingIn')}
                 </span>
@@ -252,7 +251,7 @@ export const BrowserProxySection = memo(() => {
               </p>
               {status?.login?.last_login_error && (
                 <div className="flex items-center gap-2 text-red-400">
-                  <AlertTriangle size={14} />
+                  <AlertTriangle width={14} height={14} />
                   <span className="text-xs">
                     {status.login.last_login_error}
                   </span>
@@ -269,7 +268,7 @@ export const BrowserProxySection = memo(() => {
               className="space-y-3"
             >
               <div className="flex items-center gap-2 text-amber-400">
-                <AlertTriangle size={14} />
+                <AlertTriangle width={14} height={14} />
                 <span className="text-xs font-mono">
                   {t('settings.browserProxy.notLoggedIn')}
                 </span>
@@ -279,7 +278,7 @@ export const BrowserProxySection = memo(() => {
               </p>
               {status?.login?.last_login_error && (
                 <div className="flex items-center gap-2 text-red-400 mt-1">
-                  <AlertTriangle size={14} />
+                  <AlertTriangle width={14} height={14} />
                   <span className="text-xs">
                     {status.login.last_login_error}
                   </span>
@@ -288,7 +287,7 @@ export const BrowserProxySection = memo(() => {
               <Button
                 variant="primary"
                 size="sm"
-                leftIcon={<LogIn size={14} />}
+                leftIcon={<LogIn width={14} height={14} />}
                 onClick={handleLogin}
                 isLoading={loginMutation.isPending}
               >
@@ -308,7 +307,7 @@ export const BrowserProxySection = memo(() => {
                 <Badge
                   variant="accent"
                   size="sm"
-                  icon={<CheckCircle size={12} />}
+                  icon={<CheckCircle width={12} height={12} />}
                 >
                   {ready
                     ? t('settings.browserProxy.ready')
@@ -343,7 +342,7 @@ export const BrowserProxySection = memo(() => {
 
               {(status?.health?.total_errors ?? 0) > 0 && (
                 <div className="flex items-center gap-2 text-amber-400">
-                  <AlertTriangle size={12} />
+                  <AlertTriangle width={12} height={12} />
                   <span className="text-[10px] font-mono">
                     {t('settings.browserProxy.errors', {
                       count: status?.health?.total_errors,
@@ -356,7 +355,7 @@ export const BrowserProxySection = memo(() => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  leftIcon={<RefreshCw size={14} />}
+                  leftIcon={<RefreshCw width={14} height={14} />}
                   onClick={handleReinit}
                   isLoading={reinitMutation.isPending}
                 >
@@ -365,7 +364,7 @@ export const BrowserProxySection = memo(() => {
                 <Button
                   variant="danger"
                   size="sm"
-                  leftIcon={<LogOut size={14} />}
+                  leftIcon={<LogOut width={14} height={14} />}
                   onClick={handleLogout}
                   isLoading={logoutMutation.isPending}
                 >

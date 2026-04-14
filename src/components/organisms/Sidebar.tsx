@@ -10,29 +10,17 @@
  */
 
 import { useIsMobile } from '@jaskier/core';
-import {
-  Activity,
-  BarChart3,
-  Brain,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  Loader2,
-  type LucideIcon,
-  Menu,
-  MessageSquare,
-  MessagesSquare,
-  Network,
-  Plus,
-  ScrollText,
-  Settings,
-  Sparkles,
-  Users,
-  WifiOff,
-  X,
-  Zap,
-} from 'lucide-react';
+import Activity from '~icons/lucide/activity';
+import BarChart3 from '~icons/lucide/bar-chart-3';
+import Brain from '~icons/lucide/brain';
+import ChevronDown from '~icons/lucide/chevron-down';
+import ChevronLeft from '~icons/lucide/chevron-left';
+import ChevronRight from '~icons/lucide/chevron-right';
+import ExternalLink from '~icons/lucide/external-link';
+import Loader2 from '~icons/lucide/loader-2';
+
+type LucideIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+
 import { AnimatePresence, motion } from 'motion/react';
 import {
   lazy,
@@ -47,6 +35,18 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePartnerSessions } from '@/features/chat/hooks/usePartnerSessions';
+import Menu from '~icons/lucide/menu';
+import MessageSquare from '~icons/lucide/message-square';
+import MessagesSquare from '~icons/lucide/messages-square';
+import Network from '~icons/lucide/network';
+import Plus from '~icons/lucide/plus';
+import ScrollText from '~icons/lucide/scroll-text';
+import Settings from '~icons/lucide/settings';
+import Sparkles from '~icons/lucide/sparkles';
+import Users from '~icons/lucide/users';
+import WifiOff from '~icons/lucide/wifi-off';
+import X from '~icons/lucide/x';
+import Zap from '~icons/lucide/zap';
 
 const PartnerChatModal = lazy(
   () => import('@/features/chat/components/PartnerChatModal'),
@@ -291,13 +291,14 @@ function SidebarContent({
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <GroupIcon size={14} />
+                    <GroupIcon width={14} height={14} />
                     <span className="text-sm font-bold tracking-[0.12em] uppercase">
                       {group.label}
                     </span>
                   </div>
                   <ChevronDown
-                    size={14}
+                    width={14}
+                    height={14}
                     className={cn(
                       'transition-transform duration-200',
                       isExpanded ? '' : '-rotate-90',
@@ -345,7 +346,8 @@ function SidebarContent({
                       aria-label={`Navigate to ${item.label}`}
                     >
                       <Icon
-                        size={16}
+                        width={16}
+                        height={16}
                         className={cn(
                           'transition-colors shrink-0',
                           isActive
@@ -405,7 +407,7 @@ function SidebarContent({
                 : `${theme.textMuted} hover:text-white`,
             )}
           >
-            <MessagesSquare size={14} />
+            <MessagesSquare width={14} height={14} />
             {!collapsed && (
               <span className="text-sm font-bold tracking-[0.12em] uppercase">
                 {t('sidebar.chats', 'CHATS')}
@@ -413,7 +415,8 @@ function SidebarContent({
             )}
             {!collapsed && (
               <ChevronDown
-                size={14}
+                width={14}
+                height={14}
                 className={cn(
                   'transition-transform duration-200',
                   showSessions ? '' : '-rotate-90',
@@ -432,7 +435,7 @@ function SidebarContent({
             title={t('sidebar.newChat', 'New chat')}
             aria-label={t('sidebar.newChat', 'New chat')}
           >
-            <Plus size={14} />
+            <Plus width={14} height={14} />
           </button>
         </div>
 
@@ -468,7 +471,7 @@ function SidebarContent({
                     className="text-[9px] text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-text-primary)] transition-colors"
                     aria-label={t('tags.clearFilters', 'Clear filters')}
                   >
-                    <X size={10} />
+                    <X width={10} height={10} />
                   </button>
                 )}
               </div>
@@ -563,7 +566,8 @@ function SidebarContent({
             )}
             {!collapsed && (
               <ChevronDown
-                size={14}
+                width={14}
+                height={14}
                 className={cn(
                   'transition-transform duration-200',
                   showPartnerSessions ? '' : '-rotate-90',
@@ -573,10 +577,14 @@ function SidebarContent({
           </button>
           <div className="flex items-center gap-1">
             {partnerLoading && (
-              <Loader2 size={12} className="animate-spin text-blue-400" />
+              <Loader2
+                width={12}
+                height={12}
+                className="animate-spin text-blue-400"
+              />
             )}
             {partnerError && (
-              <WifiOff size={12} className={cn(theme.iconMuted)} />
+              <WifiOff width={12} height={12} className={cn(theme.iconMuted)} />
             )}
             {!partnerLoading && !partnerError && (
               <span className={cn('text-xs', theme.textMuted)}>
@@ -621,7 +629,8 @@ function SidebarContent({
                   title={ps.title}
                 >
                   <MessageSquare
-                    size={14}
+                    width={14}
+                    height={14}
                     className={cn(
                       'shrink-0',
                       isLight ? 'text-blue-500' : 'text-blue-400/60',
@@ -635,7 +644,8 @@ function SidebarContent({
                     </p>
                   </div>
                   <ExternalLink
-                    size={10}
+                    width={10}
+                    height={10}
                     className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0 text-[var(--matrix-text-secondary)]"
                   />
                 </button>
@@ -669,7 +679,7 @@ function SidebarContent({
             onClick={onClose}
             className="nav-item w-full justify-center text-[var(--matrix-text-secondary)] hover:text-[var(--matrix-accent)]"
           >
-            <X size={18} />
+            <X width={18} height={18} />
             <span className="text-sm">{t('common.close', 'Close')}</span>
           </button>
         </div>
@@ -785,7 +795,11 @@ export function Sidebar() {
           title={t('common.menu', 'Menu')}
           aria-label={t('sidebar.openSidebar', 'Open sidebar')}
         >
-          <Menu size={20} className="text-[var(--matrix-accent)]" />
+          <Menu
+            width={20}
+            height={20}
+            className="text-[var(--matrix-accent)]"
+          />
         </button>
 
         {/* Backdrop (#29 overlay) */}
@@ -870,9 +884,9 @@ export function Sidebar() {
         }
       >
         {sidebarCollapsed ? (
-          <ChevronRight size={18} strokeWidth={2.5} />
+          <ChevronRight width={18} height={18} strokeWidth={2.5} />
         ) : (
-          <ChevronLeft size={18} strokeWidth={2.5} />
+          <ChevronLeft width={18} height={18} strokeWidth={2.5} />
         )}
       </button>
     </motion.aside>

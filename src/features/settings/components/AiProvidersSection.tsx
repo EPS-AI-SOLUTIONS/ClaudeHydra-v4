@@ -3,24 +3,22 @@
 import { useViewTheme } from '@jaskier/chat-module';
 import { Badge, Button, cn } from '@jaskier/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Loader2,
-  LogIn,
-  LogOut,
-  RefreshCw,
-  Shield,
-  Wifi,
-  WifiOff,
-  Zap,
-} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '@/shared/api/client';
+import AlertTriangle from '~icons/lucide/alert-triangle';
+import CheckCircle from '~icons/lucide/check-circle';
+import Clock from '~icons/lucide/clock';
+import Loader2 from '~icons/lucide/loader-2';
+import LogIn from '~icons/lucide/log-in';
+import LogOut from '~icons/lucide/log-out';
+import RefreshCw from '~icons/lucide/refresh-cw';
+import Shield from '~icons/lucide/shield';
+import Wifi from '~icons/lucide/wifi';
+import WifiOff from '~icons/lucide/wifi-off';
+import Zap from '~icons/lucide/zap';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -222,13 +220,13 @@ const ProviderCard = memo<ProviderCardProps>(
             size="sm"
             icon={
               status === 'connected' ? (
-                <CheckCircle size={10} />
+                <CheckCircle width={10} height={10} />
               ) : status === 'error' ? (
-                <AlertTriangle size={10} />
+                <AlertTriangle width={10} height={10} />
               ) : status === 'expiring' ? (
-                <Clock size={10} />
+                <Clock width={10} height={10} />
               ) : (
-                <WifiOff size={10} />
+                <WifiOff width={10} height={10} />
               )
             }
           >
@@ -260,7 +258,7 @@ const ProviderCard = memo<ProviderCardProps>(
 
         {/* Last verified */}
         <div className="flex items-center gap-1.5">
-          <Clock size={10} className={theme.textMuted} />
+          <Clock width={10} height={10} className={theme.textMuted} />
           <span className={cn('text-[10px] font-mono', theme.textMuted)}>
             {t('settings.providers.lastVerified', 'Verified')}:{' '}
             {formatVerified(p.last_verified)}
@@ -270,7 +268,7 @@ const ProviderCard = memo<ProviderCardProps>(
         {/* Error message */}
         {p.last_error && (
           <div className="flex items-start gap-1.5 text-red-400">
-            <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+            <AlertTriangle width={12} height={12} className="shrink-0 mt-0.5" />
             <span className="text-[10px] font-mono leading-tight line-clamp-2">
               {p.last_error}
             </span>
@@ -284,7 +282,7 @@ const ProviderCard = memo<ProviderCardProps>(
               <Button
                 variant={confirmDisconnect ? 'danger' : 'ghost'}
                 size="sm"
-                leftIcon={<LogOut size={12} />}
+                leftIcon={<LogOut width={12} height={12} />}
                 onClick={handleDisconnect}
                 isLoading={isDisconnecting}
                 disabled={isDisconnecting}
@@ -299,9 +297,9 @@ const ProviderCard = memo<ProviderCardProps>(
                 size="sm"
                 leftIcon={
                   isTesting ? (
-                    <Loader2 size={12} className="animate-spin" />
+                    <Loader2 width={12} height={12} className="animate-spin" />
                   ) : (
-                    <Wifi size={12} />
+                    <Wifi width={12} height={12} />
                   )
                 }
                 onClick={() => onTest(p.provider)}
@@ -316,7 +314,7 @@ const ProviderCard = memo<ProviderCardProps>(
             <Button
               variant="primary"
               size="sm"
-              leftIcon={<LogIn size={12} />}
+              leftIcon={<LogIn width={12} height={12} />}
               onClick={() => onConnect(p.provider)}
               isLoading={isConnecting}
               disabled={isConnecting}
@@ -355,7 +353,7 @@ const SummaryFooter = memo<{ providers: ProviderInfo[] }>(({ providers }) => {
     >
       {/* Connected count */}
       <div className="flex items-center gap-2">
-        <Zap size={14} className="text-[var(--matrix-accent)]" />
+        <Zap width={14} height={14} className="text-[var(--matrix-accent)]" />
         <span className={cn('text-xs font-mono', theme.text)}>
           {t(
             'settings.providers.connectedCount',
@@ -550,7 +548,11 @@ export default function AiProvidersSection() {
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Shield size={18} className="text-[var(--matrix-accent)]" />
+          <Shield
+            width={18}
+            height={18}
+            className="text-[var(--matrix-accent)]"
+          />
           <h3
             className={cn(
               'text-sm font-semibold font-mono uppercase tracking-wider',
@@ -565,7 +567,11 @@ export default function AiProvidersSection() {
           variant="ghost"
           size="sm"
           leftIcon={
-            <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
+            <RefreshCw
+              width={12}
+              height={12}
+              className={isLoading ? 'animate-spin' : ''}
+            />
           }
           onClick={() => refetch()}
           disabled={isLoading}
@@ -586,7 +592,8 @@ export default function AiProvidersSection() {
       {isLoading && !providers && (
         <div className="flex items-center justify-center gap-2 py-8">
           <Loader2
-            size={20}
+            width={20}
+            height={20}
             className="text-[var(--matrix-accent)] animate-spin"
           />
           <span className={cn('text-sm font-mono', theme.textMuted)}>
@@ -598,7 +605,7 @@ export default function AiProvidersSection() {
       {/* Error state */}
       {isError && (
         <div className="flex items-center gap-2 py-4 text-red-400">
-          <AlertTriangle size={16} />
+          <AlertTriangle width={16} height={16} />
           <span className="text-xs font-mono">
             {t(
               'settings.providers.fetchError',
@@ -635,7 +642,7 @@ export default function AiProvidersSection() {
       {/* Empty state */}
       {providers && providers.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 py-8">
-          <WifiOff size={24} className={theme.textMuted} />
+          <WifiOff width={24} height={24} className={theme.textMuted} />
           <span className={cn('text-sm font-mono', theme.textMuted)}>
             {t('settings.providers.empty', 'No providers configured')}
           </span>

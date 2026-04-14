@@ -8,7 +8,6 @@
  */
 
 import { Button } from '@jaskier/ui';
-import { Bot, Check, ClipboardList, Trash2, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +19,11 @@ import {
 import type { ConnectionStatus } from '@/shared/hooks/useWebSocketChat';
 import { copyToClipboard } from '@/shared/utils/clipboard';
 import { formatDateTime, formatTime } from '@/shared/utils/locale';
+import Bot from '~icons/lucide/bot';
+import Check from '~icons/lucide/check';
+import ClipboardList from '~icons/lucide/clipboard-list';
+import Trash2 from '~icons/lucide/trash-2';
+import Wrench from '~icons/lucide/wrench';
 import { ConnectionStatusBadge } from './ConnectionStatusBadge';
 import type { ChatMessage } from './MessageBubble';
 
@@ -127,7 +131,7 @@ export const ChatHeader = memo(function ChatHeader({
       className="flex items-center justify-between mb-4"
     >
       <div className="flex items-center gap-3">
-        <Bot className="text-[var(--matrix-accent)]" size={24} />
+        <Bot className="text-[var(--matrix-accent)]" width={24} height={24} />
         <div>
           <h2 className="text-lg font-semibold text-[var(--matrix-accent)] font-mono">
             {t('chat.title', 'Claude Chat')}
@@ -160,7 +164,7 @@ export const ChatHeader = memo(function ChatHeader({
           onClick={onToolsToggle}
           title={toolsEnabled ? 'File tools enabled' : 'File tools disabled'}
           aria-label={t('chat.toggleFileTools', 'Toggle file tools')}
-          leftIcon={<Wrench size={14} />}
+          leftIcon={<Wrench width={14} height={14} />}
         >
           Tools
         </Button>
@@ -185,9 +189,9 @@ export const ChatHeader = memo(function ChatHeader({
           aria-label={t('chat.copySession', 'Copy entire session')}
           leftIcon={
             sessionCopied ? (
-              <Check size={14} className="text-emerald-400" />
+              <Check width={14} height={14} className="text-emerald-400" />
             ) : (
-              <ClipboardList size={14} />
+              <ClipboardList width={14} height={14} />
             )
           }
         >
@@ -202,7 +206,7 @@ export const ChatHeader = memo(function ChatHeader({
           onClick={onClearChat}
           title={t('chat.clearChat', 'Clear chat')}
           aria-label={t('chat.clearChat', 'Clear chat')}
-          leftIcon={<Trash2 size={14} />}
+          leftIcon={<Trash2 width={14} height={14} />}
         >
           Clear
         </Button>

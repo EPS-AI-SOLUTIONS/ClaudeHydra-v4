@@ -7,9 +7,9 @@
  */
 
 import { cn } from '@jaskier/ui';
-import { X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { memo } from 'react';
+import X from '~icons/lucide/x';
 
 interface ImagePreviewProps {
   src: string;
@@ -43,7 +43,7 @@ const ImagePreview = memo<ImagePreviewProps>(({ src, onClear }) => (
         'transition-all shadow-sm hover:scale-110',
       )}
     >
-      <X size={14} strokeWidth={3} />
+      <X width={14} height={14} strokeWidth={3} />
     </button>
   </motion.div>
 ));

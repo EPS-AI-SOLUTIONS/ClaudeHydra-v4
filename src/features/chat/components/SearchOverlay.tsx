@@ -5,9 +5,12 @@
  */
 
 import { cn } from '@jaskier/ui';
-import { ChevronDown, ChevronUp, Search, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ChevronDown from '~icons/lucide/chevron-down';
+import ChevronUp from '~icons/lucide/chevron-up';
+import Search from '~icons/lucide/search';
+import X from '~icons/lucide/x';
 
 interface SearchOverlayProps {
   /** All messages to search through */
@@ -108,7 +111,8 @@ export function SearchOverlay({
       className="absolute top-2 right-2 z-30 flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--matrix-bg-secondary)]/95 border border-[var(--matrix-border)] backdrop-blur-md shadow-lg"
     >
       <Search
-        size={14}
+        width={14}
+        height={14}
         className="text-[var(--matrix-text-secondary)] shrink-0"
       />
       <input
@@ -141,7 +145,7 @@ export function SearchOverlay({
           )}
           aria-label="Previous match"
         >
-          <ChevronUp size={14} />
+          <ChevronUp width={14} height={14} />
         </button>
         <button
           type="button"
@@ -155,7 +159,7 @@ export function SearchOverlay({
           )}
           aria-label="Next match"
         >
-          <ChevronDown size={14} />
+          <ChevronDown width={14} height={14} />
         </button>
       </div>
       <button
@@ -164,7 +168,7 @@ export function SearchOverlay({
         className="p-1 rounded hover:bg-[var(--matrix-accent)]/10 text-[var(--matrix-text-secondary)] transition-colors"
         aria-label="Close search"
       >
-        <X size={14} />
+        <X width={14} height={14} />
       </button>
     </motion.div>
   );

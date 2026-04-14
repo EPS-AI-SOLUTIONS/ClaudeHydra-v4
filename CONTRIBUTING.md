@@ -100,7 +100,7 @@ Backend supports optional `AUTH_SECRET` env var:
 - **Not set**: Dev mode (no authentication required)
 - **Set**: All protected routes require `Authorization: Bearer <secret>` header
 
-Frontend uses `VITE_AUTH_SECRET` env var to inject the header automatically.
+Frontend uses `AUTH_SECRET` env var to inject the header automatically.
 
 ## Environment Variables
 
@@ -127,7 +127,7 @@ RUST_BACKTRACE=1
 
 ```env
 VITE_BACKEND_URL=http://localhost:8082
-VITE_AUTH_SECRET=your-secret-key
+AUTH_SECRET=your-secret-key
 ```
 
 ## Features

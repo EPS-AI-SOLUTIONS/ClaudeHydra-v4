@@ -23,7 +23,8 @@ use crate::state::AppState;
 
 // ── Re-export shared types from jaskier-core ──────────────────────────────────
 pub use jaskier_core::model_registry::{
-    ModelCache, ModelInfo, PinModelRequest, classify_complexity, refresh_cache,
+    ModelCache, ModelInfo, PinModelRequest, classify_complexity, refresh_cache, select_best,
+    version_key,
 };
 
 // ── ClaudeHydra-specific: Anthropic tier resolution ───────────────────────────
@@ -34,65 +35,6 @@ pub struct ResolvedModels {
     pub coordinator: Option<ModelInfo>, // sonnet
     pub executor: Option<ModelInfo>,    // haiku
     pub flash: Option<ModelInfo>,       // gemini flash (fast tasks)
-}
-
-/// Extract a sortable version key from a model ID.
-/// Handles patterns like "gemini-2.5-flash", "gemini-3.1-pro", "claude-sonnet-4-6".
-/// Returns (major * 1000 + minor, date_suffix) for proper ordering.
-fn version_key(id: &str) -> (u64, String) {
-    let mut version: u64 = 0;
-    let mut date_suffix = String::new();
-
-    for part in id.split('-') {
-        if let Some((major_s, minor_s)) = part.split_once('.') {
-            if let (Ok(major), Ok(minor)) = (major_s.parse::<u64>(), minor_s.parse::<u64>()) {
-                let v = major * 1000 + minor;
-                if v > version {
-                    version = v;
-                }
-            }
-        } else if let Ok(n) = part.parse::<u64>() {
-            if n > 20000000 {
-                date_suffix = part.to_string();
-            } else if n < 100 {
-                let v = n * 1000;
-                if v > version {
-                    version = v;
-                }
-            }
-        }
-    }
-
-    // Tier bonus: "pro" > "flash"/"lite" for same version number
-    if id.contains("-pro") {
-        version += 100;
-    } else if id.contains("-ultra") {
-        version += 200;
-    }
-
-    (version, date_suffix)
-}
-
-/// Select the best model from a list using include/exclude filters.
-/// Sorts by extracted version key (highest = newest).
-fn select_best(
-    models: &[ModelInfo],
-    must_contain: &[&str],
-    must_not_contain: &[&str],
-) -> Option<ModelInfo> {
-    let mut candidates: Vec<&ModelInfo> = models
-        .iter()
-        .filter(|m| must_contain.iter().all(|p| m.id.contains(p)))
-        .filter(|m| must_not_contain.iter().all(|p| !m.id.contains(p)))
-        .collect();
-
-    candidates.sort_by(|a, b| {
-        let (av, ad) = version_key(&a.id);
-        let (bv, bd) = version_key(&b.id);
-        bv.cmp(&av).then_with(|| bd.cmp(&ad))
-    });
-
-    candidates.first().map(|m| (*m).clone())
 }
 
 /// Resolve the best model for each use case from the cached models.
@@ -397,201 +339,29 @@ pub async fn pin_model(
     }
 }
 
-/// DELETE /api/models/pin/{use_case} — Unpin a tier
+/// DELETE /api/models/pin/{use_case} — Unpin a tier (delegates to jaskier-core)
 #[utoipa::path(delete, path = "/api/models/pin/{use_case}", tag = "models",
     params(("use_case" = String, Path, description = "Use case to unpin")),
     responses((status = 200, description = "Model unpinned", body = Value))
 )]
-pub async fn unpin_model(
-    State(state): State<AppState>,
-    Path(use_case): Path<String>,
-) -> Json<Value> {
-    let result = sqlx::query("DELETE FROM ch_model_pins WHERE use_case = $1")
-        .bind(&use_case)
-        .execute(&state.db)
-        .await;
-
-    match result {
-        Ok(r) => Json(json!({ "unpinned": r.rows_affected() > 0, "use_case": use_case })),
-        Err(e) => {
-            tracing::error!(
-                "model registry: failed to unpin use_case={}: {}",
-                use_case,
-                e
-            );
-            Json(json!({ "error": "Internal database error" }))
-        }
-    }
+pub async fn unpin_model(state: State<AppState>, use_case: Path<String>) -> Json<Value> {
+    jaskier_core::model_registry::unpin_model(state, use_case).await
 }
 
-/// GET /api/models/pins — List all active pins
+/// GET /api/models/pins — List all active pins (delegates to jaskier-core)
 #[utoipa::path(get, path = "/api/models/pins", tag = "models",
     responses((status = 200, description = "All active model pins", body = Value))
 )]
-pub async fn list_pins(State(state): State<AppState>) -> Json<Value> {
-    let pins = get_pins_map(&state).await;
-    Json(json!({ "pins": pins }))
+pub async fn list_pins(state: State<AppState>) -> Json<Value> {
+    jaskier_core::model_registry::list_pins(state).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // ── Helper: make a ModelInfo ──────────────────────────────────────────
-
-    fn model(id: &str, provider: &str) -> ModelInfo {
-        ModelInfo {
-            id: id.to_string(),
-            provider: provider.to_string(),
-            display_name: None,
-            capabilities: vec!["text".to_string()],
-        }
-    }
-
-    // ── version_key ──────────────────────────────────────────────────────
-
-    #[test]
-    fn version_key_claude_opus_4_6() {
-        let (v, _) = version_key("claude-opus-4-6");
-        assert_eq!(v, 6000);
-    }
-
-    #[test]
-    fn version_key_claude_sonnet_4_6() {
-        let (v, _) = version_key("claude-sonnet-4-6");
-        assert_eq!(v, 6000);
-    }
-
-    #[test]
-    fn version_key_claude_haiku_with_date() {
-        let (v, d) = version_key("claude-haiku-4-5-20251001");
-        assert_eq!(v, 5000);
-        assert_eq!(d, "20251001");
-    }
-
-    #[test]
-    fn version_key_gemini_2_5_flash() {
-        let (v, _) = version_key("gemini-2.5-flash");
-        assert_eq!(v, 2005);
-    }
-
-    #[test]
-    fn version_key_gemini_3_1_pro() {
-        let (v, _) = version_key("gemini-3.1-pro-preview");
-        assert_eq!(v, 3101);
-    }
-
-    #[test]
-    fn version_key_no_version() {
-        let (v, d) = version_key("some-model-name");
-        assert_eq!(v, 0);
-        assert!(d.is_empty());
-    }
-
-    #[test]
-    fn version_key_ordering_claude_models() {
-        let (v_opus, _) = version_key("claude-opus-4-6");
-        let (v_haiku_dated, d) = version_key("claude-haiku-4-5-20251001");
-        assert!(v_opus > v_haiku_dated);
-        assert_eq!(d, "20251001");
-    }
-
-    // ── select_best ──────────────────────────────────────────────────────
-
-    #[test]
-    fn select_best_picks_highest_version() {
-        let models = vec![
-            model("claude-haiku-4-5-20251001", "anthropic"),
-            model("claude-sonnet-4-6", "anthropic"),
-            model("claude-opus-4-6", "anthropic"),
-        ];
-
-        let best = select_best(&models, &[], &[]);
-        let best_id = best
-            .expect("select_best should find a model from non-empty list")
-            .id;
-        assert!(
-            best_id == "claude-sonnet-4-6" || best_id == "claude-opus-4-6",
-            "Expected opus or sonnet, got: {}",
-            best_id
-        );
-    }
-
-    #[test]
-    fn select_best_opus_filter() {
-        let models = vec![
-            model("claude-haiku-4-5-20251001", "anthropic"),
-            model("claude-sonnet-4-6", "anthropic"),
-            model("claude-opus-4-6", "anthropic"),
-        ];
-
-        let best = select_best(&models, &["opus"], &[]);
-        assert_eq!(
-            best.expect("opus filter should match claude-opus-4-6").id,
-            "claude-opus-4-6"
-        );
-    }
-
-    #[test]
-    fn select_best_sonnet_filter() {
-        let models = vec![
-            model("claude-haiku-4-5-20251001", "anthropic"),
-            model("claude-sonnet-4-6", "anthropic"),
-            model("claude-sonnet-4-5-20250929", "anthropic"),
-            model("claude-opus-4-6", "anthropic"),
-        ];
-
-        let best = select_best(&models, &["sonnet"], &[]);
-        assert_eq!(
-            best.expect("sonnet filter should match claude-sonnet-4-6")
-                .id,
-            "claude-sonnet-4-6"
-        );
-    }
-
-    #[test]
-    fn select_best_haiku_filter() {
-        let models = vec![
-            model("claude-haiku-4-5-20251001", "anthropic"),
-            model("claude-sonnet-4-6", "anthropic"),
-        ];
-
-        let best = select_best(&models, &["haiku"], &[]);
-        assert_eq!(
-            best.expect("haiku filter should match claude-haiku-4-5-20251001")
-                .id,
-            "claude-haiku-4-5-20251001"
-        );
-    }
-
-    #[test]
-    fn select_best_exclude_dated_prefers_non_dated() {
-        let models = vec![
-            model("claude-sonnet-4-5-20250929", "anthropic"),
-            model("claude-sonnet-4-6", "anthropic"),
-        ];
-
-        let best = select_best(&models, &["sonnet"], &["20"]);
-        assert_eq!(
-            best.expect("sonnet filter excluding dated should match claude-sonnet-4-6")
-                .id,
-            "claude-sonnet-4-6"
-        );
-    }
-
-    #[test]
-    fn select_best_no_match() {
-        let models = vec![model("claude-sonnet-4-6", "anthropic")];
-
-        let best = select_best(&models, &["nonexistent"], &[]);
-        assert!(best.is_none());
-    }
-
-    #[test]
-    fn select_best_empty_list() {
-        let best = select_best(&[], &[], &[]);
-        assert!(best.is_none());
-    }
+    // version_key and select_best tests live in jaskier-core::model_registry.
+    // Only ClaudeHydra-specific tests (ModelCache, ResolvedModels) belong here.
 
     // ── ModelCache ───────────────────────────────────────────────────────
 
