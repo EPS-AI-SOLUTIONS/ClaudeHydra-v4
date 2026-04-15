@@ -16,6 +16,6 @@
   },
   "include": [
     "vite.config.ts",
-    "../../packages/core/src/vite/createViteConfig.ts"
+    "vite.config.vercel.ts"
   ]
 }
