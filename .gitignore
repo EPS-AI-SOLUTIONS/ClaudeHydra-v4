@@ -1,0 +1,33 @@
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+.bun/
+
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Turbo
+.turbo/
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+
+# Rust
+target/
+
+# Test output
+coverage/
+*.lcov
+
+# Vercel local dev
+.vercel/.vc-config.json
+
+# Bak files
+*.bak
