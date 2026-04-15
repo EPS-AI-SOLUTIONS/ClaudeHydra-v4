@@ -4,6 +4,7 @@
   "buildCommand": "vite build --config vite.config.vercel.ts",
   "outputDirectory": "dist",
   "regions": ["cdg1", "fra1", "iad1"],
+  "_lastFixed": "2026-04-15",
   "headers": [
     {
       "source": "/(.*)",
