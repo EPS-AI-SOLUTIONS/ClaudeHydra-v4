@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => {
       modulePreload: {
         polyfill: true,
       },
-      rolldownOptions: {
+      rollupOptions: {
         input: './index.html',
         external: (id: string) =>
           id.endsWith('.node') ||
