@@ -261,7 +261,7 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.join(basePath, "@jaskier/hydra-app/components/molecules/index.js"),
-  featureStub(["FeatureErrorFallback", "QueryError", "SessionSearch", "ViewSkeleton"]),
+  featureStub(["ApprovalGate", "FeatureErrorFallback", "QueryError", "SessionSearch", "ViewSkeleton"]),
 );
 
 fs.writeFileSync(
