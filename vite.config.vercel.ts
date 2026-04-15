@@ -1,80 +1,72 @@
-/// <reference types="vitest/config" />
-
 import { resolve } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import type { Plugin } from 'vite';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 
-function iconsMockPlugin(): Plugin {
+/**
+ * Virtual plugin: maps ~icons/lucide/foo-bar → default export from lucide-react.
+ * Required because @jaskier/hydra-app uses unplugin-icons ~icons/lucide/* imports.
+ * Rolldown (Vite 8 bundler) cannot resolve these without this virtual module shim.
+ */
+function lucideIconsPlugin(): Plugin {
+  const PREFIX = '~icons/lucide/';
+  const VIRTUAL_PREFIX = '\0virtual:lucide:';
   return {
-    name: 'icons-mock',
-    resolveId(id: string) {
-      if (id.startsWith('~icons/')) return `\0icons-mock:${id}`;
-      return null;
+    name: 'virtual-lucide-icons',
+    resolveId(id) {
+      if (id.startsWith(PREFIX)) return VIRTUAL_PREFIX + id.slice(PREFIX.length);
     },
-    load(id: string) {
-      if (id.startsWith('\0icons-mock:')) {
-        return `import { createElement } from 'react';
-export default function MockIcon(props) { return createElement('span', props); };
-`;
+    load(id) {
+      if (id.startsWith(VIRTUAL_PREFIX)) {
+        const kebab = id.slice(VIRTUAL_PREFIX.length);
+        const pascal = kebab
+          .split('-')
+          .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+          .join('');
+        return `export { ${pascal} as default } from 'lucide-react';`;
       }
-      return null;
     },
   };
 }
 
 // Vite 8 builds both client + SSR environments by default.
 // ClaudeHydra is a client-only SPA — skip the SSR environment build.
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-
-  return {
-    clearScreen: false,
-    builder: {
-      async buildApp(builder) {
-        await builder.build(builder.environments.client);
-      },
+export default defineConfig({
+  builder: {
+    async buildApp(builder) {
+      await builder.build(builder.environments.client);
     },
-    plugins: [
-      iconsMockPlugin(),
-      react(),
-      tailwindcss(),
+  },
+  plugins: [lucideIconsPlugin(), react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+    dedupe: [
+      'react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime',
+      '@tanstack/react-query', 'zustand', 'sonner', 'i18next', 'react-i18next', 'motion', 'lucide-react',
     ],
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, './src'),
-      },
-      dedupe: [
-        'react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime',
-        '@tanstack/react-query', 'zustand', 'sonner', 'i18next', 'react-i18next', 'motion', 'lucide-react',
-      ],
+  },
+  build: {
+    target: 'esnext',
+    sourcemap: false,
+    modulePreload: {
+      polyfill: true,
     },
-    optimizeDeps: {
-      include: ['@jaskier/ui', '@jaskier/core', '@jaskier/state', '@jaskier/i18n'],
-      exclude: ['@tailwindcss/oxide', 'fsevents', 'lightningcss', 'tailwindcss'],
-    },
-    build: {
-      target: 'esnext',
-      sourcemap: false,
-      modulePreload: { polyfill: true },
-      rollupOptions: {
-        input: './index.html',
-        external: (id: string) =>
-          id.endsWith('.node') || id.startsWith('/wasm/') || id.includes('../pkg'),
-        output: {
-          manualChunks(id: string) {
-            if (id.includes('/node_modules/react-dom/') || id.includes('/node_modules/react/') || id.includes('/node_modules/scheduler/')) return 'vendor-react';
-            if (id.includes('/node_modules/zustand/')) return 'vendor-zustand';
-            if (id.includes('/node_modules/@tanstack/react-query/') && !id.includes('devtools')) return 'vendor-query';
-            if (id.includes('/node_modules/motion/')) return 'vendor-motion';
-            if (id.includes('/node_modules/i18next') || id.includes('/node_modules/react-i18next/')) return 'vendor-i18n';
-            if (id.includes('/node_modules/zod/')) return 'vendor-zod';
-            if (id.includes('/node_modules/lucide-react/')) return 'vendor-lucide';
-            if (id.includes('/node_modules/sonner/') || id.includes('/node_modules/dompurify/')) return 'vendor-ui';
-          },
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return;
+          if (/[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'vendor-react';
+          if (/[\\/]motion[\\/]/.test(id)) return 'vendor-motion';
+          if (/[\\/](i18next|react-i18next)[\\/]/.test(id)) return 'vendor-i18n';
+          if (/[\\/]@tanstack[\\/]react-query[\\/]/.test(id)) return 'vendor-query';
+          if (/[\\/](sonner|tailwind-merge|clsx|dompurify)[\\/]/.test(id)) return 'vendor-ui';
+          if (/[\\/]lucide-react[\\/]/.test(id)) return 'vendor-icons';
+          if (/[\\/]zod[\\/]/.test(id)) return 'vendor-zod';
+          if (/[\\/]zustand[\\/]/.test(id)) return 'vendor-zustand';
         },
       },
     },
-  };
+  },
 });
