@@ -29,6 +29,8 @@
     "@jaskier/wasm-worker": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-virtual": "^3.13.23",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "@xyflow/react": "^12.10.1",
     "dompurify": "^3.3.3",
     "i18next": "^26.0.1",

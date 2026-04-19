@@ -12,6 +12,8 @@ import { lazy, type ReactNode, StrictMode, Suspense } from 'react';
 import { preconnect, prefetchDNS, preload } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Native asset preloading (React 19)
 prefetchDNS('https://claudehydra-v4-backend.fly.dev');
@@ -340,6 +342,8 @@ function App() {
         <Suspense fallback={null}>
           <ReactQueryDevtools initialIsOpen={false} />
         </Suspense>
+        <Analytics />
+        <SpeedInsights />
       </QueryClientProvider>
     </AuthProvider>
   );
