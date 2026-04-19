@@ -44,7 +44,7 @@ export default defineConfig({
     },
     dedupe: [
       'react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime',
-      '@tanstack/react-query', 'zustand', 'sonner', 'i18next', 'react-i18next', 'motion', 'lucide-react',
+      '@tanstack/react-query', 'zustand', 'sonner', 'i18next', 'react-i18next', 'motion',
     ],
   },
   build: {
